@@ -67,10 +67,15 @@ describe('appstore/enrich', () => {
     )
   })
 
-  it('preserves absolute appIcon URL', () => {
-    const absolute = 'https://example.com/icon.png'
-    const r = enrichEntry({ ...basePkg, signalk: { appIcon: absolute } })
-    expect(r.appIcon).to.equal(absolute)
+  it('ignores an absolute appIcon URL', () => {
+    for (const appIcon of [
+      'https://example.com/icon.png',
+      '//example.com/icon.png',
+      'data:image/svg+xml,<svg/>'
+    ]) {
+      const r = enrichEntry({ ...basePkg, signalk: { appIcon } })
+      expect(r.appIcon, appIcon).to.equal(undefined)
+    }
   })
 
   it('surfaces displayName', () => {

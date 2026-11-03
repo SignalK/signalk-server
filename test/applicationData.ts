@@ -5,6 +5,7 @@ import chaiThings from 'chai-things'
 import chaiJsonEqual from 'chai-json-equal'
 import { strict as assert } from 'assert'
 import fs from 'fs'
+import http from 'http'
 import path from 'path'
 import { rimraf } from 'rimraf'
 import { freeport } from './ts-servertestutilities'
@@ -12,7 +13,8 @@ import {
   startServerP,
   getReadOnlyToken,
   getWriteToken,
-  getAdminToken
+  getAdminToken,
+  getToken
 } from './servertestutilities'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -98,6 +100,9 @@ describe('Application Data', () => {
     }
   })
 
+  const configDir = () =>
+    path.resolve(process.env.SIGNALK_NODE_CONFIG_DIR as string)
+
   async function post(globalOrUser: boolean, token: string, expected: number) {
     for (const test of tests) {
       const reqUrl = globalOrUser
@@ -148,6 +153,33 @@ describe('Application Data', () => {
     }
   }
 
+  // fetch normalizes dot segments in URLs, so encoded traversal needs a raw
+  // http request to reach the server unchanged.
+  function rawStatus(
+    method: string,
+    pathname: string,
+    headers: Record<string, string>,
+    body?: object
+  ): Promise<number> {
+    return new Promise((resolve, reject) => {
+      const request = http.request(
+        {
+          host: '127.0.0.1',
+          port,
+          method,
+          path: pathname,
+          headers: { ...headers, 'Content-Type': 'application/json' }
+        },
+        (response) => {
+          response.resume()
+          response.on('end', () => resolve(response.statusCode ?? 0))
+        }
+      )
+      request.on('error', reject)
+      request.end(body ? JSON.stringify(body) : undefined)
+    })
+  }
+
   it('invalid appid or version fails', async function () {
     async function fail(appid: string, version: string) {
       const result = await fetch(
@@ -160,6 +192,82 @@ describe('Application Data', () => {
     await fail(encodeURIComponent('foo/bar'), '1.0')
     await fail('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', '1.0')
     await fail('validApp', 'a.b.c')
+
+    const encodedTraversalStatus = await rawStatus(
+      'GET',
+      '/signalk/v1/applicationData/global/%2e%2e/1.0.0',
+      readHeaders
+    )
+    encodedTraversalStatus.should.equal(400)
+
+    const encodedListTraversalStatus = await rawStatus(
+      'GET',
+      '/signalk/v1/applicationData/global/%2e%2e',
+      readHeaders
+    )
+    encodedListTraversalStatus.should.equal(400)
+  })
+
+  it('rejects encoded traversal in user appid', async function () {
+    ;(
+      await rawStatus(
+        'POST',
+        '/signalk/v1/applicationData/user/%2e%2e/1.0.0',
+        writeHeaders,
+        { a: 1 }
+      )
+    ).should.equal(400)
+    ;(
+      await rawStatus(
+        'GET',
+        '/signalk/v1/applicationData/user/%2e%2e',
+        writeHeaders
+      )
+    ).should.equal(400)
+    fs.existsSync(
+      path.join(configDir(), 'applicationData', 'users', '1.0.0.json')
+    ).should.equal(false)
+  })
+
+  it('rejects user identifiers that escape the users directory', async function () {
+    // A sibling directory sharing the config directory's name as a prefix
+    // must not pass a containment check.
+    const siblingName = `${path.basename(configDir())}-sibling`
+    const siblingDir = path.join(path.dirname(configDir()), siblingName)
+    const userIds = [`../../../${siblingName}`, '../../..']
+    const users = server.app.securityStrategy.securityConfig.users
+    users.push(...userIds.map((username) => ({ username, type: 'readwrite' })))
+
+    try {
+      const siblingHeaders = {
+        Cookie: `JAUTHENTICATION=${getToken(server, userIds[0])}`
+      }
+      ;(
+        await rawStatus(
+          'POST',
+          '/signalk/v1/applicationData/user/app/1.0.0',
+          siblingHeaders,
+          { a: 1 }
+        )
+      ).should.equal(400)
+      fs.existsSync(siblingDir).should.equal(false)
+
+      const parentHeaders = {
+        Cookie: `JAUTHENTICATION=${getToken(server, userIds[1])}`
+      }
+      ;(
+        await rawStatus(
+          'GET',
+          `/signalk/v1/applicationData/user/${path.basename(configDir())}`,
+          parentHeaders
+        )
+      ).should.equal(400)
+    } finally {
+      server.app.securityStrategy.securityConfig.users = users.filter(
+        (user: { username: string }) => !userIds.includes(user.username)
+      )
+      fs.rmSync(siblingDir, { recursive: true, force: true })
+    }
   })
 
   it('fetch global returns empty data', async function () {

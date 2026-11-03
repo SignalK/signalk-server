@@ -68,7 +68,10 @@
         "environment.depth.belowTransducer",
         "environment.depth.belowSurface",
         "environment.depth.transducerToKeel",
-        "environment.depth.surfaceToTransducer"
+        "environment.depth.surfaceToTransducer",
+        "environment.tide.heightHigh",
+        "environment.tide.heightNow",
+        "environment.tide.heightLow"
       ]
     },
     "distance": {

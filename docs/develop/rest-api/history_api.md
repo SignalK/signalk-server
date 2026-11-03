@@ -101,6 +101,12 @@ To get a list of paths that have some historical data available for a specified 
 HTTP GET 'http://hostname:3000/signalk/v2/api/history/paths?duration=P1D'
 ```
 
+The optional `context` parameter requests paths for a specific Signal K context,
+for example `/signalk/v2/api/history/paths?duration=P1D&context=vessels.self`.
+Providers that support context filtering return only paths recorded for that
+context. Providers that do not support it may still return paths from all
+contexts. When `context` is omitted, paths from all contexts are returned.
+
 ### Response Format
 
 Returns an array of path strings.

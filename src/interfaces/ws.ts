@@ -46,12 +46,8 @@ import {
   parseBackpressureThresholds
 } from '../BackpressureManager'
 import { getExternalPort } from '../ports'
-import {
-  resolveDisplayUnits,
-  getDefaultCategory,
-  DisplayUnitsMetadata
-} from '../unitpreferences'
-import { Delta, hasValues } from '@signalk/server-api'
+import { resolvePathDisplayUnits, PathUnitsMetadata } from '../unitpreferences'
+import { Delta, hasMeta, hasValues } from '@signalk/server-api'
 
 const debug = createDebug('signalk-server:interfaces:ws')
 const debugConnection = createDebug('signalk-server:interfaces:ws:connections')
@@ -234,12 +230,13 @@ interface WsAppConfig {
     ssl?: boolean
     wsCompression?: boolean
     wsPingInterval?: number | false
-    trustProxy?: boolean | string
   }
   isExternalSsl: () => boolean
   maxSendBufferSize?: number
   maxSendBufferCheckTime?: number
 }
+
+type TrustProxyFn = (address: string, hop: number) => boolean
 
 interface WsApp {
   server: unknown
@@ -264,6 +261,7 @@ interface WsApp {
   removeListener: (event: string, handler: (data: unknown) => void) => void
   handleMessage: (source: string, msg: WsMessage) => void
   setProviderError: (provider: string, message: string) => void
+  get: (setting: 'trust proxy fn') => TrustProxyFn
   getHello: () => Record<string, unknown>
 }
 
@@ -288,12 +286,52 @@ interface WsApi {
 
 const DEFAULT_MAX_WS_CONNECTIONS_PER_IP = 30
 
+// RFC 6455 Going Away; older clients reject the newer 1012 Service Restart
+const WS_CLOSE_GOING_AWAY = 1001
+
+// The User-Agent ESP-IDF's WebSocket client sends unless the application sets
+// its own. See https://github.com/SignalK/SensESP/pull/1096 for background.
+// TODO: remove once SensESP releases up to 3.6.0 are out of use
+const ESP_IDF_WS_USER_AGENT = 'ESP32 Websocket Client'
+
+function isEspIdfWsClient(spark: Spark): boolean {
+  return spark.request.headers['user-agent'] === ESP_IDF_WS_USER_AGENT
+}
+
+type CloseFrameMode = 'all' | 'none' | 'notESP32'
+
+const CLOSE_FRAME_MODES: Record<string, CloseFrameMode> = {
+  all: 'all',
+  none: 'none',
+  notesp32: 'notESP32'
+}
+
+function getCloseFrameMode(): CloseFrameMode {
+  const value = process.env.SEND_WS_CLOSE_FRAME
+  if (value === undefined || value === '') {
+    return 'none'
+  }
+  const mode = CLOSE_FRAME_MODES[value.toLowerCase()]
+  if (mode) {
+    return mode
+  }
+  console.warn(
+    `Ignoring SEND_WS_CLOSE_FRAME=${value}: recognised values are 'all', 'none' and 'notESP32'`
+  )
+  return 'none'
+}
+
 function wsInterface(app: WsApp): WsApi {
   const maxWsConnectionsPerIp = parseInt(
     process.env.MAX_WS_CONNECTIONS_PER_IP ??
       String(DEFAULT_MAX_WS_CONNECTIONS_PER_IP),
     10
   )
+
+  const closeFrameMode = getCloseFrameMode()
+  const sendsCloseFrame = (spark: Spark): boolean =>
+    closeFrameMode === 'all' ||
+    (closeFrameMode === 'notESP32' && !isEspIdfWsClient(spark))
 
   const backpressureThresholds = parseBackpressureThresholds({
     maxSendBufferSize: app.config.maxSendBufferSize,
@@ -308,6 +346,7 @@ function wsInterface(app: WsApp): WsApi {
   )
 
   let primuses: Primus[] = []
+  let stopping = false
   const pathSources: PathSources = {}
   const ipConnectionCounts = new Map<string, number>()
 
@@ -490,7 +529,8 @@ function wsInterface(app: WsApp): WsApi {
               : undefined,
             ipConnectionCounts,
             maxWsConnectionsPerIp,
-            app.config.settings.trustProxy
+            app.get('trust proxy fn'),
+            () => stopping
           )
         )
 
@@ -537,7 +577,10 @@ function wsInterface(app: WsApp): WsApi {
             },
             {
               ...backpressureThresholds,
-              beforeWrite: (delta) => sendMetaData(app, spark, delta)
+              beforeWrite: (delta) => {
+                sendMetaData(app, spark, delta)
+                return withMetaResolvedForSpark(spark, delta)
+              }
             }
           )
 
@@ -694,11 +737,20 @@ function wsInterface(app: WsApp): WsApi {
 
     stop: function () {
       debug('Destroying primuses...')
-      primuses.forEach((primus) =>
+      stopping = true
+      primuses.forEach((primus) => {
+        primus.forEach((primusSpark: unknown) => {
+          const spark = primusSpark as Spark
+          if (sendsCloseFrame(spark)) {
+            spark.socket?.close(WS_CLOSE_GOING_AWAY)
+          } else {
+            spark.socket?.terminate()
+          }
+        })
         primus.destroy({ close: false, timeout: 500, reconnect: false }, () => {
           /* noop */
         })
-      )
+      })
     }
   }
 
@@ -869,11 +921,40 @@ function wsInterface(app: WsApp): WsApi {
   return api
 }
 
+// The same walk as Express' req.ip: back from the socket's peer through
+// X-Forwarded-For, up to the first address that is not a trusted proxy. With
+// a hop count or a list of proxies, entries a client prepends itself are never
+// taken as its address; trust proxy `true` trusts every hop and so takes the
+// leftmost entry.
+function resolveClientIp(
+  req: SignalKSparkRequest,
+  trustProxy: TrustProxyFn
+): string {
+  const forwardedFor = req.headers['x-forwarded-for']
+  const addresses = [req.connection.remoteAddress]
+  if (typeof forwardedFor === 'string') {
+    addresses.push(
+      ...forwardedFor
+        .split(',')
+        .map((address) => address.trim())
+        .filter((address) => address !== '')
+        .reverse()
+    )
+  }
+  for (let hop = 0; hop < addresses.length - 1; hop++) {
+    if (!trustProxy(addresses[hop], hop)) {
+      return addresses[hop]
+    }
+  }
+  return addresses[addresses.length - 1]
+}
+
 function createPrimusAuthorize(
   authorizeWS: ((req: SignalKSparkRequest) => void) | undefined,
   ipConnectionCounts: Map<string, number>,
   maxConnectionsPerIp: number,
-  trustProxy: boolean | string | undefined
+  trustProxy: TrustProxyFn,
+  isStopping: () => boolean
 ): (req: unknown, authorized: (err?: Error) => void) => void {
   return function (
     primusReq: unknown,
@@ -881,12 +962,18 @@ function createPrimusAuthorize(
   ): void {
     const req = primusReq as SignalKSparkRequest
 
-    const forwardedFor = req.headers['x-forwarded-for']
-    const firstForwardedIp =
-      trustProxy && trustProxy !== 'false' && typeof forwardedFor === 'string'
-        ? forwardedFor.split(',')[0].trim()
-        : undefined
-    req._resolvedIp = firstForwardedIp || req.connection.remoteAddress
+    // The HTTP server keeps listening until every interface has stopped. A
+    // client accepted meanwhile would be closed with a close frame, which
+    // clients that only reconnect after a dropped connection never recover
+    // from, so a stopping server turns new connections away instead.
+    if (isStopping()) {
+      authorized(
+        Object.assign(new Error('Server is stopping'), { statusCode: 503 })
+      )
+      return
+    }
+
+    req._resolvedIp = resolveClientIp(req, trustProxy)
     const ip = req._resolvedIp
     const isWebSocketUpgrade =
       String(req.headers.upgrade || '').toLowerCase() === 'websocket'
@@ -1024,6 +1111,79 @@ interface MetaHandlerContext {
   timestamp?: string
 }
 
+/**
+ * Clone a path's metadata with its displayUnits resolved for the
+ * connection's user, as every metadata object sent to a client must be.
+ * A meta delta carries only the fields it changes, so `registered` supplies
+ * the path's stored displayUnits and units where the delta leaves them out.
+ */
+function resolveMetaForSpark(
+  spark: Spark,
+  path: string,
+  meta: Record<string, unknown>,
+  registered?: Record<string, unknown> | null
+): Record<string, unknown> {
+  const metaClone = structuredClone(meta)
+  const enhanced = resolvePathDisplayUnits(
+    path,
+    {
+      units: metaClone.units ?? registered?.units,
+      displayUnits: metaClone.displayUnits ?? registered?.displayUnits
+    } as PathUnitsMetadata,
+    spark.request.skPrincipal?.identifier,
+    spark.sendDisplayUnitsOverride
+  )
+  if (enhanced) {
+    metaClone.displayUnits = enhanced
+  }
+  return metaClone
+}
+
+function carriesMeta(delta: Delta): boolean {
+  if (!delta.updates) return false
+  for (const update of delta.updates) {
+    if (hasMeta(update)) return true
+  }
+  return false
+}
+
+/**
+ * Metadata deltas from providers and PUT handlers are fanned out to every
+ * connection as sent, so their displayUnits are either missing or resolved
+ * for someone else. Only deltas carrying metadata are copied.
+ */
+function withMetaResolvedForSpark(spark: Spark, delta: Delta): Delta {
+  if (!carriesMeta(delta)) {
+    return delta
+  }
+  const context = delta.context || ''
+  return {
+    ...delta,
+    updates: delta.updates!.map((update) =>
+      hasMeta(update)
+        ? {
+            ...update,
+            meta: update.meta.map((entry) =>
+              entry.value && typeof entry.value === 'object'
+                ? {
+                    path: entry.path,
+                    value: resolveMetaForSpark(
+                      spark,
+                      entry.path,
+                      entry.value as Record<string, unknown>,
+                      getMetadata(
+                        getContextPathMetaKey(context, entry.path)
+                      ) as Record<string, unknown> | null
+                    ) as typeof entry.value
+                  }
+                : entry
+            )
+          }
+        : update
+    )
+  }
+}
+
 function handleValuesMeta(
   this: MetaHandlerContext,
   kp: { path: string }
@@ -1043,39 +1203,7 @@ function handleValuesMeta(
           unknown
         > | null
         if (meta) {
-          // Clone and enhance metadata with displayUnits formulas
-          const metaClone = structuredClone(meta) as Record<string, unknown>
-          let storedDisplayUnits = metaClone.displayUnits as
-            Record<string, unknown> | undefined
-          const username = this.spark.request.skPrincipal?.identifier
-          if (!storedDisplayUnits?.category && path) {
-            const defaultCategory = getDefaultCategory(
-              path,
-              metaClone.units as string | undefined,
-              username
-            )
-            if (defaultCategory) {
-              storedDisplayUnits = { category: defaultCategory }
-            }
-          }
-          if (storedDisplayUnits?.category) {
-            const enhanced = resolveDisplayUnits(
-              storedDisplayUnits as {
-                category: string
-                targetUnit?: string
-                formula?: string
-                inverseFormula?: string
-                symbol?: string
-                displayFormat?: string
-              },
-              metaClone.units as string | undefined,
-              username,
-              this.spark.sendDisplayUnitsOverride
-            )
-            if (enhanced) {
-              metaClone.displayUnits = enhanced
-            }
-          }
+          const metaClone = resolveMetaForSpark(this.spark, path, meta)
           this.spark.write({
             context: this.context,
             updates: [
@@ -1319,25 +1447,14 @@ function handleRealtimeConnection(
           const fullPath = 'vessels.self.' + path
           const pathMeta =
             (getMetadata(fullPath) as Record<string, unknown>) || {}
-          const storedDU = pathMeta.displayUnits as
-            DisplayUnitsMetadata | undefined
-          const category =
-            storedDU?.category ||
-            getDefaultCategory(
-              path,
-              pathMeta.units as string | undefined,
-              username
-            )
-          if (category) {
-            const displayUnits = resolveDisplayUnits(
-              { ...storedDU, category },
-              pathMeta.units as string | undefined,
-              username,
-              spark.sendDisplayUnitsOverride
-            )
-            if (displayUnits) {
-              acc.push({ path, value: { ...pathMeta, displayUnits } })
-            }
+          const displayUnits = resolvePathDisplayUnits(
+            path,
+            pathMeta as PathUnitsMetadata,
+            username,
+            spark.sendDisplayUnitsOverride
+          )
+          if (displayUnits) {
+            acc.push({ path, value: { ...pathMeta, displayUnits } })
           }
           return acc
         },

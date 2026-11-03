@@ -18,6 +18,36 @@ describe('Webapp', () => {
       expect(iconBox).not.toHaveClass('bg-primary')
     })
 
+    describe('icon URL', () => {
+      const backgroundImageFor = (appIcon: string) => {
+        const { container } = render(
+          <Webapp webAppInfo={{ name: 'test-app', signalk: { appIcon } }} />
+        )
+        const iconBox = container.querySelector('.float-start') as HTMLElement
+        return iconBox.style.backgroundImage
+      }
+
+      it('keeps a path with spaces and parentheses as one URL', () => {
+        expect(backgroundImageFor('icons/my icon (1).png')).toBe(
+          'url("/test-app/icons/my icon (1).png")'
+        )
+      })
+
+      it('keeps a path that closes url() inside the one URL', () => {
+        expect(
+          backgroundImageFor('x.png), url(https://example.com/beacon.png')
+        ).toBe('url("/test-app/x.png), url(https://example.com/beacon.png")')
+      })
+
+      it('keeps a path that closes the quoted string inside the one URL', () => {
+        expect(
+          backgroundImageFor('x.png"), url("https://example.com/beacon.png')
+        ).toBe(
+          'url("/test-app/x.png\\"), url(\\"https://example.com/beacon.png")'
+        )
+      })
+    })
+
     it('renders a blue placeholder box with a monogram of the package name when appIcon is not set', () => {
       const { container } = render(<Webapp webAppInfo={{ name: 'test-app' }} />)
 

@@ -11,6 +11,7 @@
 import fs from 'fs'
 import path from 'path'
 import { createDebug } from '../debug'
+import { fetchFromCdn } from './cdn'
 import { safeName } from './safe-name'
 
 const debug = createDebug('signalk-server:appstore:icon-bytes')
@@ -48,7 +49,10 @@ export interface IconBytesCache {
   storeRoot(): string
   /** Resolve a stored icon for the given plugin (latest version wins). */
   read(pkgName: string): StoredIcon | undefined
-  /** Download and persist the icon bytes. Returns the stored record or null on failure. */
+  /**
+   * Download and persist the icon bytes from the package CDN. Returns the
+   * stored record, or null on failure or when cdnUrl is not a CDN URL.
+   */
   download(
     pkgName: string,
     version: string,
@@ -161,7 +165,7 @@ export function createIconBytesCache(cacheDir: string): IconBytesCache {
     let contentType: string
     let bytes: Uint8Array
     try {
-      const res = await fetch(cdnUrl, {
+      const res = await fetchFromCdn(cdnUrl, {
         signal: AbortSignal.timeout(FETCH_TIMEOUT_MS)
       })
       if (!res.ok) {

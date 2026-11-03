@@ -47,11 +47,12 @@ describe('Server log websocket access', function () {
   describe('with no security configured', function () {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let server: any
+    let port: number
     let wsUrl: string
 
     before(async function () {
       this.timeout(90000)
-      const port = await freeport()
+      port = await freeport()
       server = await startServerP(port, false)
       wsUrl =
         `ws://0.0.0.0:${port}/signalk/v1/stream` +
@@ -66,6 +67,38 @@ describe('Server log websocket access', function () {
       const { gotLog, denied } = await subscribeToLog(wsUrl)
       denied.should.equal(false)
       gotLog.should.equal(true)
+    })
+
+    it('clears the log for live subscribers and later ones', async function () {
+      const live = new WsPromiser(wsUrl)
+      await live.nextMsg() // hello
+      await live.send({ subscribe: [{ path: 'log' }] })
+      console.log(LOG_MARKER)
+      await delay(200)
+
+      const res = await fetch(`http://0.0.0.0:${port}/skServer/log`, {
+        method: 'DELETE'
+      })
+      res.status.should.equal(204)
+      await delay(200)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const liveMessages: any[] = live.parsedMessages()
+      live.close()
+      liveMessages.some((m) => m && m.type === 'LOG_CLEARED').should.equal(true)
+
+      const late = new WsPromiser(wsUrl)
+      await late.nextMsg() // hello
+      await late.send({ subscribe: [{ path: 'log' }] })
+      await delay(200)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const replayed: any[] = late.parsedMessages()
+      late.close()
+      replayed
+        .some(
+          (m) =>
+            m && m.type === 'LOG' && String(m.data?.row).includes(LOG_MARKER)
+        )
+        .should.equal(false)
     })
   })
 

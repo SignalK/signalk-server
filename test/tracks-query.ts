@@ -286,6 +286,43 @@ describe('Track API query parsing', () => {
     })
   })
 
+  describe('clip', () => {
+    const BOX = '24.5,59.9,25.2,60.3'
+
+    it('clips by default when a bbox is given', () => {
+      const { request, errors } = parse({ bbox: BOX, duration: 'PT1H' })
+      expect(errors).to.be.empty
+      expect(request.clip).to.equal(true)
+    })
+
+    it('returns whole tracks with clip=false', () => {
+      const { request, errors } = parse({
+        bbox: BOX,
+        clip: 'false',
+        duration: 'PT1H'
+      })
+      expect(errors).to.be.empty
+      expect(request.clip).to.equal(false)
+    })
+
+    it('accepts the valueless form as true', () => {
+      const { request } = parse({ bbox: BOX, clip: '', duration: 'PT1H' })
+      expect(request.clip).to.equal(true)
+    })
+
+    it('passes nothing to clip to without a bbox', () => {
+      const { request, errors } = parse({ clip: 'true', duration: 'PT1H' })
+      expect(errors).to.be.empty
+      expect(request).to.not.have.property('clip')
+    })
+
+    it('rejects a value that is not a boolean', () => {
+      expect(
+        errorsFrom({ bbox: BOX, clip: 'sometimes', duration: 'PT1H' })
+      ).to.match(/clip must be true or false/)
+    })
+  })
+
   describe('thinning', () => {
     it('accepts maxPoints as a point budget', () => {
       const { request, errors } = parse({ maxPoints: '5000', duration: 'PT1H' })
@@ -557,6 +594,48 @@ describe('Track API query parsing', () => {
       const { request, errors } = parse({ context: 'self' })
       expect(errors).to.be.empty
       expect(request.duration).to.equal(undefined)
+    })
+  })
+
+  // The shapes below are what express produces: `?maxPoints[x]=1` parses into
+  // an object, a repeated key into an array, and a bare `?times` into ''.
+  describe('parameters', () => {
+    it('rejects an unknown parameter rather than ignoring it', () => {
+      // Silently dropping a filter a client asked for is how a client ends up
+      // trusting an unfiltered answer.
+      expect(errorsFrom({ duration: 'PT1H', circle: '500' })).to.match(
+        /unknown query parameter: circle/
+      )
+    })
+
+    it('rejects a known parameter whose value is not a single scalar', () => {
+      // Dropped rather than refused, the value would be lost; and a flag reads
+      // a missing scalar as '', which is true, so geometry[x]=1 would mean
+      // geometry=true.
+      expect(errorsFrom({ duration: 'PT1H', maxPoints: { x: '1' } })).to.match(
+        /maxPoints must be a single value/
+      )
+      expect(errorsFrom({ duration: 'PT1H', geometry: { x: '1' } })).to.match(
+        /geometry must be a single value/
+      )
+    })
+
+    it('rejects a repeated parameter rather than keeping its first value', () => {
+      // Taking the first element would answer a query the client did not send.
+      expect(
+        errorsFrom({ duration: 'PT1H', contexts: ['self', 'vessels.x'] })
+      ).to.match(/contexts must be a single value/)
+      expect(
+        errorsFrom({ duration: 'PT1H', bbox: ['0,0,1,1', '2,2,3,3'] })
+      ).to.match(/bbox must be a single value/)
+    })
+
+    it('still accepts a valueless flag', () => {
+      expect(parse({ duration: 'PT1H', times: '' }).errors).to.be.empty
+    })
+
+    it('accepts the singular context as well as contexts', () => {
+      expect(parse({ context: 'self' }).errors).to.be.empty
     })
   })
 

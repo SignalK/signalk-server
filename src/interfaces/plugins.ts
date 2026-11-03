@@ -34,6 +34,7 @@ import {
   SourceRef,
   PluginConstructor,
   Plugin,
+  PluginStopReason,
   Path,
   Delta,
   SubscribeCallback,
@@ -47,7 +48,8 @@ import {
   PluginRouter,
   RouteAccessLevel,
   RoutePermission,
-  PluginWebSocketServer
+  PluginWebSocketServer,
+  EnhancedDisplayUnits
 } from '@signalk/server-api'
 import { getLogger } from '@signalk/streams/logging'
 import express, { IRouter, Request, RequestHandler, Response } from 'express'
@@ -94,7 +96,12 @@ import { derivePluginId } from '../pluginid'
 import { atomicWriteFileSync } from '../atomicWrite'
 import { writeBaseDeltasFile, ConfigApp } from '../config/config'
 import DeltaEditor from '../deltaeditor'
-import { validateCategoryAssignment } from '../unitpreferences'
+import {
+  convertWithDisplayUnits,
+  PathUnitsMetadata,
+  resolvePathDisplayUnits,
+  validateCategoryAssignment
+} from '../unitpreferences'
 
 // #521 Returns path to load plugin-config assets.
 const getPluginConfigPublic = getModulePublic('@signalk/plugin-config')
@@ -149,8 +156,49 @@ function mergeExcludeSelf(
   return merged.size > 0 ? (Array.from(merged) as SourceRef[]) : undefined
 }
 
+function selfDisplayUnits(
+  skPath: string,
+  username?: string
+): EnhancedDisplayUnits | undefined {
+  const metadata = getMetadata('vessels.self.' + skPath) as
+    PathUnitsMetadata | undefined
+  const resolved = resolvePathDisplayUnits(skPath, metadata ?? {}, username)
+  if (!resolved) {
+    return undefined
+  }
+  // Only an editor asks for the override, so plugins get the public shape.
+  const { override: _override, ...displayUnits } = resolved
+  return displayUnits
+}
+
 module.exports = (theApp: any) => {
   const onStopHandlers: any = {}
+  // onStopHandlers gets an entry at registration, before the enabled check,
+  // so it cannot distinguish a plugin that started from one that only
+  // registered. stop() needs that distinction.
+  const startedPlugins = new Set<string>()
+  // A removal or a server stop must wait for a stop a configuration save has
+  // started: until it settles the plugin is out of startedPlugins but still
+  // shutting down.
+  const stoppingPlugins = new Map<string, Promise<unknown>>()
+
+  // A configuration save that stopped a plugin starts it again once that stop
+  // settles, and another save may begin a new stop meanwhile. Resolves when no
+  // stop of the plugin, or of any plugin without an id, is under way, so the
+  // caller then sees in startedPlugins what the saves started. A failed stop
+  // is the save's to report.
+  async function pendingStopsSettled(id?: string) {
+    const pending = () => {
+      if (id === undefined) {
+        return Array.from(stoppingPlugins.values())
+      }
+      const inFlight = stoppingPlugins.get(id)
+      return inFlight ? [inFlight] : []
+    }
+    for (let inFlight = pending(); inFlight.length > 0; inFlight = pending()) {
+      await Promise.all(inFlight.map((p) => p.catch(() => undefined)))
+    }
+  }
   const appNodeModules = path.join(theApp.config.appPath, 'node_modules/')
 
   // Partitioned by plugin id so the dispatcher can tell a plugin that does
@@ -247,6 +295,24 @@ module.exports = (theApp: any) => {
         return await getPluginsList(enabled)
       }
 
+      theApp.stopPlugin = async (id: string) => {
+        await pendingStopsSettled(id)
+        const plugin = theApp.plugins.find((p: PluginInfo) => p.id === id)
+        if (!plugin) {
+          return
+        }
+        if (plugin.type === 'wasm') {
+          const { getWasmPlugin, stopWasmPlugin } = require('../wasm')
+          if (getWasmPlugin(id)?.status === 'running') {
+            await stopWasmPlugin(id)
+          }
+          return
+        }
+        if (startedPlugins.has(id)) {
+          await stopPlugin(plugin)
+        }
+      }
+
       theApp.use(
         backwardsCompat('/plugins/configure'),
         serveStaticFiles(getPluginConfigPublic(theApp))
@@ -263,6 +329,30 @@ module.exports = (theApp: any) => {
       })
 
       await startPlugins(theApp)
+    },
+
+    // Server.stop() calls stop() on each interface, so this is where a
+    // server-wide stop reaches the plugins and lets them release the
+    // subscriptions, timers and connections they opened in start().
+    //
+    // Errors are contained per plugin: a stop() that throws must not prevent
+    // the remaining plugins from stopping.
+    async stop() {
+      if (!theApp.plugins) {
+        return
+      }
+      await pendingStopsSettled()
+      await Promise.all(
+        theApp.plugins
+          .filter((plugin: PluginInfo) => startedPlugins.has(plugin.id))
+          .map((plugin: PluginInfo) =>
+            Promise.resolve()
+              .then(() => stopPlugin(plugin, 'shutdown'))
+              .catch((err) => {
+                console.error(`Error stopping plugin ${plugin.id}:`, err)
+              })
+          )
+      )
     }
   }
 
@@ -641,7 +731,12 @@ module.exports = (theApp: any) => {
     }
   }
 
-  function stopPlugin(plugin: PluginInfo): Promise<any> {
+  // A caller that names no reason gets 'disable': the plugin releases what it
+  // holds, and only a stop that knows the plugin comes back may say otherwise.
+  function stopPlugin(
+    plugin: PluginInfo,
+    reason: PluginStopReason = 'disable'
+  ): Promise<any> {
     debug('Stopping plugin ' + plugin.name)
     onStopHandlers[plugin.id].forEach((f: () => void) => {
       try {
@@ -651,14 +746,37 @@ module.exports = (theApp: any) => {
       }
     })
     onStopHandlers[plugin.id] = []
-    const result = Promise.resolve(plugin.stop())
-    result.then(() => {
-      theApp.setPluginStatus(plugin.id, 'Stopped')
-      debug('Stopped plugin ' + plugin.name)
-      if (theApp.deltaCache) {
-        theApp.deltaCache.removeSource(plugin.id)
+    startedPlugins.delete(plugin.id)
+    // Not before stop(), which may still be talking to its devices, and
+    // after a failed stop() too, which is the likeliest to leave them open
+    const releaseGATTClaims = () =>
+      theApp.bleApi.releaseGATTClaimsForPlugin(plugin.id)
+    let result: Promise<any>
+    try {
+      result = Promise.resolve(plugin.stop({ reason }))
+    } catch (e) {
+      releaseGATTClaims()
+      throw e
+    }
+    stoppingPlugins.set(plugin.id, result)
+    const settled = () => {
+      if (stoppingPlugins.get(plugin.id) === result) {
+        stoppingPlugins.delete(plugin.id)
       }
-    })
+    }
+    result.then(settled, settled)
+    result.then(
+      () => {
+        theApp.setPluginStatus(plugin.id, 'Stopped')
+        debug('Stopped plugin ' + plugin.name)
+        if (theApp.deltaCache) {
+          theApp.deltaCache.removeSource(plugin.id)
+        }
+      },
+      // A failed stop() is reported by the caller awaiting result.
+      () => undefined
+    )
+    result.then(releaseGATTClaims, releaseGATTClaims)
     return result
   }
 
@@ -722,6 +840,7 @@ module.exports = (theApp: any) => {
         throw e
       }
       debug('Started plugin ' + plugin.name)
+      startedPlugins.add(plugin.id)
       setPluginStartedMessage(plugin)
     } catch (e: any) {
       console.error('error starting plugin: ' + e)
@@ -890,6 +1009,17 @@ module.exports = (theApp: any) => {
         })
 
         return true
+      },
+      getDisplayUnits: selfDisplayUnits,
+      convertToDisplayUnits: (
+        skPath: string,
+        value: number,
+        username?: string
+      ) => {
+        const displayUnits = selfDisplayUnits(skPath, username)
+        return displayUnits
+          ? convertWithDisplayUnits(displayUnits, value)
+          : undefined
       },
       reportOutputMessages: (count?: number) => {
         app.emit(CONNECTION_WRITE_EVENT_NAME, {
@@ -1218,7 +1348,7 @@ module.exports = (theApp: any) => {
         if (err) {
           console.error(err)
         } else {
-          stopPlugin(plugin).then(() => {
+          stopPlugin(plugin, 'restart').then(() => {
             doPluginStart(app, plugin, location, newConfiguration, restart)
             emitPluginsChanged()
           })
@@ -1285,7 +1415,10 @@ module.exports = (theApp: any) => {
           return
         }
         res.json('Saved configuration for plugin ' + plugin.id)
-        stopPlugin(plugin).then(() => {
+        const reason = getPluginOptions(plugin.id).enabled
+          ? 'restart'
+          : 'disable'
+        stopPlugin(plugin, reason).then(() => {
           const options = getPluginOptions(plugin.id)
           plugin.enableLogging = options.enableLogging
           plugin.enableDebug = options.enableDebug

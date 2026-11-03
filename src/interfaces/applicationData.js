@@ -130,6 +130,11 @@ module.exports = function (app) {
       return
     }
 
+    if (!validatePrincipal(req, isUser)) {
+      res.status(400).send('invalid user identifier')
+      return
+    }
+
     const dir = dirForApplicationData(req, appid, isUser)
 
     if (!fs.existsSync(dir)) {
@@ -151,6 +156,11 @@ module.exports = function (app) {
 
     if (!version) {
       res.status(400).send('invalid application version')
+      return
+    }
+
+    if (!validatePrincipal(req, isUser)) {
+      res.status(400).send('invalid user identifier')
       return
     }
 
@@ -189,6 +199,11 @@ module.exports = function (app) {
 
     if (!version) {
       res.status(400).send('invalid application version')
+      return
+    }
+
+    if (!validatePrincipal(req, isUser)) {
+      res.status(400).send('invalid user identifier')
       return
     }
 
@@ -293,74 +308,64 @@ module.exports = function (app) {
   }
 
   function validateAppId(appid) {
-    return appid.length < 30 &&
-      appid.indexOf('/') === -1 &&
-      appid.indexOf('\\') === -1
-      ? appid
-      : null
+    return isSafePathSegment(appid) && appid.length < 30 ? appid : null
   }
 
   function validateVersion(version) {
     return semver.valid(semver.coerce(version))
   }
 
-  function dirForApplicationData(req, appid, isUser) {
-    let location = path.join(
-      app.config.configPath,
-      'applicationData',
-      isUser ? `users/${req.skPrincipal.identifier}` : 'global'
+  function isSafePathSegment(value) {
+    return (
+      typeof value === 'string' &&
+      value.length > 0 &&
+      value !== '.' &&
+      value !== '..' &&
+      !value.includes('/') &&
+      !value.includes('\\') &&
+      !value.includes('\0')
     )
-
-    return path.join(location, appid)
   }
 
-  function pathForApplicationData(req, appid, version, isUser) {
-    const filePath = path.normalize(
-      path.join(dirForApplicationData(req, appid, isUser), `${version}.json`)
-    )
-    const configPath = path.resolve(app.config.configPath)
-    const resolvedPath = path.resolve(filePath)
+  function validatePrincipal(req, isUser) {
+    return !isUser || isSafePathSegment(req.skPrincipal?.identifier)
+  }
 
-    if (!resolvedPath.startsWith(configPath)) {
-      throw new Error('Invalid path: outside configuration directory')
+  function resolveWithin(root, ...segments) {
+    const resolvedRoot = path.resolve(root)
+    const resolvedPath = path.resolve(resolvedRoot, ...segments)
+    if (!resolvedPath.startsWith(resolvedRoot + path.sep)) {
+      throw new Error('Invalid path: outside application data directory')
     }
-
-    return filePath
+    return resolvedPath
   }
 
-  async function saveApplicationData(req, appid, version, isUser, data) {
-    const applicationDataDir = path.join(
+  function dirForApplicationData(req, appid, isUser) {
+    const applicationDataRoot = path.resolve(
       app.config.configPath,
       'applicationData'
     )
-    const usersDir = path.join(applicationDataDir, 'users')
-    const globalDir = path.join(applicationDataDir, 'global')
+    const location = isUser
+      ? resolveWithin(
+          path.join(applicationDataRoot, 'users'),
+          req.skPrincipal.identifier
+        )
+      : path.join(applicationDataRoot, 'global')
 
-    if (!fs.existsSync(applicationDataDir)) {
-      fs.mkdirSync(applicationDataDir)
-    }
+    return resolveWithin(location, appid)
+  }
 
-    if (isUser) {
-      if (!fs.existsSync(usersDir)) {
-        fs.mkdirSync(usersDir)
-      }
-      const userDir = path.join(usersDir, req.skPrincipal.identifier)
-      if (!fs.existsSync(userDir)) {
-        fs.mkdirSync(userDir)
-      }
-      const appDir = path.join(userDir, appid)
-      if (!fs.existsSync(appDir)) {
-        fs.mkdirSync(appDir)
-      }
-    } else {
-      if (!fs.existsSync(globalDir)) {
-        fs.mkdirSync(globalDir)
-      }
-      const appDir = path.join(globalDir, appid)
-      if (!fs.existsSync(appDir)) {
-        fs.mkdirSync(appDir)
-      }
-    }
+  function pathForApplicationData(req, appid, version, isUser) {
+    return resolveWithin(
+      dirForApplicationData(req, appid, isUser),
+      `${version}.json`
+    )
+  }
+
+  async function saveApplicationData(req, appid, version, isUser, data) {
+    fs.mkdirSync(dirForApplicationData(req, appid, isUser), {
+      recursive: true
+    })
 
     await atomicWriteFile(
       pathForApplicationData(req, appid, version, isUser),

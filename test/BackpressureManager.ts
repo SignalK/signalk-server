@@ -82,7 +82,10 @@ describe('BackpressureManager', function () {
       const beforeWriteCalls: Delta[] = []
       const manager = new BackpressureManager(transport, {
         ...defaultOptions,
-        beforeWrite: (delta: Delta) => beforeWriteCalls.push(delta)
+        beforeWrite: (delta: Delta) => {
+          beforeWriteCalls.push(delta)
+          return delta
+        }
       })
       const delta = createDelta('navigation.speedOverGround', 5.0)
 
@@ -90,6 +93,19 @@ describe('BackpressureManager', function () {
 
       expect(beforeWriteCalls.length).to.equal(1)
       expect(beforeWriteCalls[0]).to.equal(delta)
+    })
+
+    it('should write the delta the beforeWrite hook returns', function () {
+      const transport = createMockTransport(0)
+      const replacement = createDelta('navigation.speedOverGround', 6.0)
+      const manager = new BackpressureManager(transport, {
+        ...defaultOptions,
+        beforeWrite: () => replacement
+      })
+
+      manager.send(createDelta('navigation.speedOverGround', 5.0))
+
+      expect(transport._writes).to.deep.equal([replacement])
     })
 
     it('should accumulate when buffer exceeds enter threshold', function () {
@@ -218,7 +234,10 @@ describe('BackpressureManager', function () {
       const beforeWriteCalls: Delta[] = []
       const manager = new BackpressureManager(transport, {
         ...defaultOptions,
-        beforeWrite: (delta: Delta) => beforeWriteCalls.push(delta)
+        beforeWrite: (delta: Delta) => {
+          beforeWriteCalls.push(delta)
+          return delta
+        }
       })
 
       manager.send(createDelta('navigation.speedOverGround', 5.0))

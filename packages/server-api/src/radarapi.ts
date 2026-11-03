@@ -291,7 +291,7 @@ export type ArpaAcquisitionMethod = 'manual' | 'auto'
  * @category Radar API
  */
 export interface ArpaTargetPosition {
-  /** Bearing from own ship in degrees (0-360, true north) */
+  /** Bearing from own ship in radians [0, 2π), true north */
   bearing: number
   /** Distance from own ship in meters */
   distance: number
@@ -307,7 +307,7 @@ export interface ArpaTargetPosition {
  * @category Radar API
  */
 export interface ArpaTargetMotion {
-  /** Course over ground in degrees (0-360, true north) */
+  /** Course over ground in radians [0, 2π), true north */
   course: number
   /** Speed over ground in meters per second */
   speed: number
@@ -336,13 +336,13 @@ export interface ArpaTargetDanger {
  *   "id": 1,
  *   "status": "tracking",
  *   "position": {
- *     "bearing": 45.2,
+ *     "bearing": 0.789,
  *     "distance": 1852,
  *     "latitude": 52.1234,
  *     "longitude": 4.5678
  *   },
  *   "motion": {
- *     "course": 180.5,
+ *     "course": 3.14159,
  *     "speed": 5.14
  *   },
  *   "danger": {
@@ -680,7 +680,7 @@ export interface RadarProviderMethods {
   /**
    * Manually acquire a target at the specified position.
    * @param radarId The radar ID
-   * @param bearing Bearing in degrees (0-360, true north)
+   * @param bearing Bearing in radians [0, 2π), true north
    * @param distance Distance in meters
    * @returns Result with success flag and optional target ID
    */

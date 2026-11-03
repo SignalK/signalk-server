@@ -55,6 +55,7 @@ import {
 import { filterStaticSelfData } from './staticDataFilter'
 import { incDeltaStatistics, startDeltaStatistics } from './deltastats'
 import { checkForNewServerVersion } from './modules'
+import { ConnectionTracker } from './connectionTracker'
 import { getExternalPort, getPrimaryPort, getSecondaryPort } from './ports'
 import {
   getCertificateOptions,
@@ -75,6 +76,7 @@ import { EventsActorId, WithWrappedEmitter, wrapEmitter } from './events'
 import { StalenessEnforcer } from './staleness'
 import { ThrottledCaller } from './throttledCaller'
 import { Zones } from './zones'
+import { isManagingNotifications } from './api/notifications'
 import checkNodeVersion from './version'
 import helmet from 'helmet'
 const debug = createDebug('signalk-server')
@@ -130,6 +132,8 @@ class Server {
   // migration scheduled before a restart cannot fire on a torn-down app.
   pendingSourceRefMigrations?: Set<NodeJS.Timeout>
   private providerStatusEmitter: ThrottledCaller
+  private connections?: ConnectionTracker
+  private redirectConnections?: ConnectionTracker
 
   constructor(opts: { securityConfig: SecurityConfig }) {
     checkNodeVersion()
@@ -144,7 +148,9 @@ class Server {
         xDnsPrefetchControl: true,
         xDownloadOptions: true,
         xPermittedCrossDomainPolicies: true,
-        referrerPolicy: true,
+        // Other sites get the origin only (scheme, host, port), never the path
+        // or query; tile servers that require a Referer accept webapp requests.
+        referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
         hsts: true,
 
         // DISABLED (would break chart plotters, plugins, webapps):
@@ -606,11 +612,15 @@ class Server {
     }
 
     app.streambundle = new StreamBundle(app.selfId)
-    new Zones(app.streambundle, (delta: Delta) =>
-      process.nextTick(() =>
-        app.handleMessage('self.notificationhandler', delta)
+    // With management off an external handler owns notifications, and
+    // legacy zone deltas would compete with it on the same paths.
+    if (isManagingNotifications(app.config.settings)) {
+      new Zones(app.streambundle, (delta: Delta) =>
+        process.nextTick(() =>
+          app.handleMessage('self.notificationhandler', delta)
+        )
       )
-    )
+    }
     app.signalk.on('delta', app.streambundle.pushDelta.bind(app.streambundle))
     app.signalk.on(
       'unfilteredDelta',
@@ -641,6 +651,7 @@ class Server {
     })
 
     installProcessErrorHandlers(app)
+    app.stopAndExit = installShutdownHandlers(this)
   }
 
   start() {
@@ -747,6 +758,7 @@ class Server {
           return
         }
         app.server = server
+        this.connections = new ConnectionTracker(server)
         app.interfaces = {}
         app.clients = 0
 
@@ -777,9 +789,10 @@ class Server {
           startRedirectToSsl(
             secondaryPort,
             getExternalPort(app),
-            (anErr: any, aServer: any) => {
+            (anErr: any, aServer: any, connections: ConnectionTracker) => {
               if (!anErr) {
                 app.redirectServer = aServer
+                this.redirectConnections = connections
               }
             }
           )
@@ -790,7 +803,6 @@ class Server {
 
   reload(mixed: any) {
     let settings
-    const self = this
 
     if (typeof mixed === 'string') {
       try {
@@ -808,31 +820,37 @@ class Server {
       this.app.config.settings = settings
     }
 
-    this.stop().catch((e) => console.error(e))
-
-    setTimeout(() => {
-      self.start().catch((e) => console.error(e))
-    }, 1000)
+    // stop() resolves only once the plugins have stopped and the HTTP server
+    // has closed; a start() before that would lose its port and its timers to
+    // the stop still running.
+    this.stop()
+      .catch((e) => console.error(e))
+      .then(() => this.start())
+      .catch((e) => console.error(e))
 
     return this
   }
 
   async stop(cb?: () => void) {
     this.providerStatusEmitter.cancel()
-    if (!this.app.started) {
+    const { connections, redirectConnections } = this
+    if (!this.app.started || !connections) {
       return this
     }
 
     try {
-      _.each(this.app.interfaces, (intf: any) => {
-        if (
+      // The plugins interface resolves once every plugin's stop() has, and a
+      // shutdown exits as soon as this method resolves: without the wait, a
+      // plugin's asynchronous cleanup is cut off by process.exit.
+      await Promise.all(
+        _.map(this.app.interfaces, (intf: any, name: string) =>
           intf !== null &&
           typeof intf === 'object' &&
           typeof intf.stop === 'function'
-        ) {
-          intf.stop()
-        }
-      })
+            ? stopInterface(name, intf)
+            : undefined
+        )
+      )
 
       this.app.intervals.forEach((interval) => {
         clearInterval(interval)
@@ -864,13 +882,14 @@ class Server {
 
       const that = this
       return new Promise((resolve, reject) => {
-        this.app.server.close(() => {
+        connections.close(CONNECTION_CLOSE_GRACE_MS, () => {
           debug('Server closed')
-          if (that.app.redirectServer) {
+          if (redirectConnections) {
             try {
-              that.app.redirectServer.close(() => {
+              redirectConnections.close(CONNECTION_CLOSE_GRACE_MS, () => {
                 debug('Redirect server closed')
                 delete that.app.redirectServer
+                delete that.redirectConnections
                 that.app.started = false
                 cb && cb()
                 resolve(that)
@@ -903,6 +922,125 @@ function identifyPluginFromStack(
     }
   }
   return undefined
+}
+
+// Below a container runtime's default stop grace period, so the process can
+// exit on its own before the runtime escalates to SIGKILL.
+const SHUTDOWN_TIMEOUT_MS = 8000
+// Time a shutdown keeps after the interfaces to clear timers, end providers
+// and close the HTTP server before SHUTDOWN_TIMEOUT_MS forces the exit.
+const TEARDOWN_RESERVE_MS = 2000
+const INTERFACE_STOP_TIMEOUT_MS = SHUTDOWN_TIMEOUT_MS - TEARDOWN_RESERVE_MS
+// How long closing a server waits for its open connections to end before
+// destroying them. The ws interface ends its clients 500 ms after it stops,
+// so a client that answers still gets a clean close; closing the server and
+// then the redirect server stays within TEARDOWN_RESERVE_MS.
+const CONNECTION_CLOSE_GRACE_MS = 900
+
+// Settles when the interface has stopped, has failed to, or has not within
+// INTERFACE_STOP_TIMEOUT_MS, so that one interface can neither end the wait
+// for the others nor keep Server.stop() from finishing.
+function stopInterface(
+  name: string,
+  intf: { stop: () => unknown }
+): Promise<void> {
+  let timer: NodeJS.Timeout | undefined
+  const timedOut = new Promise<void>((resolve) => {
+    timer = setTimeout(() => {
+      console.error(
+        `Interface ${name} did not stop within ${INTERFACE_STOP_TIMEOUT_MS}ms`
+      )
+      resolve()
+    }, INTERFACE_STOP_TIMEOUT_MS)
+  })
+  const stopped = Promise.resolve()
+    .then(() => intf.stop())
+    .then(
+      () => undefined,
+      (err: unknown) => {
+        console.error(`Error stopping interface ${name}:`, err)
+      }
+    )
+  return Promise.race([stopped, timedOut]).finally(() => clearTimeout(timer))
+}
+
+let currentShutdownHandlers:
+  { sigterm: () => void; sigint: () => void } | undefined
+
+// In a container the server runs as PID 1, and the kernel does not apply
+// default signal dispositions to PID 1 — a signal with no handler installed
+// is discarded. Without these handlers SIGTERM does nothing, so every `docker
+// stop` / `systemctl stop` waits out its grace period and ends in SIGKILL,
+// which reports exit 137 and reads as a crash rather than the clean stop it
+// was. Handling the signal also lets interfaces and providers close first.
+function installShutdownHandlers(server: { stop: () => Promise<unknown> }) {
+  // Process-wide listeners, so the most recently constructed Server owns
+  // them: tests build several instances in one process, and a stopped
+  // instance's stop() resolves immediately, which would exit the process
+  // while the active one is still shutting down.
+  if (currentShutdownHandlers) {
+    process.off('SIGTERM', currentShutdownHandlers.sigterm)
+    process.off('SIGINT', currentShutdownHandlers.sigint)
+  }
+
+  let shuttingDown = false
+
+  const stopAndExit = (reason: string) => {
+    shuttingDown = true
+    console.log(`${reason}, shutting down`)
+
+    // Bounded: a provider or interface whose stop() never settles must not
+    // turn a graceful shutdown into an indefinite one. The deadline sits
+    // below a container runtime's default stop grace period (10s for Docker
+    // and podman) so the process exits on its own terms rather than being
+    // SIGKILLed at the same moment, which would report 137 regardless.
+    // unref() so the timer does not itself keep the process alive.
+    const forceExit = setTimeout(() => {
+      console.error(
+        `Shutdown did not complete within ${SHUTDOWN_TIMEOUT_MS}ms, exiting`
+      )
+      process.exit(1)
+    }, SHUTDOWN_TIMEOUT_MS)
+    forceExit.unref()
+
+    server
+      .stop()
+      .then(() => {
+        clearTimeout(forceExit)
+        process.exit(0)
+      })
+      .catch((err) => {
+        console.error('Error during shutdown:', err)
+        clearTimeout(forceExit)
+        process.exit(1)
+      })
+  }
+
+  const shutdown = (signal: NodeJS.Signals) => {
+    // A repeated signal means the caller is no longer waiting for an orderly
+    // shutdown, so stop waiting for one.
+    if (shuttingDown) {
+      process.exit(128 + (signal === 'SIGINT' ? 2 : 15))
+    }
+    stopAndExit(`${signal} received`)
+  }
+
+  const sigterm = () => shutdown('SIGTERM')
+  const sigint = () => shutdown('SIGINT')
+  const handlers = { sigterm, sigint }
+  currentShutdownHandlers = handlers
+  process.on('SIGTERM', sigterm)
+  process.on('SIGINT', sigint)
+
+  // A restart from the admin UI relies on the process supervisor to bring
+  // the server back, and must stop it the same way a signal does so plugins
+  // and providers get to close. Like the signal handlers, it belongs to the
+  // most recently constructed Server only.
+  return () => {
+    if (currentShutdownHandlers === handlers && !shuttingDown) {
+      stopAndExit('Restart requested')
+    }
+  }
 }
 
 function installProcessErrorHandlers(app: any) {
@@ -954,7 +1092,7 @@ function createServer(app: any, cb: (err: any, server?: any) => void) {
 function startRedirectToSsl(
   port: number,
   redirectPort: number,
-  cb: (e: unknown, server: any) => void
+  cb: (e: unknown, server: any, connections: ConnectionTracker) => void
 ) {
   const redirectApp = express()
   redirectApp.use((req: Request, res: Response) => {
@@ -962,9 +1100,10 @@ function startRedirectToSsl(
     res.redirect(`https://${host}:${redirectPort}${req.path}`)
   })
   const server = http.createServer(redirectApp)
+  const connections = new ConnectionTracker(server)
   server.listen(port, () => {
     console.log(`Redirect server running on port ${port.toString()}`)
-    cb(null, server)
+    cb(null, server, connections)
   })
 }
 

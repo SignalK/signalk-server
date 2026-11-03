@@ -27,6 +27,13 @@ export const CHART_TILE_REGEX = /\/charts\/[^?]+\/\d+\/\d+\/\d+$/
 
 export const skUuid = () => `${uuidv4()}`
 
+const sendInvalidId = (res: Response, resId: string) =>
+  res.status(400).json({
+    state: 'FAILED',
+    statusCode: 400,
+    message: `Invalid resource id provided (${resId})`
+  })
+
 interface DefaultProviders {
   [index: string]: string
 }
@@ -96,7 +103,9 @@ export class ResourcesApi {
     if (!provider) {
       throw new Error(`Error registering provider ${pluginId}!`)
     }
-    if (!provider.type) {
+    // Providers commonly map the type to a storage location, so it must be
+    // a single path segment like a resource id.
+    if (!provider.type || !validate.resourceId(provider.type)) {
       throw new Error(`Invalid ResourceProvider.type value!`)
     }
 
@@ -170,6 +179,11 @@ export class ResourcesApi {
     providerId?: string
   ) {
     debug(`** getResource(${resType}, ${resId})`)
+    if (!validate.resourceId(resId)) {
+      return Promise.reject(
+        new Error(`Invalid resource id provided (${resId})`)
+      )
+    }
 
     const provider = this.checkForProvider(resType, providerId)
     if (!provider) {
@@ -216,10 +230,10 @@ export class ResourcesApi {
         )
       }
       validate.resource(resType as SignalKResourceType, resId, 'PUT', data)
-    } else {
-      if (!resId) {
-        return Promise.reject(new Error(`No resource id provided!`))
-      }
+    } else if (!validate.resourceId(resId)) {
+      return Promise.reject(
+        new Error(`Invalid resource id provided (${resId})`)
+      )
     }
 
     const provider = await this.getProviderForWrite(resType, resId, providerId)
@@ -250,6 +264,11 @@ export class ResourcesApi {
     providerId?: string
   ) {
     debug(`** deleteResource(${resType}, ${resId})`)
+    if (!validate.resourceId(resId)) {
+      return Promise.reject(
+        new Error(`Invalid resource id provided (${resId})`)
+      )
+    }
 
     let provider: string | undefined = undefined
     if (providerId) {
@@ -565,6 +584,11 @@ export class ResourcesApi {
           return
         }
 
+        if (!validate.resourceId(req.params.resourceId)) {
+          sendInvalidId(res, req.params.resourceId)
+          return
+        }
+
         try {
           if (req.query.provider) {
             const provider = this.checkForProvider(
@@ -611,6 +635,11 @@ export class ResourcesApi {
 
         if (!this.hasRegisteredProvider(req.params.resourceType)) {
           next()
+          return
+        }
+
+        if (!validate.resourceId(req.params.resourceId)) {
+          sendInvalidId(res, req.params.resourceId)
           return
         }
 
@@ -777,6 +806,11 @@ export class ResourcesApi {
           id = skUuid()
         }
 
+        if (typeof id !== 'string' || !validate.resourceId(id)) {
+          sendInvalidId(res, id)
+          return
+        }
+
         try {
           await this.resProvider[req.params.resourceType]
             ?.get(provider)
@@ -817,6 +851,11 @@ export class ResourcesApi {
           return
         }
 
+        if (!validate.resourceId(req.params.resourceId)) {
+          sendInvalidId(res, req.params.resourceId)
+          return
+        }
+
         if (!updateAllowed(req)) {
           res.status(403).json(Responses.unauthorised)
           return
@@ -830,11 +869,7 @@ export class ResourcesApi {
             isValidId = validate.uuid(req.params.resourceId)
           }
           if (!isValidId) {
-            res.status(400).json({
-              state: 'FAILED',
-              statusCode: 400,
-              message: `Invalid resource id provided (${req.params.resourceId})`
-            })
+            sendInvalidId(res, req.params.resourceId)
             return
           }
 
@@ -903,6 +938,11 @@ export class ResourcesApi {
 
         if (!this.hasRegisteredProvider(req.params.resourceType)) {
           next()
+          return
+        }
+
+        if (!validate.resourceId(req.params.resourceId)) {
+          sendInvalidId(res, req.params.resourceId)
           return
         }
 

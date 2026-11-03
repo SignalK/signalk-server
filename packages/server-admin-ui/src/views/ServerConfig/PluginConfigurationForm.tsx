@@ -445,9 +445,6 @@ export default function PluginConfigurationForm({
   // Build the schema object with proper types
   const formSchema: RJSFSchema = {
     type: 'object',
-    ...(plugin.statusMessage && {
-      description: `Status: ${plugin.statusMessage}`
-    }),
     properties: {
       configuration: {
         // Spread rather than cherry-pick: forwards conditional keywords and `required`.

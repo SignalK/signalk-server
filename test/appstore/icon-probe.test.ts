@@ -225,7 +225,7 @@ describe('appstore/icon-probe probeIconUrl', () => {
     )
   })
 
-  it('skips probe and returns absolute URL untouched', async () => {
+  it('resolves absolute URLs to null without fetching them', async () => {
     const cache = createIconProbeCache(tmpDir())
     let called = false
     await withStubbedFetch(
@@ -234,13 +234,18 @@ describe('appstore/icon-probe probeIconUrl', () => {
         return { ok: true }
       },
       async () => {
-        const r = await probeIconUrl(
-          'x',
-          '1',
+        for (const declared of [
           'https://example.com/icon.svg',
-          cache
-        )
-        expect(r).to.equal('https://example.com/icon.svg')
+          'http://127.0.0.1:3000/icon.png',
+          '//example.com/icon.svg',
+          'data:image/svg+xml,<svg/>'
+        ]) {
+          expect(
+            await probeIconUrl('x', '1', declared, cache),
+            declared
+          ).to.equal(null)
+          expect(cache.get('x', '1', declared), declared).to.equal(undefined)
+        }
         expect(called).to.equal(false)
       }
     )

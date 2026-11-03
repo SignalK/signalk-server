@@ -19,11 +19,40 @@ import Parser from '@signalk/nmea0183-signalk'
 import { appendChecksum } from '@signalk/nmea0183-utilities'
 import type { CreateDebug, DebugLogger } from './types'
 
+const DEFAULT_SENTENCE_EVENT = 'nmea0183'
+
+function stripTagBlock(msg: string): string | undefined {
+  return msg.charAt(0) === '\\' ? msg.split('\\')[2] : msg
+}
+
 function isN2KOver0183(msg: string): boolean {
-  const sentence = msg.charAt(0) === '\\' ? msg.split('\\')[2] : msg
+  const sentence = stripTagBlock(msg)
   return sentence
     ? sentence.startsWith('$PCDIN,') || sentence.startsWith('$MXPGN,')
     : false
+}
+
+// The sentence id follows the start delimiter and the two-letter talker id:
+// "RMC" in "$GPRMC,..." and "VDM" in "!AIVDM,...".
+function sentenceId(msg: string): string | undefined {
+  return stripTagBlock(msg)?.substring(3, 6)
+}
+
+// canboatjs before canboat/canboatjs#520 reads $MXPGN in bus order unless
+// littleEndianMXPGN is set; later versions read ShipModul order unless
+// mxpgnBusOrder is set or littleEndianMXPGN is explicitly false. Passing
+// both options, consistent with each other, decodes the same either way.
+// A connection that sets neither keeps the bus order it was saved with; the
+// admin UI stores ShipModul order explicitly on new connections.
+function mxpgnByteOrderOptions(options: Nmea0183ToSignalKOptions): {
+  mxpgnBusOrder: boolean
+  littleEndianMXPGN: boolean
+} {
+  const busOrder =
+    typeof options.mxpgnBusOrder === 'boolean'
+      ? options.mxpgnBusOrder
+      : options.littleEndianMXPGN !== true
+  return { mxpgnBusOrder: busOrder, littleEndianMXPGN: !busOrder }
 }
 
 interface Nmea0183ToSignalKOptions {
@@ -34,8 +63,11 @@ interface Nmea0183ToSignalKOptions {
   providerId: string
   createDebug?: CreateDebug
   suppress0183event?: boolean
+  nmea0183eventSentences?: string[]
   appendChecksum?: boolean
   sentenceEvent?: string | string[]
+  mxpgnBusOrder?: boolean
+  littleEndianMXPGN?: boolean
   [key: string]: unknown
 }
 
@@ -73,7 +105,8 @@ export default class Nmea0183ToSignalK extends Transform {
       const { FromPgn } = require('@canboat/canboatjs')
       const n2kParser = new FromPgn({
         ...this.options,
-        useCamelCompat: this.options.useCamelCompat ?? true
+        useCamelCompat: this.options.useCamelCompat ?? true,
+        ...mxpgnByteOrderOptions(this.options)
       })
       n2kParser.on('warning', (pgn: { pgn: number }, warning: string) => {
         this.debug.enabled && this.debug(`[warning] ${pgn.pgn} ${warning}`)
@@ -89,6 +122,7 @@ export default class Nmea0183ToSignalK extends Transform {
   private readonly n2kState: Record<string, unknown> = {}
   private readonly app: Nmea0183ToSignalKOptions['app']
   private readonly sentenceEvents: string[]
+  private readonly defaultEventSentences: Set<string> | undefined
   private readonly appendChecksumFlag: boolean
   private readonly options: Nmea0183ToSignalKOptions
 
@@ -104,7 +138,18 @@ export default class Nmea0183ToSignalK extends Transform {
     this.app = options.app
     this.appendChecksumFlag = options.appendChecksum ?? false
 
-    this.sentenceEvents = options.suppress0183event ? [] : ['nmea0183']
+    this.sentenceEvents = options.suppress0183event
+      ? []
+      : [DEFAULT_SENTENCE_EVENT]
+    // An empty list is the user's choice to send no sentences.
+    this.defaultEventSentences = Array.isArray(options.nmea0183eventSentences)
+      ? new Set(
+          options.nmea0183eventSentences
+            .filter((id): id is string => typeof id === 'string')
+            .map((id) => id.trim().toUpperCase())
+            .filter((id) => id.length > 0)
+        )
+      : undefined
 
     if (options.sentenceEvent) {
       if (Array.isArray(options.sentenceEvent)) {
@@ -159,7 +204,13 @@ export default class Nmea0183ToSignalK extends Transform {
         if (this.appendChecksumFlag) {
           sentence = appendChecksum(sentence)
         }
+        const suppressDefaultEvent =
+          this.defaultEventSentences !== undefined &&
+          !this.defaultEventSentences.has(sentenceId(sentence) ?? '')
         this.sentenceEvents.forEach((eventName) => {
+          if (suppressDefaultEvent && eventName === DEFAULT_SENTENCE_EVENT) {
+            return
+          }
           this.app.emit(eventName, sentence)
           this.app.signalk.emit(eventName, sentence)
         })

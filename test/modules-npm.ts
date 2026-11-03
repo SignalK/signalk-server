@@ -70,3 +70,63 @@ describe('runNpm allow-scripts', () => {
     expect(args).to.include('--ignore-scripts')
   })
 })
+
+describe('runNpm package names', () => {
+  const config = { configPath: '/tmp', name: 'signalk-server' } as Config
+
+  const run = (name: string, version: string | null) => {
+    const originalSpawn: SpawnMock = childProcess.spawn
+    const result = {
+      args: undefined as string[] | undefined,
+      errors: [] as string[],
+      codes: [] as number[]
+    }
+    childProcess.spawn = ((_cmd: string, spawnArgs: string[]) => {
+      result.args = spawnArgs
+      return {
+        stdout: { on: () => {} },
+        stderr: { on: () => {} },
+        on: () => {}
+      } as unknown as ChildProcess
+    }) as SpawnMock
+    try {
+      runNpm(
+        config,
+        name,
+        version,
+        'install',
+        () => {},
+        (err) => result.errors.push(err.message),
+        (code) => result.codes.push(code)
+      )
+    } finally {
+      childProcess.spawn = originalSpawn
+    }
+    return result
+  }
+
+  for (const name of [
+    '../evil',
+    'file:./evil',
+    'https://x/evil.tgz',
+    'git+https://x/evil.git',
+    'evil & calc'
+  ]) {
+    it(`rejects ${name} without running npm`, () => {
+      const result = run(name, null)
+      expect(result.args).to.equal(undefined)
+      expect(result.errors).to.deep.equal([`Invalid package name: ${name}`])
+      expect(result.codes).to.deep.equal([-1])
+    })
+  }
+
+  it('never lets a name that looks like an option reach npm as one', () => {
+    const { args } = run('--global', null)
+    expect(args?.slice(-3)).to.deep.equal(['install', '--', '--global'])
+  })
+
+  it('accepts scoped names', () => {
+    const { args } = run('@scope/some-plugin', '1.2.3')
+    expect(args?.slice(-2)).to.deep.equal(['--', '@scope/some-plugin@1.2.3'])
+  })
+})

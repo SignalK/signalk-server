@@ -239,7 +239,11 @@ export interface BLEApi {
   /** Raw GATT connection (escape hatch) */
   connectGATT(mac: string, pluginId: string): Promise<BLEGattConnection>
 
-  /** Release a GATT claim */
+  /**
+   * Release a GATT claim. A claim whose subscribeGATT() or connectGATT() call
+   * has not returned yet is cancelled: its connection is closed as soon as it
+   * comes up, and the call rejects.
+   */
   releaseGATTDevice(mac: string, pluginId: string): Promise<void>
 
   /** Current GATT claims: MAC → pluginId */

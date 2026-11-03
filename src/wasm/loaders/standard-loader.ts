@@ -16,6 +16,7 @@ import { updateResourceProviderInstance } from '../bindings/resource-provider'
 import { updateWeatherProviderInstance } from '../bindings/weather-provider'
 import { updateRadarProviderInstance } from '../bindings/radar-provider'
 import { getNodeFetch } from '../utils/fetch-wrapper'
+import { derivePluginId } from '../../pluginid'
 
 const debug = Debug('signalk:wasm:loader:standard')
 
@@ -27,20 +28,20 @@ const { WASI } = require('node:wasi')
  * Load a standard WASI P1 plugin (AssemblyScript or Rust library)
  */
 export async function loadStandardPlugin(
-  pluginId: string,
+  packageName: string,
   wasmPath: string,
   wasmBuffer: Buffer,
   vfsRoot: string,
   capabilities: WasmCapabilities,
   app?: any
 ): Promise<WasmPluginInstance> {
-  debug(`Loading standard WASM plugin: ${pluginId} from ${wasmPath}`)
+  debug(`Loading standard WASM plugin: ${packageName} from ${wasmPath}`)
 
   // Create WASI instance with VFS isolation
-  debug(`Creating WASI instance for ${pluginId}`)
+  debug(`Creating WASI instance for ${packageName}`)
   const wasi = new WASI({
     version: 'preview1',
-    env: { PLUGIN_ID: pluginId },
+    env: { PLUGIN_ID: packageName },
     args: [],
     preopens: { '/': vfsRoot }
   })
@@ -99,7 +100,8 @@ export async function loadStandardPlugin(
 
   // Create environment imports
   const envImports = createEnvImports({
-    pluginId,
+    pluginId: derivePluginId(packageName),
+    packageName,
     capabilities,
     app,
     memoryRef,
@@ -158,7 +160,7 @@ export async function loadStandardPlugin(
   let rawExports: any
 
   if (isAssemblyScriptPlugin) {
-    debug(`Using AssemblyScript loader for ${pluginId}`)
+    debug(`Using AssemblyScript loader for ${packageName}`)
 
     asLoaderInstance = await loader.instantiate(module, {
       wasi_snapshot_preview1: wasiImports.wasi_snapshot_preview1 || wasiImports,
@@ -196,10 +198,10 @@ export async function loadStandardPlugin(
 
   // Initialize based on plugin type
   if (isRustPlugin) {
-    debug(`Initializing Rust command plugin: ${pluginId}`)
+    debug(`Initializing Rust command plugin: ${packageName}`)
     wasi.start(instance)
   } else if (isRustLibraryPlugin) {
-    debug(`Initialized Rust library plugin: ${pluginId}`)
+    debug(`Initialized Rust library plugin: ${packageName}`)
     // Initialize WASI runtime without calling _start (for library plugins)
     // This sets up fd_write and other syscalls properly
     if (typeof wasi.initialize === 'function') {
@@ -212,9 +214,9 @@ export async function loadStandardPlugin(
       rawExports._initialize()
     }
   } else if (isAssemblyScriptPlugin) {
-    debug(`Initialized AssemblyScript plugin: ${pluginId}`)
+    debug(`Initialized AssemblyScript plugin: ${packageName}`)
   } else {
-    throw new Error(`Unknown WASM plugin format for ${pluginId}`)
+    throw new Error(`Unknown WASM plugin format for ${packageName}`)
   }
 
   // Create normalized export interface
@@ -237,7 +239,7 @@ export async function loadStandardPlugin(
   }
 
   const pluginInstance: WasmPluginInstance = {
-    pluginId,
+    pluginId: packageName,
     wasmPath,
     vfsRoot,
     capabilities,
@@ -251,11 +253,11 @@ export async function loadStandardPlugin(
   }
 
   // Update provider references
-  updateResourceProviderInstance(pluginId, pluginInstance)
-  updateWeatherProviderInstance(pluginId, pluginInstance)
-  updateRadarProviderInstance(pluginId, pluginInstance)
+  updateResourceProviderInstance(packageName, pluginInstance)
+  updateWeatherProviderInstance(packageName, pluginInstance)
+  updateRadarProviderInstance(packageName, pluginInstance)
 
-  debug(`Successfully loaded WASM plugin: ${pluginId}`)
+  debug(`Successfully loaded WASM plugin: ${packageName}`)
   return pluginInstance
 }
 

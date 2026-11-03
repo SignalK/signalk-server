@@ -134,7 +134,7 @@ npx asc assembly/index.ts --target release
 {
   "name": "my-wasm-plugin",
   "version": "0.1.0",
-  "keywords": ["signalk-wasm-plugin"],
+  "keywords": ["signalk-node-server-plugin", "signalk-wasm-plugin"],
   "wasmManifest": "plugin.wasm",
   "wasmCapabilities": {
     "dataRead": true,
@@ -149,6 +149,8 @@ npx asc assembly/index.ts --target release
 > The **`wasmManifest`** field is the key identifier that tells Signal K this is a WASM plugin (not a Node.js plugin). It must point to your compiled `.wasm` file.
 >
 > The package **name can be anything** - scoped (`@myorg/my-plugin`) or unscoped (`my-wasm-plugin`). Choose a name that makes sense for your plugin and avoids conflicts on npm.
+>
+> [What Makes a WASM Plugin?](README.md#what-makes-a-wasm-plugin) explains the fields and keywords, and [example-hello-assemblyscript](https://github.com/SignalK/signalk-server/blob/master/examples/wasm-plugins/example-hello-assemblyscript/package.json) has a complete manifest.
 
 ## Step 6: Test Install
 
@@ -161,7 +163,7 @@ Symlinking your plugin directory allows you to make changes and rebuild without 
 cd ~/.signalk/node_modules
 ln -s /path/to/your/my-wasm-plugin my-wasm-plugin
 
-# Now any changes you make and rebuild will be picked up on server restart
+# Now a rebuild is picked up when you disable and re-enable the plugin
 ```
 
 **Option 2: Direct Copy**
@@ -184,7 +186,7 @@ npm install -g ./my-wasm-plugin-1.0.0.tgz
 npm install -g my-wasm-plugin
 ```
 
-**Note**: Symlinking is the most efficient method for development - changes are picked up on server restart without copying files. Use npm install for production deployments or when distributing plugins.
+**Note**: Symlinking is the most efficient method for development - a rebuild is picked up by disabling and re-enabling the plugin, without copying files. Use npm install for production deployments or when distributing plugins.
 
 **Important**: If your plugin includes static files (like a web UI in the `public/` folder), make sure to copy that folder as well. Static files are automatically served at `/plugins/your-plugin-id/` when the plugin is loaded.
 
@@ -215,7 +217,7 @@ After installing your plugin, verify it appears in the Admin UI:
      ```
 
 4. **Troubleshooting**:
-   - If plugin doesn't appear: Check `package.json` has the `signalk-wasm-plugin` keyword and `wasmManifest` field
+   - If plugin doesn't appear: Check `package.json` has the `signalk-node-server-plugin` or `signalk-wasm-plugin` keyword (publish with both, see [What Makes a WASM Plugin?](README.md#what-makes-a-wasm-plugin)) and the `wasmManifest` field
    - If configuration form is empty: Verify `schema()` export returns valid JSON Schema
    - If settings don't persist: Check file permissions on `~/.signalk/plugin-config-data/`
 
@@ -589,7 +591,6 @@ See [AssemblyScript documentation](https://www.assemblyscript.org/) for details.
 Check that:
 
 - `wasmManifest` points to correct file
-- `signalk-wasm-plugin` keyword is present
 - WASM binary is valid: `file plugin.wasm`
 
 ### Compilation errors

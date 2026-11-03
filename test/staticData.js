@@ -121,6 +121,28 @@ describe('Static Data', () => {
     self.should.have.nested.property('communication.callsignVhf')
   })
 
+  it('allows only GPS offsets from the GNSS offset corrector', async function () {
+    const delta = JSON.parse(JSON.stringify(testDelta))
+    delta.context = 'vessels.self'
+    delta.updates[0]['$source'] = 'gnssOffsetCorrector'
+    await doSendADelta(delta)
+
+    const fullTree = theServer.app.deltaCache.buildFull(null, [])
+
+    const self = _.get(fullTree, fullTree.self)
+
+    self.should.have.nested.property('sensors.gps.fromBow')
+    self.should.have.nested.property('sensors.gps.fromCenter')
+
+    self.should.not.have.property('mmsi')
+    self.should.not.have.property('name')
+    self.should.not.have.nested.property('design.draft')
+    self.should.not.have.nested.property('design.aisShipType')
+    self.should.not.have.nested.property('design.beam')
+    self.should.not.have.nested.property('design.length')
+    self.should.not.have.nested.property('communication.callsignVhf')
+  })
+
   it('allows static updates from defaults', async function () {
     const delta = JSON.parse(JSON.stringify(testDelta))
     delta.context = 'vessels.self'

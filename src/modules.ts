@@ -17,7 +17,6 @@
 
 import { spawn } from 'child_process'
 import fs from 'fs'
-import _ from 'lodash'
 import path from 'path'
 import semver, { SemVer } from 'semver'
 import { atomicWriteFileSync } from './atomicWrite'
@@ -133,7 +132,7 @@ function findModulesInDir(dir: string, keyword: string): ModuleData[] {
 }
 
 // Extract unique directory paths from app object.
-function getModulePaths(config: Config) {
+export function getModulePaths(config: Config) {
   // appPath is the app working directory.
   const { appPath, configPath } = config
   return (appPath === configPath ? [appPath] : [configPath, appPath]).map(
@@ -148,17 +147,32 @@ const getModuleSortName = (x: ModuleData) =>
 const priorityPrefix = (a: ModuleData, b: ModuleData) =>
   getModuleSortName(a).localeCompare(getModuleSortName(b))
 
+function newerModule(a: ModuleData, b: ModuleData) {
+  const versionA = (a.metadata as Package).version
+  const versionB = (b.metadata as Package).version
+  if (semver.valid(versionA) && semver.valid(versionB)) {
+    return semver.gt(versionB, versionA) ? b : a
+  }
+  return a
+}
+
 // Searches for installed modules that contain `keyword`.
+// A module can be installed both in the config directory (by the appstore)
+// and in the app directory (shipped with the server). Use the newest
+// version; when the versions are the same or can't be compared, the copy
+// in the config directory wins, as it comes first.
 export function modulesWithKeyword(config: Config, keyword: string) {
-  return _.uniqBy(
-    // _.flatten since values are inside an array. [[modules...], [modules...]]
-    _.flatten(
-      getModulePaths(config).map((pathOption) =>
-        findModulesInDir(pathOption, keyword)
+  const modules = new Map<string, ModuleData>()
+  getModulePaths(config).forEach((pathOption) => {
+    findModulesInDir(pathOption, keyword).forEach((moduleData) => {
+      const other = modules.get(moduleData.module)
+      modules.set(
+        moduleData.module,
+        other ? newerModule(other, moduleData) : moduleData
       )
-    ),
-    (moduleData) => moduleData.module
-  ).sort(priorityPrefix)
+    })
+  })
+  return Array.from(modules.values()).sort(priorityPrefix)
 }
 function installModule(
   config: Config,
@@ -169,6 +183,44 @@ function installModule(
   onClose: (code: number) => any
 ) {
   runNpm(config, name, version, 'install', onData, onErr, onClose)
+}
+
+// Bounds how long a plugin's stop() may hold up its removal: installs and
+// removals run one at a time, so a stop() that never settles would hold up
+// every one queued behind it.
+const STOP_BEFORE_REMOVE_TIMEOUT_MS = 10 * 1000
+
+// npm removes a plugin's package but not its running instance, which keeps
+// going until the next restart, so stop it while its code is still loaded
+// and can release what it holds (containers, sockets, timers). Never
+// rejects: a failed or overdue stop() is logged and the removal goes ahead.
+export async function stopBeforeRemove(
+  stopPlugin: (id: string) => Promise<void>,
+  pluginId: string | undefined,
+  timeoutMs: number = STOP_BEFORE_REMOVE_TIMEOUT_MS
+): Promise<void> {
+  if (!pluginId) {
+    return
+  }
+  let timer: NodeJS.Timeout | undefined
+  const timeout = new Promise<void>((resolve) => {
+    timer = setTimeout(() => {
+      console.error(
+        `${pluginId}: stop() did not finish within ${timeoutMs}ms, removing anyway`
+      )
+      resolve()
+    }, timeoutMs)
+  })
+  const stopped = Promise.resolve()
+    .then(() => stopPlugin(pluginId))
+    .catch((err: unknown) => {
+      console.error(`${pluginId}: stop() failed before removal:`, err)
+    })
+  try {
+    await Promise.race([stopped, timeout])
+  } finally {
+    clearTimeout(timer)
+  }
 }
 
 function removeModule(
@@ -315,6 +367,12 @@ export function restoreModules(
   runNpm(config, null, null, 'remove', onData, onErr, onClose)
 }
 
+// An npm package name: an optional scope and URL-safe lowercase characters.
+// Anything else (a path, URL or git spec) would make npm install from
+// outside the registry.
+const PACKAGE_NAME_PATTERN =
+  /^(@[a-z0-9-~][a-z0-9-._~]*\/)?[a-z0-9-~][a-z0-9-._~]*$/
+
 export function runNpm(
   config: Config,
   name: any,
@@ -324,6 +382,11 @@ export function runNpm(
   onErr: (err: Error) => any,
   onClose: (code: number) => any
 ) {
+  if (name && !PACKAGE_NAME_PATTERN.test(name)) {
+    onErr(new Error('Invalid package name: ' + name))
+    onClose(-1)
+    return
+  }
   if (version && version !== '' && !semver.valid(version)) {
     onErr(new Error('Invalid version: ' + version))
     onClose(-1)
@@ -356,8 +419,10 @@ export function runNpm(
       : [command, '-g']
     : ['--save', '--ignore-scripts', command]
 
+  // npm allows a name to start with a hyphen, so the package follows -- to
+  // keep npm from ever reading it as an option
   if (packageString) {
-    npmArgs.push(packageString)
+    npmArgs.push('--', packageString)
   }
 
   if (isTheServerModule(name, config)) {
@@ -574,6 +639,14 @@ async function fetchDistTagsForPackages(
   return result
 }
 
+/**
+ * The dist-tags of the last completed fetchDistTagsForPackages sweep,
+ * without waiting for a new one.
+ */
+function cachedDistTags(): Record<string, NpmDistTags> {
+  return distTagsCache.data
+}
+
 function doFetchDistTags() {
   return fetch(
     'https://registry.npmjs.org/-/package/signalk-server/dist-tags',
@@ -685,13 +758,16 @@ module.exports = {
   modulesWithKeyword,
   installModule,
   removeModule,
+  stopBeforeRemove,
   isTheServerModule,
   findModulesWithKeyword,
   fetchDistTagsForPackages,
+  cachedDistTags,
   getLatestServerVersion,
   checkForNewServerVersion,
   getAuthor,
   getKeywords,
+  getModulePaths,
   restoreModules,
   importOrRequire,
   runNpm,

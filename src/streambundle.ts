@@ -148,13 +148,8 @@ export class StreamBundle implements IStreamBundle {
       let result = this.buses[path]
       if (!result) {
         result = this.buses[path] = new Bacon.Bus()
-        // Don't double-emit on `keys` if getUnfilteredBus(path) already
-        // announced it. Value deltas reach the unfiltered bus first, so
-        // without this guard every value path is announced twice and
-        // subscriptionmanager's keys listener builds two delivery chains
-        // for it, delivering each delta to the client twice.
         if (!this.unfilteredBuses[path]) {
-          this.keys.push(path)
+          this.announce(path)
         }
       }
       return result
@@ -226,15 +221,26 @@ export class StreamBundle implements IStreamBundle {
       let result = this.unfilteredBuses[path]
       if (!result) {
         result = this.unfilteredBuses[path] = new Bacon.Bus()
-        // Don't double-emit on `keys` if getBus(path) already announced it.
         if (!this.buses[path]) {
-          this.keys.push(path)
+          this.announce(path)
         }
       }
       return result
     } else {
       return this.unfilteredAllPathsBus
     }
+  }
+
+  // Every path has buses in both families from the moment it is announced,
+  // whichever family saw it first. Subscribers scan only the family they
+  // read and learn of later paths only from `keys`, so both scans must see
+  // every path. The single announcement matters too: each one makes the
+  // keys listeners build a delivery chain, and a second would deliver each
+  // delta twice.
+  private announce(path: Path) {
+    this.buses[path] ??= new Bacon.Bus()
+    this.unfilteredBuses[path] ??= new Bacon.Bus()
+    this.keys.push(path)
   }
 
   getAvailablePaths() {

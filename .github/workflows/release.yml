@@ -23,9 +23,7 @@ on:
         type: boolean
         default: true
 
-permissions:
-  id-token: write # Required for OIDC
-  contents: read
+permissions: {}
 
 env:
   GHCR_REGISTRY: ghcr.io
@@ -34,11 +32,14 @@ env:
 
 jobs:
   build_and_publish:
+    permissions:
+      contents: read
+      id-token: write
     if: github.repository == 'SignalK/signalk-server'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: '24.x'
           registry-url: 'https://registry.npmjs.org'
@@ -58,48 +59,6 @@ jobs:
             cd packages/server-admin-ui-dependencies
             npm publish --access public
           fi
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-      - name: Publish server-admin-ui
-        run: |
-          LOCAL_VERSION=$(awk '/"version":/{gsub(/("|",)/,"",$2);print $2}' packages/server-admin-ui/package.json)
-          if ! npm view @signalk/server-admin-ui@$LOCAL_VERSION version &>/dev/null; then
-            cd packages/server-admin-ui
-            npm publish --access public
-          fi
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-      - name: Publish server-api
-        run: |
-          LOCAL_VERSION=$(awk '/"version":/{gsub(/("|",)/,"",$2);print $2}' packages/server-api/package.json)
-          if ! npm view @signalk/server-api@$LOCAL_VERSION version &>/dev/null; then
-            cd packages/server-api
-            npm publish --access public
-          fi
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-      - name: Publish streams
-        run: |
-          LOCAL_VERSION=$(awk '/"version":/{gsub(/("|",)/,"",$2);print $2}' packages/streams/package.json)
-          if ! npm view @signalk/streams@$LOCAL_VERSION version &>/dev/null; then
-            cd packages/streams
-            npm publish --access public
-          fi
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-      - name: Publish resources-provider
-        run: |
-          LOCAL_VERSION=$(awk '/"version":/{gsub(/("|",)/,"",$2);print $2}' packages/resources-provider-plugin/package.json)
-          if ! npm view @signalk/resources-provider@$LOCAL_VERSION version &>/dev/null; then
-            cd packages/resources-provider-plugin
-            npm publish --access public
-          fi
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Publish course-provider
         run: |
@@ -118,8 +77,38 @@ jobs:
             cd packages/path-metadata
             npm publish --access public
           fi
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish server-admin-ui
+        run: |
+          LOCAL_VERSION=$(awk '/"version":/{gsub(/("|",)/,"",$2);print $2}' packages/server-admin-ui/package.json)
+          if ! npm view @signalk/server-admin-ui@$LOCAL_VERSION version &>/dev/null; then
+            cd packages/server-admin-ui
+            npm publish --access public
+          fi
+
+      - name: Publish server-api
+        run: |
+          LOCAL_VERSION=$(awk '/"version":/{gsub(/("|",)/,"",$2);print $2}' packages/server-api/package.json)
+          if ! npm view @signalk/server-api@$LOCAL_VERSION version &>/dev/null; then
+            cd packages/server-api
+            npm publish --access public
+          fi
+
+      - name: Publish streams
+        run: |
+          LOCAL_VERSION=$(awk '/"version":/{gsub(/("|",)/,"",$2);print $2}' packages/streams/package.json)
+          if ! npm view @signalk/streams@$LOCAL_VERSION version &>/dev/null; then
+            cd packages/streams
+            npm publish --access public
+          fi
+
+      - name: Publish resources-provider
+        run: |
+          LOCAL_VERSION=$(awk '/"version":/{gsub(/("|",)/,"",$2);print $2}' packages/resources-provider-plugin/package.json)
+          if ! npm view @signalk/resources-provider@$LOCAL_VERSION version &>/dev/null; then
+            cd packages/resources-provider-plugin
+            npm publish --access public
+          fi
 
       - name: Publish typedoc-signalk-theme
         run: |
@@ -128,8 +117,6 @@ jobs:
             cd packages/typedoc-theme
             npm publish --access public
           fi
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Publish assemblyscript-plugin-sdk
         run: |
@@ -138,8 +125,6 @@ jobs:
             cd packages/assemblyscript-plugin-sdk
             npm publish --access public
           fi
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Set tag variable
         id: vars
@@ -153,12 +138,11 @@ jobs:
             else
               npm publish
           fi
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
   release:
     permissions:
       contents: write
+      pull-requests: read
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     needs: build_and_publish
@@ -169,7 +153,7 @@ jobs:
         with:
           ignorePreReleases: 'true'
         env:
-          GITHUB_TOKEN: ${{ secrets.RELEASE_PAT }}
+          GITHUB_TOKEN: ${{ github.token }}
 
       - name: Create Release (archived, need to be updated to use the new action)
         uses: actions/create-release@v1
@@ -179,18 +163,42 @@ jobs:
           prerelease: ${{ contains(github.ref, 'beta') }}
           body: ${{steps.github_release.outputs.changelog}}
         env:
-          GITHUB_TOKEN: ${{ secrets.RELEASE_PAT }}
+          GITHUB_TOKEN: ${{ github.token }}
 
   prepare:
     name: Prepare matrices
     needs: [build_and_publish]
     if: ${{ startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     outputs:
       build_matrix: ${{ steps.matrix.outputs.build_matrix }}
       variant_matrix: ${{ steps.matrix.outputs.variant_matrix }}
       any_enabled: ${{ steps.matrix.outputs.any_enabled }}
     steps:
+      # The Docker images install the release from the npm registry, as end
+      # users do, so the release and its whole dependency tree must resolve.
+      - name: Wait for signalk-server on npm
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          version="${GITHUB_REF#refs/*/v}"
+          check_dir="$RUNNER_TEMP/npm-install-check"
+          mkdir -p "$check_dir"
+          deadline=$((SECONDS + NPM_WAIT_TIMEOUT_SECONDS))
+          until npm view "signalk-server@$version" version 2>/dev/null | grep -qxF "$version" \
+            && npm install --dry-run --prefer-online --no-audit --no-fund \
+              --prefix "$check_dir" "signalk-server@$version" >/dev/null 2>&1; do
+            if (( SECONDS >= deadline )); then
+              echo "signalk-server@$version not installable from npm after ${NPM_WAIT_TIMEOUT_SECONDS}s" >&2
+              exit 1
+            fi
+            echo "Waiting for signalk-server@$version on npm..."
+            sleep "$NPM_WAIT_INTERVAL_SECONDS"
+          done
+        env:
+          NPM_WAIT_TIMEOUT_SECONDS: 900
+          NPM_WAIT_INTERVAL_SECONDS: 15
       - name: Checkout
         uses: actions/checkout@v7
       - name: Compute matrices
@@ -290,6 +298,9 @@ jobs:
     needs: [prepare]
     if: needs.prepare.outputs.any_enabled == 'true'
     runs-on: ${{ matrix.vm }}
+    permissions:
+      contents: read
+      packages: write
     strategy:
       fail-fast: false
       matrix:
@@ -304,7 +315,7 @@ jobs:
         with:
           registry: ${{ env.GHCR_REGISTRY }}
           username: ${{ github.actor }}
-          password: ${{ secrets.GHCR_PAT }}
+          password: ${{ github.token }}
       - name: Set TAG for build-args
         id: vars
         run: echo "tag=${GITHUB_REF#refs/*/v}" >> $GITHUB_OUTPUT
@@ -326,6 +337,9 @@ jobs:
     needs: [prepare, build]
     if: ${{ !cancelled() && needs.prepare.outputs.any_enabled == 'true' && needs.build.result == 'success' }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     strategy:
       fail-fast: false
       matrix:
@@ -354,7 +368,7 @@ jobs:
         with:
           registry: ${{ env.GHCR_REGISTRY }}
           username: ${{ github.actor }}
-          password: ${{ secrets.GHCR_PAT }}
+          password: ${{ github.token }}
       - name: Compute manifest sources
         id: sources
         env:
@@ -397,6 +411,8 @@ jobs:
     needs: [prepare, manifest]
     if: ${{ !cancelled() && needs.prepare.outputs.any_enabled == 'true' && needs.manifest.result == 'success' }}
     runs-on: ubuntu-latest
+    permissions:
+      packages: read
     strategy:
       fail-fast: false
       matrix:
@@ -417,7 +433,7 @@ jobs:
         shell: bash
         env:
           GHCR_USERNAME: ${{ github.actor }}
-          GHCR_TOKEN: ${{ secrets.GHCR_PAT }}
+          GHCR_TOKEN: ${{ github.token }}
           DOCKER_HUB_USERNAME: signalkci
           DOCKER_HUB_ACCESS_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
           HUB_PREFIX: docker.io/${{ env.DOCKER_HUB_REPO }}
@@ -446,6 +462,7 @@ jobs:
       - name: Wait for GHCR indexing
         run: sleep 60
       - name: Remove intermediate Docker images from GHCR
+        id: cleanup
         continue-on-error: true
         uses: dataaxiom/ghcr-cleanup-action@v1
         with:
@@ -453,11 +470,18 @@ jobs:
           delete-untagged: true
           delete-tags: |
             *-${{ github.run_id }}
-          token: ${{ secrets.GHCR_PAT }}
+          token: ${{ github.token }}
+      - name: Report GHCR cleanup failure
+        if: steps.cleanup.outcome == 'failure'
+        run: echo "::warning title=GHCR cleanup failed::Intermediate images were not deleted. The signalk-server package must grant this repository the Admin role under Manage Actions access."
 
   deploy_fly:
     runs-on: ubuntu-latest
     needs: copy-to-dockerhub
+    permissions:
+      contents: read
+    # a manual run has a branch, not a release, in GITHUB_REF
+    if: startsWith(github.ref, 'refs/tags/v')
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -468,6 +492,7 @@ jobs:
         run: echo "tag=${GITHUB_REF#refs/*/}" >> $GITHUB_OUTPUT
       - name: Deploy demo.signalk.org at fly.io
         working-directory: ./fly_io/demo_signalk_org
-        run: flyctl deploy --remote-only --build-arg SK_VERSION=${{ steps.vars.outputs.tag }}
+        run: flyctl deploy --remote-only --build-arg SK_VERSION="$TAG"
         env:
+          TAG: ${{ steps.vars.outputs.tag }}
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}

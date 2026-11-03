@@ -61,6 +61,7 @@ import { queryRequest } from './requestResponse'
 import {
   getRateLimitValidationOptions,
   pathForSecurityConfig,
+  SECRET_KEY_FILENAME,
   SecurityConfig,
   SecurityConfigGetter,
   SecurityConfigSaver,
@@ -76,7 +77,10 @@ import availableInterfaces from './interfaces'
 import redirects from './redirects.json'
 import rateLimit from 'express-rate-limit'
 import { execSync } from 'child_process'
-import { recommendedVersion as recommendedNodeVersion } from './version'
+import {
+  recommendedVersion as recommendedNodeVersion,
+  testedNodeVersions
+} from './version'
 import { Type } from '@sinclair/typebox'
 import { Value } from '@sinclair/typebox/value'
 
@@ -317,7 +321,9 @@ interface App
     PluginManager,
     WithWrappedEmitter {
   webapps: Package[]
+  stopAndExit: () => void
   logging: {
+    clearLog: () => void
     rememberDebug: (r: boolean) => void
     enableDebug: (r: string) => boolean
     addDebug: (name: string) => void
@@ -511,7 +517,7 @@ module.exports = function (
     if (app.securityStrategy.allowRestart(req)) {
       res.json('Restarting...')
       setTimeout(function () {
-        process.exit(0)
+        app.stopAndExit()
       }, 2000)
     } else {
       res.status(401).json('Restart not allowed')
@@ -701,7 +707,11 @@ module.exports = function (
         user.userId = req.params.id
         app.securityStrategy.addUser(config, user, (err, savedConfig) => {
           if (err) {
-            const status = err.message === 'User already exists' ? 400 : 500
+            const status =
+              err.message === 'User already exists' ||
+              (err as Error & { statusCode?: number }).statusCode === 400
+                ? 400
+                : 500
             res.status(status).type('text/plain').send(err.message)
           } else if (savedConfig) {
             saveSecurityConfig(app, savedConfig, (saveErr) => {
@@ -2156,6 +2166,13 @@ module.exports = function (
     }
   })
 
+  app.securityStrategy.addAdminWriteMiddleware(`${SERVERROUTESPREFIX}/log`)
+
+  app.delete(`${SERVERROUTESPREFIX}/log`, (_req: Request, res: Response) => {
+    app.logging.clearLog()
+    res.status(204).send()
+  })
+
   app.get(`${SERVERROUTESPREFIX}/debugKeys`, (req: Request, res: Response) => {
     res.json(listKnownDebugs())
   })
@@ -2172,7 +2189,8 @@ module.exports = function (
     res.json({
       nodeVersion: process.version,
       npmVersion,
-      recommendedNodeVersion
+      recommendedNodeVersion,
+      testedNodeVersions
     })
   })
 
@@ -2207,6 +2225,7 @@ module.exports = function (
     'settings.json',
     'defaults.json',
     'security.json',
+    SECRET_KEY_FILENAME,
     'package.json',
     'baseDeltas.json'
   ]
@@ -2293,6 +2312,8 @@ module.exports = function (
               if (err) {
                 sendRestoreStatus('error', err.message, null)
                 hasError = true
+              } else if (name === SECRET_KEY_FILENAME) {
+                fs.chmodSync(path.join(app.config.configPath, name), '600')
               }
             }
           )
@@ -2342,9 +2363,12 @@ module.exports = function (
           { filename }
         ) => {
           try {
+            // busboy passes an application/octet-stream part without a
+            // filename as a file too.
             if (
-              !filename.endsWith('.backup') &&
-              !filename.endsWith('.backup.zip')
+              !filename ||
+              (!filename.endsWith('.backup') &&
+                !filename.endsWith('.backup.zip'))
             ) {
               res
                 .status(400)

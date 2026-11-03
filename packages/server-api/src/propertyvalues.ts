@@ -32,7 +32,7 @@ import * as Bacon from 'baconjs'
  *
  * **Note: The _PropertyValues_ mechanism is not intended to be used for data passing on a regular basis, as the total history makes it a potential memory leak.**
  *
- * To safeguard against a component accidentally emitting regularly, via a fixed upper bound is enforced for the value array per _property name_. New values will be ignored if the upper bound is reached and are logged as errors.
+ * To safeguard against a component accidentally emitting regularly, the server enforces a fixed upper bound of 1000 values on one count shared by all _property names_. The count includes each name's initial `undefined`, which is added the first time a name is emitted or subscribed to. Once the bound is reached, `emitPropertyValue` throws to the emitting plugin.
  * @category Server API
  */
 export interface PropertyValuesEmitter {

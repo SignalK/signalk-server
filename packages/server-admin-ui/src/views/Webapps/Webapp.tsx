@@ -30,6 +30,18 @@ function clampToLines(lines: number): React.CSSProperties {
 const headerStyle = clampToLines(HEADER_MAX_LINES)
 const descriptionStyle = clampToLines(DESCRIPTION_MAX_LINES)
 
+// The icon path comes from the webapp's package.json and may contain spaces,
+// parentheses or quotes. Quoting the url() keeps it one token; a quoted CSS
+// string only ends at an unescaped quote or newline, so those and the
+// backslash are written as CSS hex escapes.
+function cssUrl(url: string): string {
+  const escaped = url.replace(
+    /["\\\n\r\f]/g,
+    (c) => `\\${c.charCodeAt(0).toString(16)} `
+  )
+  return `url("${escaped}")`
+}
+
 interface SignalKInfo {
   displayName?: string
   appIcon?: string
@@ -90,7 +102,7 @@ export default function Webapp({
     const style: React.CSSProperties = {
       backgroundSize: 'cover',
       backgroundImage: appIcon
-        ? `url(/${webAppInfo.name}/${appIcon})`
+        ? cssUrl(`/${webAppInfo.name}/${appIcon}`)
         : 'unset',
       display: 'flex',
       alignItems: 'center',

@@ -3,6 +3,7 @@ import Badge from 'react-bootstrap/Badge'
 import { usePathData, useMetaData } from './usePathData'
 import TimestampCell from './TimestampCell'
 import CopyToClipboardWithFade from './CopyToClipboardWithFade'
+import PathDisplayName from './PathDisplayName'
 import SourceLabel from './SourceLabel'
 import { getValueRenderer, DefaultValueRenderer } from './ValueRenderers'
 import {
@@ -243,6 +244,7 @@ function DataRow({
             {path} <span className="copy-icon" aria-hidden="true" />
           </span>
         </CopyToClipboardWithFade>
+        {path && <PathDisplayName context={realContext} path={path} />}
       </div>
 
       {showContext && (

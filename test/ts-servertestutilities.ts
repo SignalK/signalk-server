@@ -91,6 +91,7 @@ export const startServer = async (extraSettings: object = {}) => {
         body: JSON.stringify(body),
         headers: { 'Content-Type': 'application/json' }
       }),
+    del: (path: string) => fetch(`${api}${path}`, { method: 'DELETE' }),
     selfGetJson: (path: string) =>
       fetch(`${api}/vessels/self/${path}`).then((r) => r.json()),
     selfGetJsonV1: (path: string) =>

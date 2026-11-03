@@ -2,12 +2,14 @@ import {
   getCategories,
   getMergedDefinitions,
   getActivePreset,
-  getActivePresetForUser
+  getActivePresetForUser,
+  getDefaultCategory
 } from './loader'
 import {
   EnhancedDisplayUnits,
   DisplayUnitsMetadata,
-  DisplayUnitsOverride
+  DisplayUnitsOverride,
+  PathUnitsMetadata
 } from './types'
 
 /**
@@ -188,6 +190,42 @@ export function resolveDisplayUnits(
       stored.displayFormat || preset?.categories?.[category]?.displayFormat,
     override
   }
+}
+
+/**
+ * Resolve the display units for a path from its metadata: the stored
+ * category, or failing that the default category for the path or its SI
+ * unit.
+ *
+ * @param signalkPath - Path relative to its context, e.g. navigation.speedOverGround
+ * @param metadata - The path's metadata
+ * @param username - Username for per-user preset resolution (optional)
+ * @param includeOverride - Report the path-specific override in an `override` field
+ * @returns Full displayUnits with formula, or null if can't resolve
+ */
+export function resolvePathDisplayUnits(
+  signalkPath: string,
+  metadata: PathUnitsMetadata,
+  username?: string,
+  includeOverride = false
+): EnhancedDisplayUnits | null {
+  let storedDisplayUnits = metadata.displayUnits
+  if (!storedDisplayUnits?.category && signalkPath) {
+    const defaultCategory = getDefaultCategory(
+      signalkPath,
+      metadata.units,
+      username
+    )
+    if (defaultCategory) {
+      storedDisplayUnits = { category: defaultCategory }
+    }
+  }
+  return resolveDisplayUnits(
+    storedDisplayUnits,
+    metadata.units,
+    username,
+    includeOverride
+  )
 }
 
 /**

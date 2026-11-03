@@ -6,6 +6,7 @@ children:
   - n2k-device-management.md
   - source-priority.md
   - staleness.md
+  - execute.md
 ---
 
 # Configuring Signal K Server
@@ -48,6 +49,8 @@ From this screen you can add connections for various data types including:
 
 The options presented will vary based on the data type chosen.
 
+To read data from a program of your own, see [Using your own program as a data source](./execute.md).
+
 **_NMEA2000_**: The processing of NMEA2000 PGNs is done by [n2k-signalk](https://github.com/SignalK/n2k-signalk) via [canboatjs](https://github.com/canboat/canboatjs).
 
 Please refer to the [Canboat PGN database](https://canboat.github.io/canboat/canboat.html) to see what PGNs are supported.
@@ -58,7 +61,7 @@ Once your NMEA 2000 devices are connected, you can view and manage them from _Da
 
 ### NMEA 0183 Options
 
-- _Suppress nmea0183 event_ - All incoming NMEA0183 data is made available over TCP on port 10110 by default. This happens by incoming data being emitted as _nmea0183_ events. Selecting this option will prevent data from this connection appearing on the NEMA0183 TCP service.
+- _Send nmea0183 event for_ - All incoming NMEA0183 data is made available over TCP on port 10110 by default. This happens by incoming data being emitted as _nmea0183_ events. _All sentences_ is the default. _No sentences_ keeps every sentence from this connection off the NMEA0183 TCP service. _These sentences_ takes a comma-separated list of sentence IDs, e.g. `VDM,VDO`, and sends only those, while the connection's other sentences are still converted to Signal K. An empty list sends nothing. To send only the preferred source's navigation data over NMEA 0183, select _These sentences_ or _No sentences_ on every connection that carries that data and combine this with [Source Priority](./source-priority.md) and the _signalk-to-nmea0183_ plugin. A configured _Input Event_ (other than `nmea0183`) still receives every sentence.
 
 - _Input Event_ - By default, data received on this connection will cause the nmea0183 event to be emitted. In order to distinguish input from this connection from other NMEA 0183 connections, enter an input event name which will be emitted (in addition to the nmea0183 event) when data is received on this connection.
 
@@ -96,7 +99,7 @@ sudo find / -name "plaka.log"
 
 The _Data_ menu provides tools for viewing, inspecting, and managing your Signal K data:
 
-- **Data Browser** — Browse all Signal K data paths in real time with values, sources, and timestamps.
+- **Data Browser** — Browse all Signal K data paths in real time with values, sources, and timestamps. When a path has a `displayName` set in its metadata, it is shown below the path — handy for telling instanced paths like `tanks.freshWater.2` or `electrical.switches.bank.10.1` apart. Notification rows show the name of the data path they relate to. Administrators can set or edit the name in place via the pencil next to it; it is stored as regular metadata, the same as editing it on the _Meta Data_ page.
 
 - **Meta Data** — View and edit Signal K metadata (units, descriptions, display names, zones) for any path.
 

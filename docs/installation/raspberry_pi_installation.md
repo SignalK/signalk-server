@@ -37,17 +37,17 @@ Once the OS installation has been completed, you are ready to commence.
    sudo apt update
    ```
 
-1. Install NodeJS 24 and npm.
+1. Install NodeJS 24.
 
    Follow [instructions for Ubuntu and Debian based distributions like Raspberry Pi OS at NodeSource Distributions](https://github.com/nodesource/distributions#installation-instructions).
 
-1. Ensure that we're using the latest version of npm.
+1. Install npm and ensure that we're using the latest version of npm.
 
    ```
    sudo npm install -g npm@latest
    ```
 
-   Use the following command to check the versions of NodeJS and npm installed.
+1. Use the following command to check the versions of NodeJS and npm installed.
 
    ```
    node -v && npm -v
@@ -63,8 +63,10 @@ Once the OS installation has been completed, you are ready to commence.
 ## Install Signal K Server
 
 ```
-sudo npm install -g signalk-server
+sudo npm install -g signalk-server --allow-scripts=@canboat/canboatjs
 ```
+
+npm 12 and later block install scripts they are not told to allow, so `--allow-scripts` lets npm run the one that builds the server's native CAN bus support. npm 11 runs install scripts by default, and older npm ignores the option.
 
 You can test that installation was successful by starting the server using some
 sample data.

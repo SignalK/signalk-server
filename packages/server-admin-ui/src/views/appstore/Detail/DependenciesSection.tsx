@@ -54,7 +54,7 @@ const DependenciesSection: React.FC<DependenciesSectionProps> = ({
           </Badge>
         )}
       </div>
-      <div className="d-flex flex-wrap gap-2">
+      <div className="plugin-detail__dep-grid">
         {deps.map((d) => {
           const status = getInstallStatus(
             installingByName?.[d.name],
@@ -66,7 +66,7 @@ const DependenciesSection: React.FC<DependenciesSectionProps> = ({
               to={`/apps/store/plugin/${encodeURIComponent(d.name)}`}
               className="text-decoration-none"
             >
-              <div className="plugin-detail__dep-card d-flex align-items-center gap-2">
+              <div className="plugin-detail__dep-card h-100 d-flex align-items-center gap-2">
                 <PluginIcon
                   name={d.name}
                   displayName={d.displayName}
@@ -74,7 +74,7 @@ const DependenciesSection: React.FC<DependenciesSectionProps> = ({
                   size={28}
                 />
                 <div className="flex-grow-1 min-w-0">
-                  <div className="plugin-detail__dep-name text-truncate">
+                  <div className="plugin-detail__dep-name">
                     {d.displayName || d.name}
                   </div>
                   {status === 'installed' && (

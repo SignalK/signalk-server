@@ -99,6 +99,22 @@ const BROWSER_LOGININFO_COOKIE_NAME = 'skLoginInfo'
 const LOGIN_FAILED_MESSAGE = 'Invalid username/password'
 const VALID_PERMISSIONS = new Set(['readonly', 'readwrite', 'admin'])
 
+const UNSAFE_IDENTIFIER_CHARS = /[/\\\0]/
+const INVALID_IDENTIFIER_MESSAGE =
+  'Identifier must not be "." or ".." or contain "/", "\\" or NUL'
+
+// Usernames and device client ids name per-principal storage directories,
+// so they must be usable as a single path segment.
+function isSafeIdentifier(identifier: unknown): identifier is string {
+  return (
+    typeof identifier === 'string' &&
+    identifier.length > 0 &&
+    identifier !== '.' &&
+    identifier !== '..' &&
+    !UNSAFE_IDENTIFIER_CHARS.test(identifier)
+  )
+}
+
 // Dummy hash for timing attack prevention - pre-generated bcrypt hash
 const DUMMY_HASH = '$2b$10$abcdefghijklmnopqrstuuABCDEFGHIJKLMNOPQRSTUVWXYZ012'
 
@@ -1104,6 +1120,15 @@ function tokenSecurityFactory(
       return
     }
 
+    if (!isSafeIdentifier(username)) {
+      const err: Error & { statusCode?: number } = new Error(
+        INVALID_IDENTIFIER_MESSAGE
+      )
+      err.statusCode = 400
+      callback(err)
+      return
+    }
+
     if (theConfig.users?.find((u) => u.username === username)) {
       callback(new Error('User already exists'))
       return
@@ -1964,6 +1989,22 @@ function tokenSecurityFactory(
           const accessRequest = clientRequest.accessRequest
           if (!validateAccessRequest(accessRequest)) {
             updateRequest(request.requestId, 'COMPLETED', { statusCode: 400 })
+              .then(resolve)
+              .catch(reject)
+            return
+          }
+
+          if (
+            !isSafeIdentifier(
+              accessRequest.clientId
+                ? accessRequest.clientId
+                : accessRequest.userId
+            )
+          ) {
+            updateRequest(request.requestId, 'COMPLETED', {
+              statusCode: 400,
+              message: INVALID_IDENTIFIER_MESSAGE
+            })
               .then(resolve)
               .catch(reject)
             return

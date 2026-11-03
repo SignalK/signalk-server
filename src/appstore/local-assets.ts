@@ -10,6 +10,7 @@
 
 import fs from 'fs'
 import path from 'path'
+import { hasWebMount } from '../interfaces/webapps'
 
 export interface LocalAssetUrls {
   appIcon?: string
@@ -22,6 +23,7 @@ interface SignalKAssetDeclaration {
 }
 
 interface PackageWithSignalK {
+  keywords?: unknown
   signalk?: SignalKAssetDeclaration
 }
 
@@ -88,6 +90,10 @@ function isContainedRelativePath(cleaned: string): boolean {
   return true
 }
 
+function isAbsoluteOrDataUrl(declaredPath: string): boolean {
+  return /^(https?:)?\/\//i.test(declaredPath) || /^data:/i.test(declaredPath)
+}
+
 /**
  * Turn a package.json-declared asset path into a URL under the plugin's
  * own `/<pkgName>/` mount.
@@ -119,8 +125,7 @@ export function buildLocalAssetUrl(
   servedRoot: string | undefined
 ): string | undefined {
   if (!declaredPath || typeof declaredPath !== 'string') return undefined
-  if (/^(https?:)?\/\//i.test(declaredPath)) return declaredPath
-  if (/^data:/i.test(declaredPath)) return declaredPath
+  if (isAbsoluteOrDataUrl(declaredPath)) return declaredPath
   const cleaned = declaredPath.replace(/^\.\//, '')
   if (!isContainedRelativePath(cleaned)) return undefined
   if (servedRoot) {
@@ -133,7 +138,7 @@ export function buildLocalAssetUrl(
 /**
  * Build the local `appIcon` / `screenshots` URLs declared by an
  * installed package, or `undefined` when the package declares neither
- * usable asset.
+ * usable asset or the server does not mount it.
  */
 export function buildLocalAssetUrls(
   pkgName: string,
@@ -142,10 +147,15 @@ export function buildLocalAssetUrls(
 ): LocalAssetUrls | undefined {
   const signalk = pkg?.signalk
   if (!signalk || typeof signalk !== 'object') return undefined
+  if (!hasWebMount(pkg.keywords)) return undefined
   const servedRoot = getInstalledServedRoot(pkgName, packageLocation)
+  const declaredIcon =
+    typeof signalk.appIcon === 'string' ? signalk.appIcon.trim() : ''
+  // appIcon is package-relative, unlike screenshots: an absolute URL here
+  // would point the admin's browser at a host the plugin author chose.
   const appIcon =
-    typeof signalk.appIcon === 'string' && signalk.appIcon.trim()
-      ? buildLocalAssetUrl(pkgName, signalk.appIcon.trim(), servedRoot)
+    declaredIcon && !isAbsoluteOrDataUrl(declaredIcon)
+      ? buildLocalAssetUrl(pkgName, declaredIcon, servedRoot)
       : undefined
   let screenshots: string[] | undefined
   if (Array.isArray(signalk.screenshots)) {

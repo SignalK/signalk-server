@@ -1,6 +1,7 @@
 import { expect } from 'chai'
 import { EventEmitter } from 'node:events'
 import Module from 'node:module'
+import { mock } from 'node:test'
 import { LocalBLEProvider } from '../src/api/ble/localProvider'
 
 /**
@@ -36,6 +37,25 @@ const CLEANUP_POLL_MS = 100
 const CLEANUP_MARGIN_MS = 3000
 // A setup that waits on a dead link would otherwise run into mocha's default
 const SETUP_TEST_TIMEOUT_MS = 5000
+// The provider's deadline for each connectGATT() setup step, run down on
+// mocked timers by the tests that run into it
+const SETUP_DEADLINE_MS = 60000
+// A hung Connect and its hung cleanup Disconnect each take one deadline
+const DEADLINE_ROUNDS = 4
+const WRITE_INTERVAL_MS = 10
+// Waiting for a write, well inside mocha's default timeout
+const WRITE_POLL_MS = 5
+const WRITE_DEADLINE_MS = 1000
+// Waiting for discovery to be resumed, which happens after the call that ends
+// a pause has returned
+const DISCOVERY_POLL_MS = 5
+const DISCOVERY_DEADLINE_MS = 1000
+// The longest one connection's setup holds discovery off
+const DISCOVERY_PAUSE_MAX_MS = 60000
+// A D-Bus round trip long enough for calls from two connections to overlap
+const DISCOVERY_CALL_LATENCY_MS = 5
+// Enough event-loop turns for the provider's pending D-Bus work to run
+const SETTLE_TURNS = 20
 
 const PROPERTIES_IFACE = 'org.freedesktop.DBus.Properties'
 const DEVICE_IFACE = 'org.bluez.Device1'
@@ -57,14 +77,22 @@ const OBJECTS: Record<string, Record<string, Props>> = {
 // proxy dropping its listeners leaves the other subscribers of that path alone.
 class FakeBus extends EventEmitter {
   disconnectCalls = 0
+  writeTypes: string[] = []
   servicesResolved = true
+  // Leaves Disconnect calls unanswered, as a wedged bluetoothd would
+  hangDisconnect = false
+  // Leaves reads of a GATT service's UUID unanswered, for a bluetoothd that
+  // wedges while node-ble enumerates the resolved services
+  hangServiceRead = false
   // Lets a test lose the link at a chosen point of the connection setup
   onServicesResolvedRead?: () => void
   onStartNotify?: () => void
+  onConnect?: () => void
   private readonly busDaemon = new EventEmitter()
   private readonly subscribers = new Map<string, Set<EventEmitter>>()
   private connectGate?: Promise<void>
   private connectStarted?: () => void
+  private servicesResolvedGate?: Promise<void>
 
   async getProxyObject(service: string, path: string) {
     if (service === BUS_DAEMON) {
@@ -77,17 +105,26 @@ class FakeBus extends EventEmitter {
           ? this.propertiesProxy(path)
           : {
               Connect: async () => {
+                this.onConnect?.()
                 this.connectStarted?.()
                 await this.connectGate
               },
               // As BlueZ does, signals the change before replying to the call
               Disconnect: async () => {
                 this.disconnectCalls++
+                if (this.hangDisconnect) return new Promise<void>(() => {})
                 this.loseLink()
               },
               StartNotify: async () => {
                 this.onStartNotify?.()
-              }
+              },
+              WriteValue: async (
+                _data: number[],
+                options: { type: { value: string } }
+              ) => {
+                this.writeTypes.push(options.type.value)
+              },
+              ReadValue: async () => []
             }
     }
   }
@@ -105,12 +142,29 @@ class FakeBus extends EventEmitter {
     return { connecting, release }
   }
 
+  holdServicesResolvedRead() {
+    let release: () => void = () => undefined
+    this.servicesResolvedGate = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    return release
+  }
+
+  // Lets later Connect calls through while an earlier held one stays pending
+  stopHoldingConnect() {
+    this.connectGate = undefined
+  }
+
   private propertiesProxy(path: string) {
     const proxy = Object.assign(new EventEmitter(), {
       Get: async (iface: string, name: string) => {
         if (name === 'ServicesResolved') {
           this.onServicesResolvedRead?.()
+          await this.servicesResolvedGate
           return { value: this.servicesResolved }
+        }
+        if (this.hangServiceRead && iface === 'org.bluez.GattService1') {
+          return new Promise<never>(() => {})
         }
         return { value: OBJECTS[path]?.[iface]?.[name] }
       }
@@ -125,6 +179,15 @@ class FakeBus extends EventEmitter {
   restartBluetoothd() {
     this.busDaemon.emit('NameOwnerChanged', 'org.bluez', ':1.10', '')
     this.busDaemon.emit('NameOwnerChanged', 'org.bluez', '', ':1.11')
+  }
+
+  // PropertiesChanged listeners still subscribed to the device
+  deviceListeners() {
+    let count = 0
+    for (const proxy of this.subscribers.get(DEVICE_PATH) ?? []) {
+      count += proxy.listenerCount('PropertiesChanged')
+    }
+    return count
   }
 
   loseLink() {
@@ -163,6 +226,51 @@ const startProvider = async () => {
     // A fresh Device per lookup, as node-ble's Adapter.waitDevice() returns
     waitDevice: async () => new Device(bus, ADAPTER, DEVICE_NODE)
   }
+  const provider = await initProvider(bus, adapter)
+  return { provider, bus, adapterCalls }
+}
+
+// An adapter with bluetoothd's discovery semantics: each call takes effect in
+// the order sent, after one D-Bus round trip, and StopDiscovery without a
+// discovery session fails as BlueZ's "No discovery started" does
+const startProviderWithDiscoveryState = async (latencyMs = 0) => {
+  const bus = new FakeBus()
+  const state = {
+    discovering: false,
+    discoveringAtWaitDevice: [] as boolean[],
+    calls: [] as string[]
+  }
+  const roundTrip = () =>
+    new Promise<void>((resolve) =>
+      latencyMs === 0 ? setImmediate(resolve) : setTimeout(resolve, latencyMs)
+    )
+  const adapter = {
+    isPowered: async () => true,
+    devices: async () => [],
+    helper: {
+      callMethod: async (method: string) => {
+        await roundTrip()
+        if (method === 'StartDiscovery') state.discovering = true
+        if (method === 'StopDiscovery') {
+          if (!state.discovering) {
+            state.calls.push(`${method}!`)
+            throw new Error('No discovery started')
+          }
+          state.discovering = false
+        }
+        state.calls.push(method)
+      }
+    },
+    waitDevice: async () => {
+      state.discoveringAtWaitDevice.push(state.discovering)
+      return new Device(bus, ADAPTER, DEVICE_NODE)
+    }
+  }
+  const provider = await initProvider(bus, adapter)
+  return { provider, bus, state }
+}
+
+const initProvider = async (bus: FakeBus, adapter: object) => {
   const provider = new LocalBLEProvider(ADAPTER, MAX_SLOTS)
 
   patchable.prototype.require = function (
@@ -188,14 +296,36 @@ const startProvider = async () => {
     patchable.prototype.require = realRequire
   }
   await ready
+  return provider
+}
 
-  return { provider, bus, adapterCalls }
+// Runs a connectGATT() on mocked timers, advancing them past the provider's
+// setup deadline each time its pending D-Bus work has had a chance to arm one
+const connectPastDeadlines = async (
+  provider: LocalBLEProvider
+): Promise<Error | undefined> => {
+  let settled = false
+  const outcome = provider
+    .connectGATT(MAC)
+    .then(
+      () => undefined,
+      (e: Error) => e
+    )
+    .finally(() => {
+      settled = true
+    })
+  for (let i = 0; i < DEADLINE_ROUNDS && !settled; i++) {
+    for (let j = 0; j < 20; j++) await new Promise((r) => setImmediate(r))
+    mock.timers.tick(SETUP_DEADLINE_MS)
+  }
+  return outcome
 }
 
 describe('Local BLE provider GATT link loss', () => {
   let provider: LocalBLEProvider | undefined
 
   afterEach(() => {
+    mock.timers.reset()
     provider?.shutdown()
     provider = undefined
   })
@@ -338,6 +468,125 @@ describe('Local BLE provider GATT link loss', () => {
     expect(provider.availableGATTSlots()).to.equal(MAX_SLOTS)
   })
 
+  it('gives up on a connectGATT() whose Connect call BlueZ never answers', async function () {
+    this.timeout(SETUP_TEST_TIMEOUT_MS)
+    const started = await startProvider()
+    provider = started.provider
+    const { bus } = started
+    bus.holdConnect()
+    mock.timers.enable({ apis: ['setTimeout'] })
+
+    const error = await connectPastDeadlines(provider)
+
+    expect(error?.message).to.match(/connecting to .* timed out/)
+    // Disconnect is what makes BlueZ abandon the pending Connect
+    expect(bus.disconnectCalls).to.equal(1)
+    expect(provider.availableGATTSlots()).to.equal(MAX_SLOTS)
+
+    // The connect queue is free again for the next caller
+    bus.stopHoldingConnect()
+    const conn = await provider.connectGATT(MAC)
+    expect(conn.connected).to.equal(true)
+    await conn.disconnect()
+  })
+
+  it('gives up on a connectGATT() whose resolved services BlueZ never finishes listing', async function () {
+    this.timeout(SETUP_TEST_TIMEOUT_MS)
+    const started = await startProvider()
+    provider = started.provider
+    const { bus } = started
+    bus.hangServiceRead = true
+    mock.timers.enable({ apis: ['setTimeout'] })
+
+    const error = await connectPastDeadlines(provider)
+
+    expect(error?.message).to.match(/resolving services of .* timed out/)
+    expect(bus.disconnectCalls).to.equal(1)
+    expect(provider.availableGATTSlots()).to.equal(MAX_SLOTS)
+  })
+
+  it('gives up on a connectGATT() whose services never resolve on a live link', async function () {
+    this.timeout(SETUP_TEST_TIMEOUT_MS)
+    const started = await startProvider()
+    provider = started.provider
+    const { bus } = started
+    bus.servicesResolved = false
+    mock.timers.enable({ apis: ['setTimeout'] })
+
+    const error = await connectPastDeadlines(provider)
+
+    expect(error?.message).to.match(/resolving services of .* timed out/)
+    expect(bus.disconnectCalls).to.equal(1)
+    expect(provider.availableGATTSlots()).to.equal(MAX_SLOTS)
+    expect(bus.deviceListeners()).to.equal(0)
+  })
+
+  it('does not start waiting for ServicesResolved once connectGATT() has given up', async function () {
+    this.timeout(SETUP_TEST_TIMEOUT_MS)
+    const started = await startProvider()
+    provider = started.provider
+    const { bus } = started
+    bus.servicesResolved = false
+    const releaseRead = bus.holdServicesResolvedRead()
+    mock.timers.enable({ apis: ['setTimeout'] })
+
+    const error = await connectPastDeadlines(provider)
+    expect(error?.message).to.match(/resolving services of .* timed out/)
+
+    // The read answers only after the deadline, and says to wait
+    releaseRead()
+    await new Promise((resolve) => setImmediate(resolve))
+
+    expect(bus.deviceListeners()).to.equal(0)
+  })
+
+  it('does not wait for the services of a device connectGATT() has given up on', async function () {
+    this.timeout(SETUP_TEST_TIMEOUT_MS)
+    const started = await startProvider()
+    provider = started.provider
+    const { bus } = started
+    const releaseRead = bus.holdServicesResolvedRead()
+    mock.timers.enable({ apis: ['setTimeout'] })
+
+    const error = await connectPastDeadlines(provider)
+    expect(error?.message).to.match(/resolving services of .* timed out/)
+
+    // The held read answers only after the deadline, and says resolved; any
+    // later read finds the services of the disconnected device unresolved
+    bus.onServicesResolvedRead = () => {
+      bus.servicesResolved = false
+    }
+    releaseRead()
+    for (let i = 0; i < 20; i++) {
+      await new Promise((resolve) => setImmediate(resolve))
+    }
+
+    expect(bus.deviceListeners()).to.equal(0)
+  })
+
+  it('does not wait forever on the Disconnect that abandons a hung Connect', async function () {
+    this.timeout(SETUP_TEST_TIMEOUT_MS)
+    const started = await startProvider()
+    provider = started.provider
+    const { bus } = started
+    bus.holdConnect()
+    bus.hangDisconnect = true
+    mock.timers.enable({ apis: ['setTimeout'] })
+
+    const error = await connectPastDeadlines(provider)
+
+    expect(error?.message).to.match(/connecting to .* timed out/)
+    expect(provider.availableGATTSlots()).to.equal(MAX_SLOTS)
+    expect(bus.deviceListeners()).to.equal(0)
+
+    // The connect queue is free again for the next caller
+    bus.stopHoldingConnect()
+    bus.hangDisconnect = false
+    const conn = await provider.connectGATT(MAC)
+    expect(conn.connected).to.equal(true)
+    await conn.disconnect()
+  })
+
   it('fails a subscribeGATT() whose link goes before services resolve', async function () {
     this.timeout(SETUP_TEST_TIMEOUT_MS)
     const started = await startProvider()
@@ -472,5 +721,295 @@ describe('Local BLE provider discovery', () => {
     expect(
       started.adapterCalls.filter((m) => m === 'StartDiscovery')
     ).to.have.length(2)
+  })
+})
+
+describe('Local BLE provider GATT writes', () => {
+  let provider: LocalBLEProvider | undefined
+
+  afterEach(() => {
+    provider?.shutdown()
+    provider = undefined
+  })
+
+  it('sends a connectGATT() write as an acknowledged request, not a reliable write', async () => {
+    const started = await startProvider()
+    provider = started.provider
+    const conn = await provider.connectGATT(MAC)
+
+    await conn.write(SERVICE_UUID, NOTIFY_UUID, Buffer.from([1]))
+    await conn.write(SERVICE_UUID, NOTIFY_UUID, Buffer.from([2]), true)
+    await conn.write(SERVICE_UUID, NOTIFY_UUID, Buffer.from([3]), false)
+
+    expect(started.bus.writeTypes).to.deep.equal([
+      'request',
+      'request',
+      'command'
+    ])
+  })
+
+  it('sends a subscribeGATT() write as an acknowledged request, not a reliable write', async () => {
+    const started = await startProvider()
+    provider = started.provider
+    const handle = await provider.subscribeGATT(
+      { mac: MAC, service: SERVICE_UUID },
+      () => undefined
+    )
+
+    await handle.write(NOTIFY_UUID, Buffer.from([1]))
+    await handle.write(NOTIFY_UUID, Buffer.from([2]), false)
+
+    expect(started.bus.writeTypes).to.deep.equal(['request', 'command'])
+  })
+
+  it('sends subscribeGATT() init writes as acknowledged requests unless unacknowledged', async () => {
+    const started = await startProvider()
+    provider = started.provider
+    await provider.subscribeGATT(
+      {
+        mac: MAC,
+        service: SERVICE_UUID,
+        init: [
+          { uuid: NOTIFY_UUID, data: '01' },
+          { uuid: NOTIFY_UUID, data: '02', withResponse: false }
+        ]
+      },
+      () => undefined
+    )
+
+    expect(started.bus.writeTypes).to.deep.equal(['request', 'command'])
+  })
+
+  it('sends a subscribeGATT() periodic write as an acknowledged request', async () => {
+    const started = await startProvider()
+    provider = started.provider
+    await provider.subscribeGATT(
+      {
+        mac: MAC,
+        service: SERVICE_UUID,
+        periodicWrite: [
+          { uuid: NOTIFY_UUID, data: '01', intervalMs: WRITE_INTERVAL_MS }
+        ]
+      },
+      () => undefined
+    )
+
+    await waitForWrite(started.bus)
+    expect(started.bus.writeTypes[0]).to.equal('request')
+  })
+
+  it("sends a subscribeGATT() poll's write-before-read as an acknowledged request", async () => {
+    const started = await startProvider()
+    provider = started.provider
+    await provider.subscribeGATT(
+      {
+        mac: MAC,
+        service: SERVICE_UUID,
+        poll: [
+          {
+            uuid: NOTIFY_UUID,
+            intervalMs: WRITE_INTERVAL_MS,
+            writeBeforeRead: '01'
+          }
+        ]
+      },
+      () => undefined
+    )
+
+    await waitForWrite(started.bus)
+    expect(started.bus.writeTypes[0]).to.equal('request')
+  })
+})
+
+const waitForWrite = async (bus: FakeBus) => {
+  const deadline = Date.now() + WRITE_DEADLINE_MS
+  while (bus.writeTypes.length === 0 && Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, WRITE_POLL_MS))
+  }
+}
+
+describe('Local BLE provider discovery during GATT connections', () => {
+  let provider: LocalBLEProvider | undefined
+
+  afterEach(() => {
+    mock.timers.reset()
+    provider?.shutdown()
+    provider = undefined
+  })
+
+  const discoveryCalls = (started: { adapterCalls: string[] }) => ({
+    starts: started.adapterCalls.filter((m) => m === 'StartDiscovery').length,
+    stops: started.adapterCalls.filter((m) => m === 'StopDiscovery').length
+  })
+
+  const waitFor = async (done: () => boolean) => {
+    const deadline = Date.now() + DISCOVERY_DEADLINE_MS
+    while (!done() && Date.now() < deadline) {
+      await new Promise((resolve) => setTimeout(resolve, DISCOVERY_POLL_MS))
+    }
+  }
+
+  const waitForStarts = (started: { adapterCalls: string[] }, starts: number) =>
+    waitFor(() => discoveryCalls(started).starts >= starts)
+
+  // For tests on mocked timers, where waitFor()'s polling would not run
+  const settle = async () => {
+    for (let i = 0; i < SETTLE_TURNS; i++) {
+      await new Promise((resolve) => setImmediate(resolve))
+    }
+  }
+
+  it('holds discovery off from just before a connectGATT() Connect until services resolve', async () => {
+    const started = await startProvider()
+    provider = started.provider
+    await provider.startDiscovery()
+    const held = started.bus.holdConnect()
+
+    const connecting = provider.connectGATT(MAC)
+    await held.connecting
+    expect(discoveryCalls(started)).to.deep.equal({ starts: 1, stops: 1 })
+
+    held.release()
+    const conn = await connecting
+    await waitForStarts(started, 2)
+    expect(conn.connected).to.equal(true)
+    expect(discoveryCalls(started)).to.deep.equal({ starts: 2, stops: 1 })
+  })
+
+  it('holds discovery off from just before a subscribeGATT() Connect until services resolve', async () => {
+    const started = await startProvider()
+    provider = started.provider
+    await provider.startDiscovery()
+    const held = started.bus.holdConnect()
+
+    const subscribing = provider.subscribeGATT(
+      { mac: MAC, service: SERVICE_UUID, notify: [NOTIFY_UUID] },
+      () => undefined
+    )
+    await held.connecting
+    expect(discoveryCalls(started)).to.deep.equal({ starts: 1, stops: 1 })
+
+    held.release()
+    await subscribing
+    await waitForStarts(started, 2)
+    expect(discoveryCalls(started)).to.deep.equal({ starts: 2, stops: 1 })
+  })
+
+  it('resumes discovery when a connectGATT() setup fails', async function () {
+    this.timeout(SETUP_TEST_TIMEOUT_MS)
+    const started = await startProvider()
+    provider = started.provider
+    const { bus } = started
+    await provider.startDiscovery()
+    bus.servicesResolved = false
+    bus.onServicesResolvedRead = () => setImmediate(() => bus.loseLink())
+
+    const error = await provider.connectGATT(MAC).then(
+      () => undefined,
+      (e: Error) => e
+    )
+
+    expect(error?.message).to.match(/lost/)
+    await waitForStarts(started, 2)
+    expect(discoveryCalls(started)).to.deep.equal({ starts: 2, stops: 1 })
+  })
+
+  it('starts discovery asked for during a pause once the pause is over', async () => {
+    const started = await startProvider()
+    provider = started.provider
+    const held = started.bus.holdConnect()
+    const connecting = provider.connectGATT(MAC)
+    await held.connecting
+
+    await provider.startDiscovery()
+    expect(discoveryCalls(started).starts).to.equal(0)
+
+    held.release()
+    await connecting
+    await waitForStarts(started, 1)
+    expect(discoveryCalls(started).starts).to.equal(1)
+  })
+
+  it('keeps discovery off at the Connect of a connectGATT() made straight after another', async () => {
+    const started = await startProviderWithDiscoveryState(
+      DISCOVERY_CALL_LATENCY_MS
+    )
+    provider = started.provider
+    const { state } = started
+    const discoveringAtConnect: boolean[] = []
+    started.bus.onConnect = () => discoveringAtConnect.push(state.discovering)
+    await provider.startDiscovery()
+
+    const first = await provider.connectGATT(MAC)
+    await first.disconnect()
+    const second = await provider.connectGATT(MAC)
+    await second.disconnect()
+    await waitFor(() => state.discovering)
+
+    expect(discoveringAtConnect).to.deep.equal([false, false])
+    expect(state.calls).to.not.include('StopDiscovery!')
+    expect(state.discovering).to.equal(true)
+  })
+
+  it('looks a device up with discovery running', async () => {
+    const started = await startProviderWithDiscoveryState()
+    provider = started.provider
+    await provider.startDiscovery()
+
+    const conn = await provider.connectGATT(MAC)
+    await conn.disconnect()
+    await provider.subscribeGATT(
+      { mac: MAC, service: SERVICE_UUID },
+      () => undefined
+    )
+
+    expect(started.state.discoveringAtWaitDevice).to.deep.equal([true, true])
+  })
+
+  it('resumes discovery when a subscribeGATT() setup never sees its services resolve', async () => {
+    const started = await startProviderWithDiscoveryState()
+    provider = started.provider
+    const { state } = started
+    await provider.startDiscovery()
+    started.bus.servicesResolved = false
+    mock.timers.enable({ apis: ['setTimeout'] })
+
+    provider
+      .subscribeGATT({ mac: MAC, service: SERVICE_UUID }, () => undefined)
+      .catch(() => undefined)
+    await settle()
+    expect(state.discovering).to.equal(false)
+
+    mock.timers.tick(DISCOVERY_PAUSE_MAX_MS)
+    await settle()
+    expect(state.discovering).to.equal(true)
+  })
+
+  it('leaves discovery alone when it is not running', async () => {
+    const started = await startProvider()
+    provider = started.provider
+
+    const conn = await provider.connectGATT(MAC)
+    await conn.disconnect()
+    await provider.subscribeGATT(
+      { mac: MAC, service: SERVICE_UUID },
+      () => undefined
+    )
+
+    expect(discoveryCalls(started)).to.deep.equal({ starts: 0, stops: 0 })
+  })
+
+  it('connects when bluetoothd has no discovery left to pause', async () => {
+    const started = await startProviderWithDiscoveryState()
+    provider = started.provider
+    const { state } = started
+    await provider.startDiscovery()
+    state.discovering = false
+    started.bus.restartBluetoothd()
+
+    const conn = await provider.connectGATT(MAC)
+
+    expect(state.calls).to.include('StopDiscovery!')
+    expect(conn.connected).to.equal(true)
   })
 })

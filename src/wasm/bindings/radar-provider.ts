@@ -716,7 +716,7 @@ export function createRadarProviderBinding(
           /**
            * Manually acquire a target at the specified position
            * @param radarId The radar ID
-           * @param bearing Bearing in degrees
+           * @param bearing Bearing in radians [0, 2π)
            * @param distance Distance in meters
            */
           acquireTarget: async (

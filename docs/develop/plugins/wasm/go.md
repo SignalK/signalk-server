@@ -148,7 +148,7 @@ func main() {}
   "name": "my-go-wasm-plugin",
   "version": "0.1.0",
   "description": "My Go WASM plugin",
-  "keywords": ["signalk-wasm-plugin"],
+  "keywords": ["signalk-node-server-plugin", "signalk-wasm-plugin"],
   "wasmManifest": "plugin.wasm",
   "wasmCapabilities": {
     "dataRead": true,
@@ -158,7 +158,7 @@ func main() {}
 }
 ```
 
-> **Note**: The package name can be anything - there's no requirement for `@signalk/` scope. The `wasmManifest` field is what identifies this as a WASM plugin.
+> **Note**: The package name can be anything - there's no requirement for `@signalk/` scope. The `wasmManifest` field is what identifies this as a WASM plugin. [What Makes a WASM Plugin?](README.md#what-makes-a-wasm-plugin) explains the fields and keywords.
 
 ## Step 6: Build
 

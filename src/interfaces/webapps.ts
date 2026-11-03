@@ -31,6 +31,28 @@ const PLUGIN_KEYWORDS = [
   'signalk-wasm-plugin'
 ] as const
 
+/**
+ * Package keywords whose packages are mounted at `/<package-name>/`, each
+ * keyed by the app list that records the mounted packages. Anything that
+ * needs to know whether a package has a static mount checks this list.
+ */
+export const WEB_MOUNT_KEYWORDS = {
+  webapps: 'signalk-webapp',
+  addons: 'signalk-node-server-addon',
+  embeddablewebapps: 'signalk-embeddable-webapp',
+  pluginconfigurators: 'signalk-plugin-configurator'
+} as const
+
+const webMountKeywords: ReadonlySet<unknown> = new Set(
+  Object.values(WEB_MOUNT_KEYWORDS)
+)
+
+export function hasWebMount(keywords: unknown): boolean {
+  return (
+    Array.isArray(keywords) && keywords.some((k) => webMountKeywords.has(k))
+  )
+}
+
 interface PluginEntry {
   id: string
   packageName: string
@@ -103,30 +125,20 @@ function mountApis(app: WebappsApp): void {
   })
 }
 
-module.exports = (app: WebappsApp) => {
+function webappsInterface(app: WebappsApp) {
   return {
     start() {
-      // Preserve any existing webapps (e.g., from WASM plugins loaded earlier)
-      const existingWebapps = app.webapps || []
-      const nodeWebapps = mountWebModules(app, 'signalk-webapp')
-      app.webapps = uniqBy([...nodeWebapps, ...existingWebapps], 'name')
-
-      app.addons = mountWebModules(app, 'signalk-node-server-addon')
-
-      const existingEmbeddableWebapps = app.embeddablewebapps || []
-      const nodeEmbeddableWebapps = mountWebModules(
-        app,
-        'signalk-embeddable-webapp'
-      )
-      app.embeddablewebapps = uniqBy(
-        [...nodeEmbeddableWebapps, ...existingEmbeddableWebapps],
-        'name'
-      )
-
-      app.pluginconfigurators = mountWebModules(
-        app,
-        'signalk-plugin-configurator'
-      )
+      for (const [list, keyword] of Object.entries(WEB_MOUNT_KEYWORDS) as [
+        keyof typeof WEB_MOUNT_KEYWORDS,
+        string
+      ][]) {
+        // Keep entries registered before this interface starts, e.g. by
+        // WASM plugins.
+        app[list] = uniqBy(
+          [...mountWebModules(app, keyword), ...(app[list] || [])],
+          'name'
+        )
+      }
 
       mountApis(app)
     },
@@ -134,3 +146,10 @@ module.exports = (app: WebappsApp) => {
     stop() {}
   }
 }
+
+// The interface loader requires this module as a bare function, which
+// replaces `exports`; attach the named exports so imports still see them.
+module.exports = Object.assign(webappsInterface, {
+  WEB_MOUNT_KEYWORDS,
+  hasWebMount
+})

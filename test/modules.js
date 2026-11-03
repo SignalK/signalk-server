@@ -12,6 +12,17 @@ const {
   getAuthor
 } = require('../dist/modules')
 
+// Read without require(), so that the test can't change the copy that
+// modulesWithKeyword() gets from the require cache.
+function readAppPackageJson(app, module) {
+  return JSON.parse(
+    fs.readFileSync(
+      path.join(app.config.appPath, 'node_modules', module, 'package.json'),
+      'utf8'
+    )
+  )
+}
+
 describe('modulesWithKeyword', () => {
   let testTempDir
 
@@ -52,16 +63,10 @@ describe('modulesWithKeyword', () => {
     )
     fs.mkdirSync(installedModuleDirectory)
 
-    const fakeInstalledModulePackageJson = require(
-      path.join(
-        app.config.appPath,
-        `node_modules/${updateInstalledModule}/package.json`
-      )
-    )
-    fakeInstalledModulePackageJson.version = '1000.0.0'
+    const packageJson = readAppPackageJson(app, updateInstalledModule)
     fs.writeFileSync(
       path.join(installedModuleDirectory, 'package.json'),
-      JSON.stringify(fakeInstalledModulePackageJson)
+      JSON.stringify({ ...packageJson, version: '1000.0.0' })
     )
 
     const moduleList = modulesWithKeyword(app.config, 'signalk-webapp')
@@ -73,6 +78,58 @@ describe('modulesWithKeyword', () => {
       (moduleInfo) => moduleInfo.module === updateInstalledModule
     )
     chai.expect(installedModuleInfo.location).to.eql(tempNodeModules)
+  })
+
+  // Puts a copy of an app dir module in a new config dir, with the given
+  // version, and returns which copy modulesWithKeyword() picks.
+  function pickWithConfigDirVersion(module, version) {
+    testTempDir = fs.mkdtempSync(
+      path.join(require('os').tmpdir(), '_skservertest_modules')
+    )
+    const app = {
+      config: {
+        appPath: path.join(__dirname + '/../'),
+        configPath: testTempDir
+      }
+    }
+    const moduleDir = path.join(testTempDir, 'node_modules', module)
+    fs.mkdirSync(moduleDir, { recursive: true })
+    fs.writeFileSync(
+      path.join(moduleDir, 'package.json'),
+      JSON.stringify({ ...readAppPackageJson(app, module), version })
+    )
+    return modulesWithKeyword(app.config, 'signalk-webapp').find(
+      (moduleInfo) => moduleInfo.module === module
+    )
+  }
+
+  it('prefers the app dir when the config dir has an older version', () => {
+    const module = '@signalk/instrumentpanel'
+    const moduleInfo = pickWithConfigDirVersion(module, '0.0.1')
+    chai
+      .expect(moduleInfo.location)
+      .to.eql(path.join(__dirname, '../node_modules/'))
+    chai.expect(moduleInfo.metadata.version).to.not.eql('0.0.1')
+  })
+
+  it('prefers the config dir when both have the same version', () => {
+    const module = '@signalk/instrumentpanel'
+    const version = readAppPackageJson(
+      { config: { appPath: path.join(__dirname + '/../') } },
+      module
+    ).version
+    const moduleInfo = pickWithConfigDirVersion(module, version)
+    chai
+      .expect(moduleInfo.location)
+      .to.eql(path.join(testTempDir, 'node_modules/'))
+  })
+
+  it('prefers the config dir when its version is not valid semver', () => {
+    const module = '@signalk/instrumentpanel'
+    const moduleInfo = pickWithConfigDirVersion(module, 'not-semver')
+    chai
+      .expect(moduleInfo.location)
+      .to.eql(path.join(testTempDir, 'node_modules/'))
   })
 })
 

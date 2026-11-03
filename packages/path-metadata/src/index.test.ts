@@ -201,4 +201,55 @@ describe('getMetadata', () => {
       expect(meta.units).to.equal('m/s')
     })
   })
+
+  describe('lookups reflect runtime additions made after them', () => {
+    // Lookups are memoised, so each case below looks the path up first to
+    // make sure a remembered result never outlives a registry change.
+    it('a path that had no metadata picks up a later addMetaData', () => {
+      const p = self('plugin.late.path')
+      expect(getMetadata(p)).to.equal(undefined)
+      metadataRegistry.addMetaData('vessels.self', 'plugin.late.path', {
+        units: 'K'
+      })
+      expect((getMetadata(p) as { units?: string }).units).to.equal('K')
+    })
+
+    it('a spec-matched path returns its runtime clone once one exists', () => {
+      const p = self('navigation.speedThroughWater')
+      const spec = getMetadata(p)
+      const clone = metadataRegistry.internalGetMetadata(p)
+      expect(clone).to.not.equal(spec)
+      expect(getMetadata(p)).to.equal(clone)
+    })
+
+    it('an override merged into an existing clone is visible', () => {
+      const p = self('navigation.speedThroughWater')
+      metadataRegistry.addMetaData(
+        'vessels.self',
+        'navigation.speedThroughWater',
+        {
+          description: 'first'
+        }
+      )
+      expect(getMetadata(p)?.description).to.equal('first')
+      metadataRegistry.addMetaData(
+        'vessels.self',
+        'navigation.speedThroughWater',
+        {
+          description: 'second'
+        }
+      )
+      expect(getMetadata(p)?.description).to.equal('second')
+    })
+
+    it('reset drops runtime additions from later lookups', () => {
+      const p = self('plugin.reset.path')
+      metadataRegistry.addMetaData('vessels.self', 'plugin.reset.path', {
+        units: 'V'
+      })
+      expect(getMetadata(p)).to.not.equal(undefined)
+      metadataRegistry.reset()
+      expect(getMetadata(p)).to.equal(undefined)
+    })
+  })
 })

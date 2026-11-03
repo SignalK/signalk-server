@@ -21,7 +21,9 @@ export {
 } from './loader'
 export {
   resolveDisplayUnits,
+  resolvePathDisplayUnits,
   stripResolvedDisplayUnits,
   validateCategoryAssignment
 } from './resolver'
+export { convertWithDisplayUnits } from './conversion'
 export * from './types'
