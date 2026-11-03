@@ -268,6 +268,12 @@ export interface SecurityStrategy {
     permissions: RoutePermission[]
   ) => void
 
+  /** Replace all access levels recorded for a plugin's routes (optional - only available when token security is active) */
+  replacePluginRoutePermissions?: (
+    pluginId: string,
+    permissions: RoutePermission[]
+  ) => void
+
   /** Update OIDC config in memory (optional - only available when token security is active) */
   updateOIDCConfig?: (newOidcConfig: PartialOIDCConfig) => void
 

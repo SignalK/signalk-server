@@ -247,16 +247,20 @@ function tokenSecurityFactory(
 
   const RESERVED_PLUGIN_PATHS = ['/', '/config']
 
-  const pluginRoutePermissions: Array<{
+  type PluginRoutePermissionEntry = {
+    pluginId: string
     method: string
     regex: RegExp
     permission: 'readwrite' | 'readonly'
-  }> = []
+  }
 
-  strategy.registerPluginRoutePermissions = function (
+  const pluginRoutePermissions: PluginRoutePermissionEntry[] = []
+
+  function toPermissionEntries(
     pluginId: string,
     permissions: RoutePermission[]
-  ): void {
+  ): PluginRoutePermissionEntry[] {
+    const entries: PluginRoutePermissionEntry[] = []
     for (const { method, path, permission } of permissions) {
       const normalizedPath = path.startsWith('/') ? path : `/${path}`
       if (
@@ -265,12 +269,35 @@ function tokenSecurityFactory(
         continue
       }
       const fullPath = `/plugins/${pluginId}${normalizedPath}`
-      pluginRoutePermissions.push({
+      entries.push({
+        pluginId,
         method: method.toUpperCase(),
         regex: pathToRegexp(fullPath),
         permission
       })
     }
+    return entries
+  }
+
+  strategy.registerPluginRoutePermissions = function (
+    pluginId: string,
+    permissions: RoutePermission[]
+  ): void {
+    pluginRoutePermissions.push(...toPermissionEntries(pluginId, permissions))
+  }
+
+  strategy.replacePluginRoutePermissions = function (
+    pluginId: string,
+    permissions: RoutePermission[]
+  ): void {
+    // Built first, so a path that fails to compile leaves the old entries
+    const entries = toPermissionEntries(pluginId, permissions)
+    for (let i = pluginRoutePermissions.length - 1; i >= 0; i--) {
+      if (pluginRoutePermissions[i].pluginId === pluginId) {
+        pluginRoutePermissions.splice(i, 1)
+      }
+    }
+    pluginRoutePermissions.push(...entries)
   }
 
   const { expiration = 'NEVER' } = config
