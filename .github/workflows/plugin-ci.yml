@@ -1704,6 +1704,22 @@ jobs:
           const path = require('path');
           const nmDir = path.join(process.env.APPSTORE_DIR, 'node_modules');
           const nativeModules = [];
+          // Native addons that ship prebuilt binaries, by platform.
+          const prebuiltModules = new Map();
+
+          // The platforms (e.g. linux-x64) a package ships prebuilt addons
+          // for, in the prebuilds/<platform>-<arch>/*.node layout that
+          // prebuildify writes. node-gyp-build loads these at runtime, so
+          // they work without install scripts.
+          function prebuiltPlatforms(pkgDir) {
+            const prebuilds = path.join(pkgDir, 'prebuilds');
+            if (!fs.existsSync(prebuilds)) return [];
+            return fs.readdirSync(prebuilds).filter((platform) => {
+              const dir = path.join(prebuilds, platform);
+              return fs.statSync(dir).isDirectory() &&
+                fs.readdirSync(dir).some((f) => f.endsWith('.node'));
+            });
+          }
 
           function findNativeModules(dir) {
             if (!fs.existsSync(dir)) return;
@@ -1715,7 +1731,12 @@ jobs:
                 continue;
               }
               if (fs.existsSync(path.join(full, 'binding.gyp'))) {
-                nativeModules.push(entry);
+                const platforms = prebuiltPlatforms(full);
+                if (platforms.length > 0) {
+                  prebuiltModules.set(entry, platforms);
+                } else {
+                  nativeModules.push(entry);
+                }
               }
               const nested = path.join(full, 'node_modules');
               if (fs.existsSync(nested)) findNativeModules(nested);
@@ -1723,6 +1744,10 @@ jobs:
           }
 
           findNativeModules(nmDir);
+
+          for (const [name, platforms] of prebuiltModules) {
+            console.log('::notice::' + name + ' is a native addon with prebuilt binaries for ' + platforms.join(', ') + '. They load without install scripts; on other platforms the addon is missing, so make sure the plugin copes with that.');
+          }
 
           if (nativeModules.length === 0) {
             console.log('No native addons found — App Store install is safe');
