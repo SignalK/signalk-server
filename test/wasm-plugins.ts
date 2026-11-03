@@ -701,7 +701,6 @@ export function plugin_stop(): i32 {
       unlinkExamplePlugin()
     })
 
-    /** Start or stop the example plugin through the plugin config API. */
     async function setPluginEnabled(enabled: boolean): Promise<void> {
       const response = await fetch(
         `${url}/skServer/plugins/${examplePluginId}/config`,
@@ -714,7 +713,6 @@ export function plugin_stop(): i32 {
       expect(response.status).to.equal(200)
     }
 
-    /** Trigger a plugin broadcast and return how many clients it reached. */
     async function broadcast(): Promise<number> {
       const response = await fetch(
         `${url}/plugins/${examplePluginId}/api/broadcast`,
