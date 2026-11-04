@@ -461,7 +461,7 @@ app.emit('nmea2000JsonOut:bus2', {
 })
 ```
 
-To send to several buses, emit once for each. A connection whose **Send broadcast N2K output** setting is off sends only what is sent to it, and leaves out what is sent on the plain `nmea2000out` and `nmea2000JsonOut`: use that for the second bus of a bridge, or for a gateway that should only listen.
+To send to several buses, emit once for each. The admin UI's Data Fiddler can try this out: with more than one NMEA 2000 connection, it lists them next to its send button. A connection whose **Send broadcast N2K output** setting is off sends only what is sent to it, and leaves out what is sent on the plain `nmea2000out` and `nmea2000JsonOut`: use that for the second bus of a bridge, or for a gateway that should only listen.
 
 ### Listing the NMEA 2000 buses
 
