@@ -55,9 +55,21 @@ export default class Execute extends Transform {
       'Using event ' + stdOutEvent + " for output to child process's stdin"
     )
 
+    // The canboatjs drivers report their own writes; the actisense-serial
+    // child process does not.
+    const reportWrite = () =>
+      setImmediate(() =>
+        this.options.app.emit('connectionwrite', {
+          providerId: this.options.providerId
+        })
+      )
+
     this.options.app.on(stdOutEvent, (d: string) => {
       try {
         this.childProcess.stdin?.write(d + '\n')
+        if (stdOutEvent === 'nmea2000out') {
+          reportWrite()
+        }
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : String(err)
         console.log('execute:' + message)
@@ -67,6 +79,7 @@ export default class Execute extends Transform {
     if (stdOutEvent === 'nmea2000out') {
       this.options.app.on('nmea2000JsonOut', (pgn: PGN) => {
         this.childProcess.stdin?.write(pgnToActisenseSerialFormat(pgn) + '\r\n')
+        reportWrite()
       })
       this.options.app.emit('nmea2000OutAvailable')
     }

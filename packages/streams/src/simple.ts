@@ -109,6 +109,9 @@ interface SubOptions {
   filtersEnabled?: boolean
   useCanName?: boolean
   tcp?: boolean
+  // false: send only what is targeted at this connection, not what is sent
+  // to every NMEA 2000 connection.
+  sendBroadcastOutput?: boolean
   [key: string]: unknown
 }
 
@@ -146,6 +149,53 @@ type PipeStartFactory = (
 // transport writes what arrives on it.
 const gatewayTxEvent = (base: string, subOptions: SubOptions): string =>
   `${base}:${subOptions.providerId}`
+
+// The NMEA 2000 connections whose driver writes the PGNs it gets on its
+// outEvent and jsonOutEvent: the canboatjs ones, except the receive-only
+// NavLink2 UDP.
+const N2K_WRITERS = new Set([
+  'ngt-1-canboatjs',
+  'canbus-canboatjs',
+  'ikonvert-canboatjs',
+  'navlink2-tcp-canboatjs',
+  'canboat-csv-canboatjs',
+  'ydwg02-canboatjs',
+  'ydwg02-udp-canboatjs',
+  'ydwg02-usb-canboatjs',
+  'w2k-1-n2k-ascii-canboatjs',
+  'w2k-1-n2k-actisense-canboatjs',
+  'n2k-ip-gateway-canboatjs',
+  'maretron-ipg-canboatjs'
+])
+
+/**
+ * The events an NMEA 2000 connection sends what it gets on: `broadcast`
+ * (`nmea2000out` or `nmea2000JsonOut`), unless the connection is set not
+ * to, and its own `<broadcast>:<providerId>`. A list given in the
+ * connection's options replaces the broadcast name.
+ */
+function n2kOutEvents(
+  configured: unknown,
+  broadcast: string,
+  providerId: string,
+  sendBroadcast: boolean
+): string {
+  const given =
+    typeof configured === 'string'
+      ? configured
+          .split(',')
+          .map((event) => event.trim())
+          .filter((event) => event !== '')
+      : []
+  const events = given.length > 0 ? given : [broadcast]
+  const targeted = `${broadcast}:${providerId}`
+  return [
+    ...events.filter(
+      (event) => event !== targeted && (sendBroadcast || event !== broadcast)
+    ),
+    targeted
+  ].join(',')
+}
 
 const discriminatorByDataType: Record<string, string> = {
   NMEA2000JS: 'A',
@@ -647,6 +697,9 @@ export default class Simple extends Transform {
     opts.subOptions.app = options.app
 
     let mappingType = dataType
+    let n2kOutput:
+      | { eventNames: Record<string, string>; broadcast: boolean }
+      | undefined
 
     if (options.type === 'NMEA2000' && opts.subOptions) {
       if (
@@ -671,20 +724,32 @@ export default class Simple extends Transform {
       ) {
         mappingType = 'NMEA2000YD'
       }
-      options.app.on('nmea2000out', () => {
-        setImmediate(() =>
-          options.app.emit('connectionwrite', {
-            providerId: options.providerId
-          })
+      // A plugin sends to every bus on nmea2000out / nmea2000JsonOut and
+      // to this one on nmea2000out:<providerId> / nmea2000JsonOut:<id>.
+      // The driver reports a write itself (connectionwrite), so a bus
+      // lights up only when it sends.
+      if (N2K_WRITERS.has(opts.subOptions.type ?? '')) {
+        const sendBroadcast = opts.subOptions.sendBroadcastOutput !== false
+        opts.subOptions.outEvent = n2kOutEvents(
+          opts.subOptions.outEvent,
+          'nmea2000out',
+          options.providerId,
+          sendBroadcast
         )
-      })
-      options.app.on('nmea2000JsonOut', () => {
-        setImmediate(() =>
-          options.app.emit('connectionwrite', {
-            providerId: options.providerId
-          })
+        opts.subOptions.jsonOutEvent = n2kOutEvents(
+          opts.subOptions.jsonOutEvent,
+          'nmea2000JsonOut',
+          options.providerId,
+          sendBroadcast
         )
-      })
+        n2kOutput = {
+          eventNames: {
+            nmea2000out: `nmea2000out:${options.providerId}`,
+            nmea2000JsonOut: `nmea2000JsonOut:${options.providerId}`
+          },
+          broadcast: sendBroadcast
+        }
+      }
     }
 
     const pipeStart = pipeStartByType[options.type]!
@@ -701,6 +766,8 @@ export default class Simple extends Transform {
     ]
 
     const dataReceivedEventName = `${opts.subOptions.providerId}-received`
+    // The same event in the <event>:<providerId> form new events use.
+    const receivedEventName = `received:${opts.subOptions.providerId}`
 
     const spy = new Transform({
       objectMode: true,
@@ -710,6 +777,7 @@ export default class Simple extends Transform {
         callback: TransformCallback
       ) {
         options.app.emit(dataReceivedEventName, chunk)
+        options.app.emit(receivedEventName, chunk)
         callback(null, chunk)
       }
     })
@@ -719,8 +787,10 @@ export default class Simple extends Transform {
       id: opts.subOptions.providerId,
       type: mappingType,
       eventNames: {
-        received: dataReceivedEventName
-      }
+        received: receivedEventName,
+        ...n2kOutput?.eventNames
+      },
+      ...(n2kOutput && { broadcast: n2kOutput.broadcast })
     })
 
     if (opts.subOptions.overrideTimestamp) {

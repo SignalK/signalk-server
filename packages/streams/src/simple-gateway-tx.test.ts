@@ -180,3 +180,153 @@ describe('Simple gateway TX', () => {
     })
   })
 })
+
+// A plugin sends to every N2K connection on nmea2000JsonOut and to one on
+// nmea2000JsonOut:<providerId>; a connection can be set to take only what
+// is sent to it.
+describe('Simple N2K bus targeting', () => {
+  const start = async (sendBroadcastOutput: boolean[]) => {
+    const app = createMockApp()
+    const simpleApp = app as unknown as SimpleOptions['app']
+    const gateways: Gateway[] = []
+    const connections: Simple[] = []
+    const writes: string[] = []
+    app.on('connectionwrite', ({ providerId }: { providerId: string }) =>
+      writes.push(providerId)
+    )
+    for (const [i, broadcast] of sendBroadcastOutput.entries()) {
+      const providerId = `bus${i + 1}`
+      const gateway = await startGateway()
+      gateways.push(gateway)
+      connections.push(
+        new Simple({
+          app: simpleApp,
+          providerId,
+          type: 'NMEA2000',
+          subOptions: {
+            app: simpleApp,
+            providerId,
+            type: 'w2k-1-n2k-ascii-canboatjs',
+            host: '127.0.0.1',
+            port: gateway.port,
+            sendBroadcastOutput: broadcast
+          } as SimpleOptions['subOptions'],
+          emitPropertyValue: () => undefined,
+          onPropertyValues: () => undefined,
+          createDebug: createDebugStub()
+        })
+      )
+    }
+    await Promise.all(
+      connections.map((_, i) => clientConnected(app, `bus${i + 1}`))
+    )
+    const stop = async () => {
+      connections.forEach((connection) => connection.end())
+      await Promise.all(gateways.map(stopGateway))
+    }
+    return { app, gateways, writes, stop }
+  }
+  const instances = (gateway: Gateway) =>
+    lines(gateway).map((line) => line.match(/ 1F214 (\d\d)/)?.[1])
+
+  it('sends to every bus, or to the one it is sent to', async () => {
+    const { app, gateways, writes, stop } = await start([true, true])
+    try {
+      app.emit('nmea2000JsonOut', battery(0))
+      app.emit('nmea2000JsonOut:bus2', battery(1))
+      app.emit('nmea2000JsonOut', battery(2))
+      await waitFor(
+        () => instances(gateways[1]!).includes('02'),
+        'the second gateway to receive everything'
+      )
+      await waitFor(
+        () => instances(gateways[0]!).includes('02'),
+        'the first gateway to receive the broadcasts'
+      )
+      expect(instances(gateways[0]!)).to.deep.equal(['00', '02'])
+      expect(instances(gateways[1]!)).to.deep.equal(['00', '01', '02'])
+      // Only a bus that writes reports a write.
+      await new Promise((resolve) => setImmediate(resolve))
+      writes.length = 0
+      app.emit('nmea2000JsonOut:bus2', battery(3))
+      await waitFor(
+        () => instances(gateways[1]!).includes('03'),
+        'the second gateway to receive the targeted frame'
+      )
+      await new Promise((resolve) => setImmediate(resolve))
+      expect(writes).to.not.be.empty
+      expect(new Set(writes)).to.deep.equal(new Set(['bus2']))
+    } finally {
+      await stop()
+    }
+  })
+
+  it('leaves out what is sent to every bus when told to', async () => {
+    const { app, gateways, writes, stop } = await start([true, false])
+    try {
+      app.emit('nmea2000JsonOut', battery(0))
+      app.emit('nmea2000JsonOut:bus2', battery(1))
+      await waitFor(
+        () =>
+          instances(gateways[0]!).length > 0 &&
+          instances(gateways[1]!).length > 0,
+        'both gateways to receive a frame'
+      )
+      expect(instances(gateways[0]!)).to.deep.equal(['00'])
+      expect(instances(gateways[1]!)).to.deep.equal(['01'])
+      await new Promise((resolve) => setImmediate(resolve))
+      expect(new Set(writes)).to.deep.equal(new Set(['bus1', 'bus2']))
+    } finally {
+      await stop()
+    }
+  })
+
+  it('publishes each connection’s events', async () => {
+    const { app, stop } = await start([true, false])
+    try {
+      const values = app.propertyValues
+        .filter(({ name }) => name === 'pipedprovider')
+        .map(({ value }) => value)
+      expect(values).to.deep.equal([
+        {
+          id: 'bus1',
+          type: 'NMEA2000JS',
+          eventNames: {
+            received: 'received:bus1',
+            nmea2000out: 'nmea2000out:bus1',
+            nmea2000JsonOut: 'nmea2000JsonOut:bus1'
+          },
+          broadcast: true
+        },
+        {
+          id: 'bus2',
+          type: 'NMEA2000JS',
+          eventNames: {
+            received: 'received:bus2',
+            nmea2000out: 'nmea2000out:bus2',
+            nmea2000JsonOut: 'nmea2000JsonOut:bus2'
+          },
+          broadcast: false
+        }
+      ])
+    } finally {
+      await stop()
+    }
+  })
+
+  it('emits what a connection receives on both of its received events', async () => {
+    const { app, gateways, stop } = await start([true])
+    try {
+      const received: string[] = []
+      app.on('bus1-received', () => received.push('old'))
+      app.on('received:bus1', () => received.push('new'))
+      gateways[0]!.sockets.forEach((socket) =>
+        socket.write('A173321.107 23FF7 1F513 012F3070002F30709F\r\n')
+      )
+      await waitFor(() => received.length >= 2, 'the received events')
+      expect(received.slice(0, 2)).to.deep.equal(['old', 'new'])
+    } finally {
+      await stop()
+    }
+  })
+})
