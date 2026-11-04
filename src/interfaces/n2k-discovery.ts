@@ -70,6 +70,12 @@ interface N2kDiscoveryApp extends SignalKServer {
   }
 }
 
+// A connection's pipedprovider property value: its id and events.
+interface PipedProviderValue {
+  id: string
+  eventNames?: { received?: string; nmea2000JsonOut?: string }
+}
+
 interface SourceStatus {
   // sourceRef matches the wire format produced by getSourceId():
   // "label.canName" or "label.src" for N2K, "label.talker" for NMEA0183,
@@ -167,12 +173,17 @@ async function saveLabels(
   await atomicWriteFile(labelsFilePath(app), JSON.stringify(labels, null, 2))
 }
 
+// Sends a PGN to the NMEA 2000 bus its destination is on, or to every bus
+// for a broadcast (see sendN2k in the module below).
+type N2kSend = (pgn: { dst?: number }, sourceRef?: string) => void
+
 function sendISORequest(
-  app: N2kDiscoveryApp,
+  send: N2kSend,
   dst: number,
-  requestedPgn = 126996
+  requestedPgn = 126996,
+  sourceRef?: string
 ): void {
-  app.emit('nmea2000JsonOut', new PGN_59904({ pgn: requestedPgn }, dst))
+  send(new PGN_59904({ pgn: requestedPgn }, dst), sourceRef)
 }
 
 // Request PGN 126996 from each known device individually, spaced 500ms
@@ -191,7 +202,7 @@ function sendISORequest(
 const DISCOVERY_PGNS = [60928, 126996, 126998] as const
 
 function requestProductInfo(
-  app: N2kDiscoveryApp,
+  send: N2kSend,
   knownAddresses: Set<number>,
   pendingTimers: Set<ReturnType<typeof setTimeout>>
 ): number {
@@ -216,7 +227,7 @@ function requestProductInfo(
       const offset = (i * DISCOVERY_PGNS.length + j) * REQUEST_INTERVAL_MS
       const timer = setTimeout(() => {
         pendingTimers.delete(timer)
-        sendISORequest(app, addr, pgn)
+        sendISORequest(send, addr, pgn)
       }, offset)
       pendingTimers.add(timer)
     })
@@ -337,6 +348,96 @@ module.exports = (app: N2kDiscoveryApp) => {
     return undefined
   }
 
+  // The NMEA 2000 connections each bus address was seen on, learned from
+  // every connection's received:<providerId> event, which carries its
+  // decoded PGNs. A request to one device goes to its bus only, so that a
+  // connection that sends no broadcast output still gets it, and a device
+  // with the same address on another bus does not.
+  const busesByAddress = new Map<number, Set<string>>()
+  const busListeners = new Map<
+    string,
+    { event: string; listener: (...args: unknown[]) => void }
+  >()
+  const watchBuses = (values: unknown) => {
+    if (!Array.isArray(values)) return
+    for (const entry of values) {
+      const bus = (entry as { value?: PipedProviderValue } | undefined)?.value
+      const received = bus?.eventNames?.received
+      if (
+        !bus ||
+        !received ||
+        !bus.eventNames?.nmea2000JsonOut ||
+        busListeners.has(bus.id)
+      ) {
+        continue
+      }
+      const id = bus.id
+      const listener = (pgn: unknown) => {
+        const src = (pgn as { src?: unknown } | undefined)?.src
+        if (typeof src !== 'number' || src < 0 || src > 253) return
+        let buses = busesByAddress.get(src)
+        if (!buses) {
+          buses = new Set()
+          busesByAddress.set(src, buses)
+        }
+        buses.add(id)
+      }
+      app.on(received, listener)
+      busListeners.set(id, { event: received, listener })
+    }
+  }
+  // The server keeps property values in app.propertyValues; the facade
+  // given to plugins and connections has onPropertyValues itself.
+  const propertyValues = (
+    app as {
+      propertyValues?: {
+        onPropertyValues(name: string, cb: (v: unknown) => void): unknown
+      }
+    }
+  ).propertyValues
+  const stopWatchingBuses = propertyValues?.onPropertyValues(
+    'pipedprovider',
+    watchBuses
+  )
+
+  // The buses to send a PGN for `dst` to: the one `sourceRef`
+  // ("<providerId>.<src or CAN NAME>") names, else those the address was
+  // seen on, else the one the sources tree has it under. Only buses that
+  // take PGNs sent to them (nmea2000JsonOut:<providerId>) count.
+  function busesFor(dst: number, sourceRef?: string): string[] {
+    let buses: string[]
+    const dot = typeof sourceRef === 'string' ? sourceRef.lastIndexOf('.') : -1
+    if (dot > 0) {
+      buses = [sourceRef!.substring(0, dot)]
+    } else if (busesByAddress.has(dst)) {
+      buses = [...busesByAddress.get(dst)!]
+    } else {
+      const providerId = findProviderIdForAddress(dst)
+      buses = providerId ? [providerId] : []
+    }
+    const emitter = app as unknown as {
+      listenerCount?: (event: string) => number
+    }
+    return buses.filter(
+      (bus) => (emitter.listenerCount?.(`nmea2000JsonOut:${bus}`) ?? 0) > 0
+    )
+  }
+
+  // Send a PGN: to every NMEA 2000 bus when it is for every device, or its
+  // bus is not known; otherwise to the bus of the device it is for.
+  const sendN2k: N2kSend = (pgn, sourceRef) => {
+    const dst = pgn.dst
+    const buses =
+      typeof dst === 'number' && dst !== 255 ? busesFor(dst, sourceRef) : []
+    if (buses.length === 0) {
+      app.emit('nmea2000JsonOut', pgn)
+      return
+    }
+    for (const bus of buses) {
+      app.emit(`nmea2000JsonOut:${bus}`, pgn)
+    }
+  }
+
   // Has the device at this bus address been identified? "Identified"
   // means manufacturerCode is populated in the live sources tree,
   // which only happens once we've received and parsed PGN 60928
@@ -380,7 +481,7 @@ module.exports = (app: N2kDiscoveryApp) => {
       rediscoveryLastAtBySrc.set(addr, Date.now())
       DISCOVERY_PGNS.forEach((pgn, j) => {
         schedulePendingRequest(
-          () => sendISORequest(app, addr, pgn),
+          () => sendISORequest(sendN2k, addr, pgn),
           j * REQUEST_INTERVAL_MS
         )
       })
@@ -394,7 +495,8 @@ module.exports = (app: N2kDiscoveryApp) => {
     const statuses: SourceStatus[] = []
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const sourceMeta = (app.signalk as any)?.sourceMeta as
-      Record<string, { lastSeen?: number }> | undefined
+      | Record<string, { lastSeen?: number }>
+      | undefined
     // sourceMeta is the canonical per-source freshness map. Its keys are
     // already in `sourceRef` form (e.g. "can0.44", "0183-1.II",
     // "derived-data") matching getSourceId(). Walk it directly so we
@@ -453,7 +555,8 @@ module.exports = (app: N2kDiscoveryApp) => {
     if (debug.enabled) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const sourceMeta = (app.signalk as any)?.sourceMeta as
-        Record<string, { lastSeen?: number }> | undefined
+        | Record<string, { lastSeen?: number }>
+        | undefined
       debug(
         'tick: %d statuses, %d sourceMeta entries, %d source providers',
         statuses.length,
@@ -604,7 +707,7 @@ module.exports = (app: N2kDiscoveryApp) => {
           'Auto-requesting identity from %d N2K devices',
           knownAddresses.size
         )
-        requestProductInfo(app, knownAddresses, pendingTimers)
+        requestProductInfo(sendN2k, knownAddresses, pendingTimers)
       }, delayMs)
       sweepTimers.add(timer)
     }
@@ -653,7 +756,7 @@ module.exports = (app: N2kDiscoveryApp) => {
         // we don't clear, because a device that answered the first
         // sweep but is silent during this one is still on the bus.
         const deviceCount = requestProductInfo(
-          app,
+          sendN2k,
           knownAddresses,
           pendingTimers
         )
@@ -812,7 +915,7 @@ module.exports = (app: N2kDiscoveryApp) => {
 
         // Request PGN 130060 (Label) from the device
         if (n2kOutAvailable) {
-          sendISORequest(app, src, 130060)
+          sendISORequest(sendN2k, src, 130060, sourceRef)
         }
 
         // Long-poll: we keep the N2KAnalyzerOut listener attached for
@@ -931,7 +1034,8 @@ module.exports = (app: N2kDiscoveryApp) => {
         const sources = app.signalk?.sources
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const sourceMeta = (app.signalk as any).sourceMeta as
-          Record<string, { lastSeen?: number }> | undefined
+          | Record<string, { lastSeen?: number }>
+          | undefined
         const removedRefs: string[] = []
 
         if (sources && typeof sources === 'object') {
@@ -1238,13 +1342,18 @@ module.exports = (app: N2kDiscoveryApp) => {
           return
         }
 
-        const { dst, field, value, currentValue, targetPgn } = req.body as {
-          dst?: number
-          field?: string
-          value?: unknown
-          currentValue?: number
-          targetPgn?: number
-        }
+        const { dst, field, value, currentValue, targetPgn, sourceRef } =
+          req.body as {
+            dst?: number
+            field?: string
+            value?: unknown
+            currentValue?: number
+            targetPgn?: number
+            // "<providerId>.<src or CAN NAME>": the device's bus.
+            sourceRef?: string
+          }
+        // To the device's bus only.
+        const sendHere = (pgn: { dst?: number }) => sendN2k(pgn, sourceRef)
 
         if (
           typeof dst !== 'number' ||
@@ -1280,8 +1389,7 @@ module.exports = (app: N2kDiscoveryApp) => {
             lower,
             upper
           )
-          app.emit(
-            'nmea2000JsonOut',
+          sendHere(
             new PGN_126208_NmeaCommandGroupFunction(
               {
                 pgn: 60928,
@@ -1296,7 +1404,10 @@ module.exports = (app: N2kDiscoveryApp) => {
             )
           )
           // Re-request Address Claim so sources data updates
-          schedulePendingRequest(() => sendISORequest(app, dst, 60928), 1000)
+          schedulePendingRequest(
+            () => sendISORequest(sendN2k, dst, 60928, sourceRef),
+            1000
+          )
         } else if (field === 'deviceInstanceLower') {
           // PGN 126208 Command targeting PGN 60928 field 3 only (data instance)
           const lower = Number(value)
@@ -1309,8 +1420,7 @@ module.exports = (app: N2kDiscoveryApp) => {
             return
           }
           debug('Sending data instance change to dst %d: %d', dst, lower)
-          app.emit(
-            'nmea2000JsonOut',
+          sendHere(
             new PGN_126208_NmeaCommandGroupFunction(
               {
                 pgn: 60928,
@@ -1322,7 +1432,10 @@ module.exports = (app: N2kDiscoveryApp) => {
             )
           )
           // Re-request Address Claim so sources data updates
-          schedulePendingRequest(() => sendISORequest(app, dst, 60928), 1000)
+          schedulePendingRequest(
+            () => sendISORequest(sendN2k, dst, 60928, sourceRef),
+            1000
+          )
         } else if (
           field === 'installationDescription1' ||
           field === 'installationDescription2'
@@ -1338,8 +1451,7 @@ module.exports = (app: N2kDiscoveryApp) => {
             dst,
             text
           )
-          app.emit(
-            'nmea2000JsonOut',
+          sendHere(
             new PGN_126208_NmeaCommandGroupFunction(
               {
                 pgn: 126998,
@@ -1354,8 +1466,14 @@ module.exports = (app: N2kDiscoveryApp) => {
           // Two requests: first after 1.5s (device needs time to process
           // the command), second at 3s as a safety net in case the first
           // response arrived before the device finished updating both fields.
-          schedulePendingRequest(() => sendISORequest(app, dst, 126998), 1500)
-          schedulePendingRequest(() => sendISORequest(app, dst, 126998), 3000)
+          schedulePendingRequest(
+            () => sendISORequest(sendN2k, dst, 126998, sourceRef),
+            1500
+          )
+          schedulePendingRequest(
+            () => sendISORequest(sendN2k, dst, 126998, sourceRef),
+            3000
+          )
         } else if (field === 'batteryInstance') {
           // PGN 126208 targeting PGN 127508 (Battery Status):
           // field order 1 = instance (8 bits, 0-252)
@@ -1376,8 +1494,7 @@ module.exports = (app: N2kDiscoveryApp) => {
               currentValue,
               instance
             )
-            app.emit(
-              'nmea2000JsonOut',
+            sendHere(
               new PGN_126208_NmeaWriteFieldsGroupFunction(
                 {
                   pgn: 127508,
@@ -1398,8 +1515,7 @@ module.exports = (app: N2kDiscoveryApp) => {
               dst,
               instance
             )
-            app.emit(
-              'nmea2000JsonOut',
+            sendHere(
               new PGN_126208_NmeaCommandGroupFunction(
                 {
                   pgn: 127508,
@@ -1431,8 +1547,7 @@ module.exports = (app: N2kDiscoveryApp) => {
               currentValue,
               instance
             )
-            app.emit(
-              'nmea2000JsonOut',
+            sendHere(
               new PGN_126208_NmeaWriteFieldsGroupFunction(
                 {
                   pgn: 127506,
@@ -1449,8 +1564,7 @@ module.exports = (app: N2kDiscoveryApp) => {
           } else {
             // Command (FC 1) for simple single-instance devices
             debug('Sending DC instance change to dst %d: %d', dst, instance)
-            app.emit(
-              'nmea2000JsonOut',
+            sendHere(
               new PGN_126208_NmeaCommandGroupFunction(
                 {
                   pgn: 127506,
@@ -1490,8 +1604,7 @@ module.exports = (app: N2kDiscoveryApp) => {
             currentValue,
             instance
           )
-          app.emit(
-            'nmea2000JsonOut',
+          sendHere(
             new PGN_126208_NmeaWriteFieldsGroupFunction(
               {
                 pgn: pgn,
@@ -1533,8 +1646,7 @@ module.exports = (app: N2kDiscoveryApp) => {
             sourceType,
             getEnumerationName('TEMPERATURE_SOURCE', sourceType) || 'unknown'
           )
-          app.emit(
-            'nmea2000JsonOut',
+          sendHere(
             new PGN_126208_NmeaWriteFieldsGroupFunction(
               {
                 pgn: pgn,
@@ -1571,8 +1683,7 @@ module.exports = (app: N2kDiscoveryApp) => {
             currentValue,
             instance
           )
-          app.emit(
-            'nmea2000JsonOut',
+          sendHere(
             new PGN_126208_NmeaWriteFieldsGroupFunction(
               {
                 pgn: 130313,
@@ -1611,8 +1722,7 @@ module.exports = (app: N2kDiscoveryApp) => {
             sourceType,
             getEnumerationName('HUMIDITY_SOURCE', sourceType) || 'unknown'
           )
-          app.emit(
-            'nmea2000JsonOut',
+          sendHere(
             new PGN_126208_NmeaWriteFieldsGroupFunction(
               {
                 pgn: 130313,
@@ -1642,8 +1752,7 @@ module.exports = (app: N2kDiscoveryApp) => {
               currentValue,
               instance
             )
-            app.emit(
-              'nmea2000JsonOut',
+            sendHere(
               new PGN_126208_NmeaWriteFieldsGroupFunction(
                 {
                   pgn: 127501,
@@ -1663,8 +1772,7 @@ module.exports = (app: N2kDiscoveryApp) => {
               dst,
               instance
             )
-            app.emit(
-              'nmea2000JsonOut',
+            sendHere(
               new PGN_126208_NmeaCommandGroupFunction(
                 {
                   pgn: 127501,
@@ -1719,6 +1827,12 @@ module.exports = (app: N2kDiscoveryApp) => {
     onlineStates.clear()
     frameLastSeenBySrc.clear()
     app.removeListener('N2KAnalyzerOut', n2kListener)
+    for (const { event, listener } of busListeners.values()) {
+      app.removeListener(event, listener)
+    }
+    busListeners.clear()
+    busesByAddress.clear()
+    if (typeof stopWatchingBuses === 'function') stopWatchingBuses()
     app.removeListener('nmea2000OutAvailable', n2kOutListener)
     app.removeListener('sourceRefChanged', sourceRefChangedListener)
   }

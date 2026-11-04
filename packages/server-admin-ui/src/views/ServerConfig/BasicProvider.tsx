@@ -1591,7 +1591,9 @@ function SendBroadcastOutputInput({
       <Col xs="7" md="6" className="form-text text-muted small">
         Send the PGNs that plugins send to every NMEA 2000 connection. Turn off
         to send only the PGNs sent to this connection, e.g. for the second bus
-        of a bridge or a gateway that should only listen.
+        of a bridge or a gateway that should only listen. The server&apos;s
+        requests to a device on this connection, such as device discovery and
+        instance changes, still reach it.
       </Col>
     </Form.Group>
   )

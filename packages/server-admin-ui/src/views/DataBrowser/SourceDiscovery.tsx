@@ -1192,6 +1192,8 @@ const InlineInstanceCell: React.FC<{
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         dst: Number(device.src),
+        // The device's bus: the request goes to that connection only.
+        sourceRef: device.sourceRef,
         field,
         value: num
       })
@@ -1449,6 +1451,8 @@ const InstanceRow: React.FC<{
     setSaveResult(null)
     const body: Record<string, unknown> = {
       dst: Number(device.src),
+      // The device's bus: the request goes to that connection only.
+      sourceRef: device.sourceRef,
       field,
       value: num
     }
@@ -2096,6 +2100,8 @@ const DataInstanceRow: React.FC<{
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         dst: Number(device.src),
+        // The device's bus: the request goes to that connection only.
+        sourceRef: device.sourceRef,
         field: fieldForPgn(inst.pgn),
         value: num,
         currentValue: inst.instance,
@@ -2128,6 +2134,8 @@ const DataInstanceRow: React.FC<{
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         dst: Number(device.src),
+        // The device's bus: the request goes to that connection only.
+        sourceRef: device.sourceRef,
         field: isHumidityPGN ? 'humiditySource' : 'temperatureSource',
         value: num,
         currentValue: inst.instance,
@@ -2362,6 +2370,8 @@ const InlineTextField: React.FC<{
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         dst: Number(device.src),
+        // The device's bus: the request goes to that connection only.
+        sourceRef: device.sourceRef,
         field,
         value: savedValue
       })
