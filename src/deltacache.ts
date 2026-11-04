@@ -1540,21 +1540,26 @@ export default class DeltaCache {
     contextFilter: ContextMatcher,
     user?: string,
     key?: string,
-    sourcePolicy?: 'preferred' | 'all'
+    sourcePolicy?: 'preferred' | 'all',
+    trusted = false
   ) {
     return this.getCachedDeltasForContexts(
       this.getMatchingContexts(contextFilter),
       user,
       key,
-      sourcePolicy
+      sourcePolicy,
+      trusted
     )
   }
 
+  // trusted skips the per-user read filter, for server-side readers that
+  // already see the whole model
   getCachedDeltasForContexts(
     contextNodes: CachedContexts,
     user?: string,
     key?: string,
-    sourcePolicy?: 'preferred' | 'all'
+    sourcePolicy?: 'preferred' | 'all',
+    trusted = false
   ) {
     // Split the dotted path once per call — lodash _.get would re-parse
     // it per context, and its 500-entry stringToPath memoize cache is
@@ -1603,9 +1608,12 @@ export default class DeltaCache {
           : 0
     )
 
-    return preferred.map(toDelta).filter((delta) => {
-      return this.app.securityStrategy.filterReadDelta(user, delta)
-    })
+    const cached = preferred.map(toDelta)
+    return trusted
+      ? cached
+      : cached.filter((delta) => {
+          return this.app.securityStrategy.filterReadDelta(user, delta)
+        })
   }
 }
 

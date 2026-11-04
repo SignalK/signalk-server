@@ -96,7 +96,8 @@ class SubscriptionManager implements ISubscriptionManager {
     callback: SubscribeCallback,
     user?: string,
     sourcePolicy?: 'preferred' | 'all',
-    excludeSources?: SourceRef[]
+    excludeSources?: SourceRef[],
+    trusted = false
   ) {
     // The callback is plugin/client code that runs synchronously inside
     // Bacon dispatches: live bus fan-out, cache bootstrap replay and the
@@ -172,7 +173,8 @@ class SubscriptionManager implements ISubscriptionManager {
         sourcePolicy,
         perSubEngine,
         this.selfContext,
-        true
+        true,
+        trusted
       )
       // listen to new keys and then use the same logic to check if we
       // want to subscribe, passing in a map with just that single bus.
@@ -221,7 +223,8 @@ class SubscriptionManager implements ISubscriptionManager {
         contextFilter,
         user,
         undefined,
-        perSubEngine ? 'all' : sourcePolicy
+        perSubEngine ? 'all' : sourcePolicy,
+        trusted
       )
       if (existingDeltas) {
         const now = new Date()
@@ -315,7 +318,8 @@ function handleSubscribeRows(
   sourcePolicy?: 'preferred' | 'all',
   perSubEngine?: ToPreferredDelta | null,
   selfContext?: string,
-  bootstrapFromCache?: boolean
+  bootstrapFromCache?: boolean,
+  trusted?: boolean
 ) {
   rows.reduce((acc, subscribeRow) => {
     if (subscribeRow.path !== undefined) {
@@ -331,7 +335,8 @@ function handleSubscribeRows(
         sourcePolicy,
         perSubEngine,
         selfContext,
-        bootstrapFromCache
+        bootstrapFromCache,
+        trusted
       )
     }
     return acc
@@ -354,7 +359,8 @@ function handleSubscribeRow(
   sourcePolicy?: 'preferred' | 'all',
   perSubEngine?: ToPreferredDelta | null,
   selfContext?: string,
-  bootstrapFromCache?: boolean
+  bootstrapFromCache?: boolean,
+  trusted?: boolean
 ) {
   const matcher = pathMatcher(subscribeRow.path)
   // The set of cached contexts matching filter is invariant across this
@@ -503,7 +509,8 @@ function handleSubscribeRow(
           getMatchingContexts(),
           user,
           key,
-          perSubEngine ? 'all' : sourcePolicy
+          perSubEngine ? 'all' : sourcePolicy,
+          trusted
         )
         const latest =
           flattenRootValues && cached
