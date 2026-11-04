@@ -74,6 +74,7 @@ function decrementIpCount(
 
 interface SignalKSparkRequest {
   skPrincipal?: SkPrincipal
+  skIsAuthenticated?: boolean
   token?: string
   source?: string
   cookies?: Record<string, string>
@@ -297,13 +298,13 @@ export interface WebSocketClient {
 
 const DEFAULT_MAX_WS_CONNECTIONS_PER_IP = 30
 
-// tokensecurity gives clients without a token this identifier when read-only
-// access is allowed; it names no user or device.
-const ANONYMOUS_PRINCIPAL = 'AUTO'
-
+// With read-only access allowed, tokensecurity gives a client without a
+// token a principal too, but leaves it unauthenticated: it names no user or
+// device.
 function namedPrincipal(spark: Spark): string | undefined {
-  const identifier = spark.request.skPrincipal?.identifier
-  return identifier === ANONYMOUS_PRINCIPAL ? undefined : identifier
+  return spark.request.skIsAuthenticated
+    ? spark.request.skPrincipal?.identifier
+    : undefined
 }
 
 // RFC 6455 Going Away; older clients reject the newer 1012 Service Restart
