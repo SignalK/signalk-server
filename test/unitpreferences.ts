@@ -146,6 +146,21 @@ describe('Unit Preferences', function () {
       expect(meta.displayUnits.formula).to.equal('value - 273.15')
     })
 
+    it('enriches tide height meta with the depth category', async function () {
+      for (const name of ['heightHigh', 'heightNow', 'heightLow']) {
+        await sendDelta(`environment.tide.${name}`, 1.2)
+        await sleep(50)
+
+        const res = await fetch(
+          `${host}/signalk/v1/api/vessels/self/environment/tide/${name}/meta`
+        )
+        expect(res.status).to.equal(200)
+
+        const meta = await res.json()
+        expect(meta.displayUnits.category).to.equal('depth')
+      }
+    })
+
     it('returns no displayUnits for paths without default category', async function () {
       await sendDelta('some.custom.path', 42)
       await sleep(50)

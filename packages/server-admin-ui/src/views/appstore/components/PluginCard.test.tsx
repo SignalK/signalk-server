@@ -36,6 +36,11 @@ describe('PluginCard', () => {
     expect(screen.getByText('OFFICIAL')).toBeDefined()
   })
 
+  it('renders WASM badge for WASM plugins', () => {
+    renderCard({ isWasm: true })
+    expect(screen.getByText('WASM')).toBeDefined()
+  })
+
   it('hides DEPRECATED badge on non-installed deprecated plugins', () => {
     renderCard({ deprecated: true })
     expect(screen.queryByText('DEPRECATED')).toBeNull()

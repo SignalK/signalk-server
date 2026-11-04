@@ -92,7 +92,9 @@ PR descriptions must be **succinct and straight to the point**. Explain the moti
 
 When referencing issues, use `closes`, `fixes`, or `resolves` followed by the issue number (e.g., "closes #18", "fixes #21 and resolves #23").
 
-**MANDATORY:** One logical change per PR. Refactoring and behavior changes belong in separate PRs. If changes would result in multiple changelog entries, they should be separate PRs. Even if you have made multiple changes together locally, split them into separate PRs.
+**MANDATORY:** One logical change per PR. Refactoring and behavior changes belong in separate PRs or at the minimum as separate commits. If changes address unrelated topics that would result in separate changelog entries, they should be separate PRs. Even if you have made multiple unrelated changes together locally, split them into separate PRs.
+
+A logical change is a complete feature or fix, not the smallest possible diff. Changes that work toward the same goal or touch the same functionality (for example, several fixes and improvements to how the server shuts down) belong in a single PR as separate atomic commits, not in a series of separate PRs. Split PRs by topic, not by individual step.
 
 **AI tools must proactively enforce PR scope.** If a user requests changes unrelated to the current PR topic, do not silently include them. Instead, suggest creating a separate PR for the unrelated work. Similarly, when rebasing or cleaning up commit history, if you detect commits that address different topics, suggest splitting them into separate PRs before proceeding.
 
