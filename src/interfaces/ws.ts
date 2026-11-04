@@ -297,6 +297,15 @@ export interface WebSocketClient {
 
 const DEFAULT_MAX_WS_CONNECTIONS_PER_IP = 30
 
+// tokensecurity gives clients without a token this identifier when read-only
+// access is allowed; it names no user or device.
+const ANONYMOUS_PRINCIPAL = 'AUTO'
+
+function namedPrincipal(spark: Spark): string | undefined {
+  const identifier = spark.request.skPrincipal?.identifier
+  return identifier === ANONYMOUS_PRINCIPAL ? undefined : identifier
+}
+
 // RFC 6455 Going Away; older clients reject the newer 1012 Service Restart
 const WS_CLOSE_GOING_AWAY = 1001
 
@@ -393,7 +402,7 @@ function wsInterface(app: WsApp): WsApi {
             id: spark.id,
             ip: spark.request._resolvedIp,
             userAgent: userAgentOf(spark.request.headers),
-            principal: spark.request.skPrincipal?.identifier,
+            principal: namedPrincipal(spark),
             connectedAt: spark.skConnectedAt
           })
           return true
