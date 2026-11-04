@@ -45,6 +45,7 @@ const {
   isTheServerModule,
   findModulesWithKeyword,
   fetchDistTagsForPackages,
+  cachedDistTags,
   getLatestServerVersion,
   getAuthor,
   getKeywords,
@@ -71,7 +72,12 @@ const {
   probeIconUrl,
   buildLocalAssetUrls: buildLocalAssetUrlsFor,
   packageNameIs,
-  readInstalledReadme
+  readInstalledReadme,
+  isPluginPackage,
+  isWasmPackage,
+  installedModuleKeywords,
+  NODE_PLUGIN_KEYWORD,
+  withPublishedVersions
 } = require('../appstore')
 
 const bundledAdminUIs = ['@signalk/server-admin-ui']
@@ -281,7 +287,7 @@ module.exports = function (app) {
             debug.enabled && debug(err.stack)
             storeAvailable = false
             return [
-              getInstalledAsPackageEntries('signalk-node-server-plugin'),
+              getInstalledAsPackageEntries(NODE_PLUGIN_KEYWORD),
               getInstalledAsPackageEntries('signalk-webapp')
             ]
           }),
@@ -292,7 +298,7 @@ module.exports = function (app) {
           .then(
             ([[plugins, webapps], serverVersion, distTagsMap, regIndex]) => {
               const result = getAllModuleInfo(
-                plugins,
+                withPublishedVersions(plugins, distTagsMap),
                 webapps,
                 serverVersion,
                 distTagsMap,
@@ -496,10 +502,12 @@ module.exports = function (app) {
     // published release would never reach the detail page.
     const cachedDetail = readDetailFromCache(cache, name)
     // An entry cached while the README was unreachable is rebuilt once
-    // the installed copy can supply it.
+    // the installed copy can supply it, and so is an entry without
+    // isWasm, which the detail page needs for the WASM badge.
     if (
       cachedDetail &&
       cachedDetail.version === pkg.version &&
+      typeof cachedDetail.isWasm === 'boolean' &&
       !(isInstalled && !cachedDetail.readme && installedReadmeFor(pkg)?.trim())
     ) {
       return cachedDetail
@@ -606,9 +614,8 @@ module.exports = function (app) {
           author: getAuthor(pkg),
           categories: getCategories(pkgForEnrichment),
           npmUrl: getNpmUrl({ package: pkg }) || undefined,
-          isPlugin: (pkg.keywords || []).some(
-            (v) => v === 'signalk-node-server-plugin'
-          ),
+          isPlugin: isPluginPackage(pkg.keywords),
+          isWasm: isWasmPackage(pkg.keywords),
           isWebapp: (pkg.keywords || []).some((v) => v === 'signalk-webapp'),
           keywords: pkg.keywords || [],
           npmReadme:
@@ -1025,10 +1032,25 @@ module.exports = function (app) {
 
   function findPluginsAndWebapps() {
     return Promise.all([
-      findModulesWithKeyword('signalk-node-server-plugin'),
+      findModulesWithKeyword(NODE_PLUGIN_KEYWORD),
       findModulesWithKeyword('signalk-embeddable-webapp'),
       findModulesWithKeyword('signalk-webapp')
-    ]).then(([plugins, embeddableWebapps, webapps]) => {
+    ]).then(([npmPlugins, embeddableWebapps, webapps]) => {
+      // An installed WASM plugin published without the Node plugin keyword
+      // is missing from the search, but must stay updatable and removable.
+      const listed = new Set(npmPlugins.map((p) => p.package.name))
+      const notInSearch = getInstalledAsPackageEntries(NODE_PLUGIN_KEYWORD)
+        .filter(
+          (p) =>
+            !listed.has(p.package.name) && isWasmPackage(p.package.keywords)
+        )
+        .map((p) => ({ ...p, installedVersion: p.package.version }))
+      // Discovery reads the dist-tags the store list last fetched instead of
+      // waiting for npm; the store list applies the ones it fetches itself.
+      const plugins = withPublishedVersions(
+        npmPlugins.concat(notInSearch),
+        cachedDistTags()
+      )
       const allWebapps = []
         .concat(embeddableWebapps)
         .concat(webapps)
@@ -1044,7 +1066,7 @@ module.exports = function (app) {
 
   function getInstalledAsPackageEntries(keyword) {
     const sources =
-      keyword === 'signalk-node-server-plugin'
+      keyword === NODE_PLUGIN_KEYWORD
         ? [{ entries: app.plugins || [], fallbackKeyword: keyword }]
         : [
             { entries: app.webapps || [], fallbackKeyword: 'signalk-webapp' },
@@ -1070,7 +1092,7 @@ module.exports = function (app) {
             name,
             version: installed.version,
             description: installed.description,
-            keywords: installed.keywords || [fallbackKeyword],
+            keywords: installedModuleKeywords(installed, fallbackKeyword),
             publisher:
               installed.publisher ||
               (authorName ? { username: authorName } : { username: '' }),
@@ -1235,9 +1257,8 @@ module.exports = function (app) {
         recent: isRecent(plugin.package.date),
         keywords: getKeywords(plugin.package),
         npmUrl: getNpmUrl(plugin),
-        isPlugin: plugin.package.keywords.some(
-          (v) => v === 'signalk-node-server-plugin'
-        ),
+        isPlugin: isPluginPackage(plugin.package.keywords),
+        isWasm: isWasmPackage(plugin.package.keywords),
         isWebapp: plugin.package.keywords.some((v) => v === 'signalk-webapp'),
         isEmbeddableWebapp: plugin.package.keywords.some(
           (v) => v === 'signalk-embeddable-webapp'
@@ -1392,19 +1413,26 @@ module.exports = function (app) {
   }
 
   function sendAppStoreChangedEvent() {
-    findPluginsAndWebapps().then(([plugins, webapps]) => {
-      getLatestServerVersion(app.config.version)
-        .then((serverVersion) =>
-          getAllModuleInfo(plugins, webapps, serverVersion)
-        )
-        .then((result) => {
-          app.emit('serverevent', {
-            type: 'APP_STORE_CHANGED',
-            from: 'signalk-server',
-            data: result
-          })
+    findPluginsAndWebapps()
+      .then(([plugins, webapps]) =>
+        // Like the store list, report modules without a server update when
+        // npm cannot say which server version is current.
+        getLatestServerVersion(app.config.version)
+          .catch(() => '0.0.0')
+          .then((serverVersion) =>
+            getAllModuleInfo(plugins, webapps, serverVersion)
+          )
+      )
+      .then((result) => {
+        app.emit('serverevent', {
+          type: 'APP_STORE_CHANGED',
+          from: 'signalk-server',
+          data: result
         })
-    })
+      })
+      .catch((err) => {
+        console.error(`App Store change event not sent: ${err.message}`)
+      })
   }
 
   function installSKModule(module, version) {

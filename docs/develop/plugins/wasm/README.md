@@ -19,7 +19,7 @@ This guide covers how to develop WASM/WASIX plugins for Signal K Server. WASM pl
 
 ## What Makes a WASM Plugin?
 
-A WASM plugin is an npm package that contains the WASM code for the plugin instead of the traditional JavaScript code. A WASM plugin is identified by the `signalk-wasm-plugin` keyword in package.json and the **`wasmManifest`** field in `package.json`:
+A WASM plugin is an npm package that contains the WASM code for the plugin instead of the traditional JavaScript code. A WASM plugin is identified by the **`wasmManifest`** field in `package.json`:
 
 ```json
 {
@@ -34,7 +34,7 @@ A WASM plugin is an npm package that contains the WASM code for the plugin inste
 - **`wasmManifest`** (required): Path to the compiled `.wasm` file. This field tells Signal K to load this as a WASM plugin instead of a Node.js plugin.
 - **`wasmCapabilities`** (required): Declares what permissions the plugin needs (network, storage, etc.)
 - **Package name** (flexible): Can be anything - `my-plugin`, `@myorg/my-plugin`, etc. There is **no requirement** to use `@signalk/` scope.
-- **Keywords**: Include `signalk-wasm-plugin` for discovery (do **not** use `signalk-node-server-plugin` - that's for Node.js plugins only)
+- **Keywords**: Include both `signalk-node-server-plugin` and `signalk-wasm-plugin`. The App Store finds every plugin by `signalk-node-server-plugin`; `signalk-wasm-plugin` marks it as a WASM plugin.
 
 ## Language Options
 
