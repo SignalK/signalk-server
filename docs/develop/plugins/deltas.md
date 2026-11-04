@@ -448,6 +448,54 @@ app.emit('nmea2000JsonOut', {
 })
 ```
 
+### Sending to one NMEA 2000 bus
+
+`nmea2000out` and `nmea2000JsonOut` reach every NMEA 2000 connection. A boat with more than one bus, or more than one gateway on a bus, can also be sent to one connection, by its provider id (the connection's ID in the admin UI). Each NMEA 2000 connection that writes also sends what it gets on `nmea2000out:<providerId>` and `nmea2000JsonOut:<providerId>`:
+
+```javascript
+app.emit('nmea2000JsonOut:bus2', {
+  pgn: 130306,
+  'Wind Speed': speed,
+  'Wind Angle': angle < 0 ? angle + Math.PI * 2 : angle,
+  Reference: 'Apparent'
+})
+```
+
+To send to several buses, emit once for each. A connection whose **Send broadcast N2K output** setting is off sends only what is sent to it, and leaves out what is sent on the plain `nmea2000out` and `nmea2000JsonOut`: use that for the second bus of a bridge, or for a gateway that should only listen.
+
+### Listing the NMEA 2000 buses
+
+Every connection publishes a `pipedprovider` property value. For an NMEA 2000 connection that writes, it names the events to send to it, and whether it sends what is sent to every bus:
+
+```javascript
+app.onPropertyValues('pipedprovider', (values) => {
+  values
+    .filter((value) => value?.value?.eventNames?.nmea2000JsonOut)
+    .forEach(({ value }) => {
+      // { id: 'bus2', type: 'NMEA2000YD',
+      //   eventNames: { received: 'received:bus2',
+      //                 nmea2000out: 'nmea2000out:bus2',
+      //                 nmea2000JsonOut: 'nmea2000JsonOut:bus2' },
+      //   broadcast: false }
+      buses.set(value.id, value)
+    })
+})
+```
+
+### Reading one NMEA 2000 bus
+
+A connection emits the PGNs it decodes on its `received:<providerId>` event, before they become deltas:
+
+```javascript
+app.on('received:bus2', (pgn) => {
+  if (pgn.pgn === 130306) {
+    // wind from bus2 only
+  }
+})
+```
+
+The deltas a connection produces have a `$source` that starts with `<providerId>.`, so a delta subscription can be narrowed to one bus by source as well.
+
 ### Sending a message on NMEA2000 startup
 
 If you need to send an NMEA2000 message out at startup, _e.g get current state from a device_ you will need to wait until the provider is ready before sending your message.
