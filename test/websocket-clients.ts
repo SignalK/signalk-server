@@ -111,6 +111,40 @@ describe('WebSocket clients', function () {
   })
 })
 
+describe('WebSocket clients with read-only access allowed', function () {
+  let url: string
+  let server: { stop: () => Promise<void> }
+  let adminToken: string
+
+  before(async function () {
+    this.timeout(SERVER_START_TIMEOUT)
+    const port = await freeport()
+    url = `http://0.0.0.0:${port}`
+    server = await startServerP(port, true, {}, { allow_readonly: true })
+    adminToken = await getAdminToken(server)
+  })
+
+  after(async function () {
+    await server.stop()
+  })
+
+  it('names no principal for anonymous clients', async function () {
+    const ws = await openStream(url, { 'User-Agent': 'Anonymous viewer' })
+    try {
+      const res = await fetch(`${url}/skServer/websocketClients`, {
+        headers: { Cookie: `JAUTHENTICATION=${adminToken}` }
+      })
+      expect(res.status).to.equal(200)
+      const clients: WebSocketClient[] = await res.json()
+      const client = clients.find((c) => c.userAgent === 'Anonymous viewer')
+      expect(client).to.exist
+      expect(client?.principal).to.be.undefined
+    } finally {
+      ws.close()
+    }
+  })
+})
+
 describe('userAgentOf', function () {
   it('caps the length and ignores a missing header', function () {
     expect(userAgentOf({ 'user-agent': 'a'.repeat(300) })).to.have.lengthOf(256)
