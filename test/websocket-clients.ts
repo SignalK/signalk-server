@@ -1,10 +1,12 @@
 import chai from 'chai'
 import WebSocket from 'ws'
 import { freeport, SERVER_START_TIMEOUT } from './ts-servertestutilities'
+import { promisify } from 'util'
 import {
   startServerP,
   getAdminToken,
-  getReadOnlyToken
+  getReadOnlyToken,
+  getToken
 } from './servertestutilities'
 import { userAgentOf } from '../src/userAgent'
 
@@ -113,7 +115,19 @@ describe('WebSocket clients', function () {
 
 describe('WebSocket clients with read-only access allowed', function () {
   let url: string
-  let server: { stop: () => Promise<void> }
+  let server: {
+    stop: () => Promise<void>
+    app: {
+      securityStrategy: {
+        securityConfig: object
+        addUser: (
+          config: object,
+          user: { userId: string; type: string; password: string },
+          callback: (err: Error | null) => void
+        ) => void
+      }
+    }
+  }
   let adminToken: string
 
   before(async function () {
@@ -139,6 +153,29 @@ describe('WebSocket clients with read-only access allowed', function () {
       const client = clients.find((c) => c.userAgent === 'Anonymous viewer')
       expect(client).to.exist
       expect(client?.principal).to.be.undefined
+    } finally {
+      ws.close()
+    }
+  })
+
+  it('names a signed-in user called AUTO', async function () {
+    const security = server.app.securityStrategy
+    await promisify(security.addUser)(security.securityConfig, {
+      userId: 'AUTO',
+      type: 'read',
+      password: 'auto-password'
+    })
+    const ws = await openStream(url, {
+      Cookie: `JAUTHENTICATION=${getToken(server, 'AUTO')}`,
+      'User-Agent': 'Signed-in AUTO'
+    })
+    try {
+      const res = await fetch(`${url}/skServer/websocketClients`, {
+        headers: { Cookie: `JAUTHENTICATION=${adminToken}` }
+      })
+      const clients: WebSocketClient[] = await res.json()
+      const client = clients.find((c) => c.userAgent === 'Signed-in AUTO')
+      expect(client?.principal).to.equal('AUTO')
     } finally {
       ws.close()
     }
