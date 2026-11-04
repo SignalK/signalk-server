@@ -299,12 +299,12 @@ export interface WebSocketClient {
 const DEFAULT_MAX_WS_CONNECTIONS_PER_IP = 30
 
 // With read-only access allowed, tokensecurity gives a client without a
-// token a principal too, but leaves it unauthenticated: it names no user or
-// device.
+// token a principal too, but marks it unauthenticated: it names no user or
+// device. Other security strategies may leave the flag unset.
 function namedPrincipal(spark: Spark): string | undefined {
-  return spark.request.skIsAuthenticated
-    ? spark.request.skPrincipal?.identifier
-    : undefined
+  return spark.request.skIsAuthenticated === false
+    ? undefined
+    : spark.request.skPrincipal?.identifier
 }
 
 // RFC 6455 Going Away; older clients reject the newer 1012 Service Restart

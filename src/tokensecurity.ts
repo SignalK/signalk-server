@@ -1548,6 +1548,7 @@ function tokenSecurityFactory(
     if (!token) {
       if (configuration.allow_readonly) {
         req.skPrincipal = { identifier: 'AUTO', permissions: 'readonly' }
+        req.skIsAuthenticated = false
         return
       } else {
         error = new Error('Missing access token')
