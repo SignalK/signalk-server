@@ -134,6 +134,10 @@ function setup(bluetooth = true, withApi = true) {
   return { bindings, bleApi, put, putString, events }
 }
 
+// MAX_STARTUP_BLE_EVENTS in plugin-lifecycle.ts
+const STARTUP_QUEUE_LIMIT = 1000
+const STARTUP_FLOOD = STARTUP_QUEUE_LIMIT + 10
+
 const flush = () => new Promise<void>((resolve) => setImmediate(resolve))
 
 describe('WASM BLE bindings', () => {
@@ -443,7 +447,11 @@ describe('WASM BLE plugin lifecycle', () => {
     wasmPlugins.delete(PLUGIN_ID)
   })
 
-  function registerPlugin(bleApi: FakeBleApi, stop: () => number = () => 0) {
+  function registerPlugin(
+    bleApi: FakeBleApi,
+    stop: () => number = () => 0,
+    duringStart: () => Promise<void> = async () => {}
+  ) {
     const memory = new WebAssembly.Memory({ initial: 1 })
     const memoryRef = { current: memory }
     const bindings = createBleBindings(
@@ -462,13 +470,19 @@ describe('WASM BLE plugin lifecycle', () => {
         id: () => PLUGIN_ID,
         name: () => 'Calypso',
         schema: () => '{}',
-        start: () =>
-          bindings.sk_ble_subscribe_gatt(
-            SCRATCH_OFFSET,
-            descriptorBytes.length
-          ) > 0
-            ? 0
-            : 1,
+        start: async () => {
+          if (
+            bindings.sk_ble_subscribe_gatt(
+              SCRATCH_OFFSET,
+              descriptorBytes.length
+            ) <= 0
+          ) {
+            return 1
+          }
+          bindings.sk_ble_subscribe_advertisements()
+          await duringStart()
+          return 0
+        },
         stop,
         ble_handler: (json: string) => received.push(JSON.parse(json))
       }
@@ -516,6 +530,30 @@ describe('WASM BLE plugin lifecycle', () => {
       type: 'error',
       message: 'device not visible'
     })
+  })
+
+  it('keeps connection events when advertisements fill the startup queue', async () => {
+    const bleApi = new FakeBleApi()
+    const handle = new FakeHandle()
+    const { received } = registerPlugin(bleApi, undefined, async () => {
+      for (let i = 0; i < STARTUP_FLOOD; i++) {
+        bleApi.advertisementCallback!({
+          mac: MAC,
+          rssi: -70,
+          providerId: 'local',
+          timestamp: i
+        })
+      }
+      bleApi.subscriptions[0]!.resolve(handle)
+      await flush()
+    })
+
+    await startWasmPlugin({}, PLUGIN_ID)
+
+    expect(received.filter((e) => e.type === 'advertisement')).to.have.length(
+      STARTUP_QUEUE_LIMIT
+    )
+    expect(received[received.length - 1]).to.include({ type: 'connected' })
   })
 
   it('releases BLE subscriptions when stop() throws', async () => {

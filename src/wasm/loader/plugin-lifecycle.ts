@@ -33,8 +33,11 @@ const pollTimers: Map<string, NodeJS.Timeout> = new Map()
 // Track delta subscription unsubscribe functions for plugins
 const deltaUnsubscribers: Map<string, () => void> = new Map()
 
-// Bounds the events held back while a plugin's start() runs
 const MAX_STARTUP_BLE_EVENTS = 1000
+
+function isBleStreamEvent(event: WasmBleEvent): boolean {
+  return event.type === 'advertisement' || event.type === 'notify'
+}
 
 // Mutex for serializing network-capable plugin starts
 // as-fetch uses global state that gets corrupted with parallel plugin starts
@@ -118,12 +121,18 @@ async function startWasmPluginInternal(
         if (plugin.status === 'running') {
           deliverBleEvent(event)
         } else if (plugin.status === 'starting') {
-          if (startupBleEvents.length < MAX_STARTUP_BLE_EVENTS) {
+          // Advertisements and notifications can arrive without limit, so
+          // only they are dropped once the queue is full. Connection changes
+          // and errors are few, and a plugin may be waiting for one.
+          if (
+            startupBleEvents.length < MAX_STARTUP_BLE_EVENTS ||
+            !isBleStreamEvent(event)
+          ) {
             startupBleEvents.push(event)
           } else if (!startupBleOverflowLogged) {
             startupBleOverflowLogged = true
             debug(
-              `[${pluginId}] more than ${MAX_STARTUP_BLE_EVENTS} BLE events during start(), dropping the rest`
+              `[${pluginId}] more than ${MAX_STARTUP_BLE_EVENTS} BLE events during start(), dropping further advertisements and notifications`
             )
           }
         }
