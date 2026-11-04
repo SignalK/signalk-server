@@ -122,4 +122,61 @@ describe('Simple gateway TX', () => {
       await Promise.all(gateways.map(stopGateway))
     }
   })
+
+  // The driver sends on its connection's transmit event (canboatjs's
+  // txEvent) and the transport writes from that event only, for every
+  // gateway a connection writes to over the network.
+  ;[
+    ['ydwg02-canboatjs', 'ydwg02-out'],
+    ['ydwg02-udp-canboatjs', 'ydwg02-out'],
+    ['navlink2-tcp-canboatjs', 'navlink2-out'],
+    ['w2k-1-n2k-ascii-canboatjs', 'w2k-1-out'],
+    ['w2k-1-n2k-actisense-canboatjs', 'w2k-1-out']
+  ].forEach(([type, base]) => {
+    it(`gives each ${type} connection a transmit event of its own`, async () => {
+      const app = createMockApp()
+      const simpleApp = app as unknown as SimpleOptions['app']
+      const gateways: Gateway[] = []
+      const connections: Simple[] = []
+
+      try {
+        for (const providerId of ['bus1', 'bus2']) {
+          const gateway = await startGateway()
+          gateways.push(gateway)
+          connections.push(
+            new Simple({
+              app: simpleApp,
+              providerId,
+              type: 'NMEA2000',
+              subOptions: {
+                app: simpleApp,
+                providerId,
+                type,
+                host: '127.0.0.1',
+                port: gateway.port
+              } as SimpleOptions['subOptions'],
+              emitPropertyValue: () => undefined,
+              onPropertyValues: () => undefined,
+              createDebug: createDebugStub()
+            })
+          )
+        }
+
+        expect(app.listenerCount(base!)).to.equal(0)
+        connections.forEach((connection, i) => {
+          const txEvent = `${base}:bus${i + 1}`
+          const pipeline = (connection as unknown as { pipeline: object[] })
+            .pipeline
+          const driver = pipeline.find(
+            (element) => (element as { outEvent?: string }).outEvent
+          ) as { outEvent: string }
+          expect(driver.outEvent).to.equal(txEvent)
+          expect(app.listenerCount(txEvent)).to.equal(1)
+        })
+      } finally {
+        connections.forEach((connection) => connection.end())
+        await Promise.all(gateways.map(stopGateway))
+      }
+    })
+  })
 })

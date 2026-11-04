@@ -141,7 +141,9 @@ type PipeStartFactory = (
 
 // Each gateway connection writes on a transmit event of its own, so a
 // frame encoded for one connection reaches only that gateway and two
-// gateways can carry different traffic (a bridge between two buses).
+// gateways can carry different traffic (a bridge between two buses). The
+// canboatjs driver sends on it (its txEvent option) and the connection's
+// transport writes what arrives on it.
 const gatewayTxEvent = (base: string, subOptions: SubOptions): string =>
   `${base}:${subOptions.providerId}`
 
@@ -217,7 +219,16 @@ const dataTypeMapping: Record<string, PipelineFactory> = {
     {
       let subOptions: SubOptions
       if (options.subOptions.type === 'navlink2-tcp-canboatjs') {
-        subOptions = { ...options.subOptions, tcp: true }
+        subOptions = {
+          ...options.subOptions,
+          tcp: true,
+          txEvent: gatewayTxEvent('navlink2-out', options.subOptions)
+        }
+      } else if (options.subOptions.type === 'ikonvert-canboatjs') {
+        subOptions = {
+          ...options.subOptions,
+          txEvent: gatewayTxEvent('ikonvertOut', options.subOptions)
+        }
       } else {
         subOptions = options.subOptions
       }
@@ -235,7 +246,7 @@ const dataTypeMapping: Record<string, PipelineFactory> = {
       new Ydwg02Ctor(
         {
           ...options.subOptions,
-          ydgwOutEvent: gatewayTxEvent('ydwg02-out', options.subOptions)
+          txEvent: gatewayTxEvent('ydwg02-out', options.subOptions)
         },
         options.subOptions.type === 'ydwg02-usb-canboatjs' ? 'usb' : 'network'
       )
@@ -311,7 +322,7 @@ function nmea2000input(
       new (Ctor as new (options: object) => PipeElement)({
         ...subOptions,
         baudrate: 230400,
-        toStdout: 'ikonvertOut'
+        toStdout: gatewayTxEvent('ikonvertOut', subOptions)
       })
     ]
   } else if (subOptions.type === 'ydwg02-canboatjs') {
@@ -339,7 +350,10 @@ function nmea2000input(
     ]
   } else if (subOptions.type === 'navlink2-tcp-canboatjs') {
     return [
-      new Tcp({ ...subOptions, outEvent: 'navlink2-out' } as SubOptions & {
+      new Tcp({
+        ...subOptions,
+        outEvent: gatewayTxEvent('navlink2-out', subOptions)
+      } as SubOptions & {
         host: string
         port: number
         outEvent: string
@@ -373,9 +387,8 @@ function nmea2000input(
       }),
       new Liner(subOptions),
       new W2k01Ctor(
-        subOptions,
-        'ascii',
-        gatewayTxEvent('w2k-1-out', subOptions)
+        { ...subOptions, txEvent: gatewayTxEvent('w2k-1-out', subOptions) },
+        'ascii'
       )
     ]
   } else if (subOptions.type === 'w2k-1-n2k-actisense-canboatjs') {
@@ -390,9 +403,8 @@ function nmea2000input(
         outEvent: string
       }),
       new W2k01Ctor(
-        subOptions,
-        'actisense',
-        gatewayTxEvent('w2k-1-out', subOptions)
+        { ...subOptions, txEvent: gatewayTxEvent('w2k-1-out', subOptions) },
+        'actisense'
       )
     ]
   } else if (subOptions.type === 'n2k-ip-gateway-canboatjs') {
