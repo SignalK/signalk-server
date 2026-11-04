@@ -17,6 +17,7 @@ import { faTriangleExclamation } from '@fortawesome/free-solid-svg-icons/faTrian
 import { faTrash } from '@fortawesome/free-solid-svg-icons/faTrash'
 import { faCirclePlus } from '@fortawesome/free-solid-svg-icons/faCirclePlus'
 import N2KFilters from './N2KFilters'
+import { N2K_WRITERS } from '../../utils/n2kWriters'
 
 interface ProviderOptions {
   type?: string
@@ -1555,23 +1556,6 @@ function ActAsCanDeviceInput({
     </Form.Group>
   )
 }
-
-// The NMEA 2000 connections that write PGNs to their bus; as N2K_WRITERS in
-// @signalk/streams' simple.ts.
-const N2K_WRITERS = [
-  'ngt-1-canboatjs',
-  'canbus-canboatjs',
-  'ikonvert-canboatjs',
-  'navlink2-tcp-canboatjs',
-  'canboat-csv-canboatjs',
-  'ydwg02-canboatjs',
-  'ydwg02-udp-canboatjs',
-  'ydwg02-usb-canboatjs',
-  'w2k-1-n2k-ascii-canboatjs',
-  'w2k-1-n2k-actisense-canboatjs',
-  'n2k-ip-gateway-canboatjs',
-  'maretron-ipg-canboatjs'
-]
 
 function SendBroadcastOutputInput({
   value,
