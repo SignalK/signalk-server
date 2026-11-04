@@ -469,6 +469,37 @@ describe('NotificationApi', () => {
       }
     })
 
+    it('drops a null or blank location from an external notification', function () {
+      const alarm = new Alarm()
+      const update = (location: string | null) => ({
+        $source: 'n2k' as SourceRef,
+        values: [
+          {
+            path: 'notifications.bilge' as Path,
+            value: {
+              state: 'alarm',
+              method: ['visual'],
+              message: 'Highwater',
+              location
+            }
+          }
+        ]
+      })
+      alarm.syncFromNotificationUpdate(
+        update('Engine Room'),
+        'vessels.self' as Context
+      )
+      expect(alarm.value.location).to.equal('Engine Room')
+
+      const cleared = update(null)
+      alarm.syncFromNotificationUpdate(cleared, 'vessels.self' as Context)
+      expect(alarm.value).to.not.have.property('location')
+      expect(cleared.values[0].value.location).to.equal(null)
+
+      alarm.syncFromNotificationUpdate(update('  '), 'vessels.self' as Context)
+      expect(alarm.value).to.not.have.property('location')
+    })
+
     it('drops the location when an external notification is cleared', function () {
       const alarm = new Alarm()
       const update = (value: object | null) => ({
