@@ -74,7 +74,9 @@ describe('Playground sends a PGN to one NMEA 2000 connection', () => {
 
     fireEvent.click(send)
     await waitFor(() => expect(inputTestBodies.length).toBeGreaterThan(1))
-    expect(inputTestBodies.at(-1)).not.toHaveProperty('n2kTarget')
+    expect(inputTestBodies[inputTestBodies.length - 1]).not.toHaveProperty(
+      'n2kTarget'
+    )
 
     fireEvent.change(screen.getByLabelText(SELECT), {
       target: { value: 'bus2' }
@@ -82,7 +84,7 @@ describe('Playground sends a PGN to one NMEA 2000 connection', () => {
     const sent = inputTestBodies.length
     fireEvent.click(send)
     await waitFor(() => expect(inputTestBodies.length).toBeGreaterThan(sent))
-    expect(inputTestBodies.at(-1)).toMatchObject({
+    expect(inputTestBodies[inputTestBodies.length - 1]).toMatchObject({
       sendToN2K: true,
       n2kTarget: 'bus2'
     })
