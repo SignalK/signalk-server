@@ -80,6 +80,10 @@ RUN npm_install() { \
        && cp -rf node_modules/@mxtommy/kip node_modules/signalk-server/node_modules/@mxtommy/ \
        && rm -rf node_modules/@mxtommy/; \
      fi \
+  && if [ ! -f node_modules/signalk-server/node_modules/@signalk/server-admin-ui/public/index.html ]; then \
+       echo "@signalk/server-admin-ui missing — npm skips an optional dependency it cannot resolve, e.g. a version not yet visible on the registry" >&2; \
+       exit 1; \
+     fi \
   && can_socket=$(find node_modules -path '*/@canboat/canboatjs/build/Release/canSocket.node' -print -quit) \
   && if [ -z "$can_socket" ]; then \
        echo "canSocket.node missing — canboatjs install script did not build the native CAN addon (npm allow-scripts gate skipped it, or node-gyp rebuild failed)" >&2; \
