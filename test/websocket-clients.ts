@@ -182,6 +182,50 @@ describe('WebSocket clients with read-only access allowed', function () {
   })
 })
 
+describe('WebSocket clients with a strategy not marking authentication', function () {
+  let url: string
+  let server: { stop: () => Promise<void> }
+  let adminToken: string
+  let readToken: string
+
+  before(async function () {
+    this.timeout(SERVER_START_TIMEOUT)
+    const port = await freeport()
+    url = `http://0.0.0.0:${port}`
+    process.env.SECURITYSTRATEGY = require.resolve('./flagless-security')
+    try {
+      server = await startServerP(port, true)
+    } finally {
+      delete process.env.SECURITYSTRATEGY
+    }
+    adminToken = await getAdminToken(server)
+    readToken = await getReadOnlyToken(server)
+  })
+
+  after(async function () {
+    await server.stop()
+  })
+
+  it('keeps the principal the strategy set', async function () {
+    const ws = await openStream(url, {
+      Cookie: `JAUTHENTICATION=${readToken}`,
+      'User-Agent': 'Custom strategy client'
+    })
+    try {
+      const res = await fetch(`${url}/skServer/websocketClients`, {
+        headers: { Cookie: `JAUTHENTICATION=${adminToken}` }
+      })
+      const clients: WebSocketClient[] = await res.json()
+      const client = clients.find(
+        (c) => c.userAgent === 'Custom strategy client'
+      )
+      expect(client?.principal).to.be.a('string')
+    } finally {
+      ws.close()
+    }
+  })
+})
+
 describe('userAgentOf', function () {
   it('caps the length and ignores a missing header', function () {
     expect(userAgentOf({ 'user-agent': 'a'.repeat(300) })).to.have.lengthOf(256)
