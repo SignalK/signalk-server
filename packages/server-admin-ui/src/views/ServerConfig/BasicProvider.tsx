@@ -31,6 +31,7 @@ interface ProviderOptions {
   useCamelCompat?: boolean
   useCanName?: boolean
   createDevice?: boolean
+  sendBroadcastOutput?: boolean
   sendNetworkStats?: boolean
   noDataReceivedTimeout?: string
   remoteSelf?: string
@@ -1555,6 +1556,63 @@ function ActAsCanDeviceInput({
   )
 }
 
+// The NMEA 2000 connections that write PGNs to their bus; as N2K_WRITERS in
+// @signalk/streams' simple.ts.
+const N2K_WRITERS = [
+  'ngt-1-canboatjs',
+  'canbus-canboatjs',
+  'ikonvert-canboatjs',
+  'navlink2-tcp-canboatjs',
+  'canboat-csv-canboatjs',
+  'ydwg02-canboatjs',
+  'ydwg02-udp-canboatjs',
+  'ydwg02-usb-canboatjs',
+  'w2k-1-n2k-ascii-canboatjs',
+  'w2k-1-n2k-actisense-canboatjs',
+  'n2k-ip-gateway-canboatjs',
+  'maretron-ipg-canboatjs'
+]
+
+function SendBroadcastOutputInput({
+  value,
+  onChange
+}: {
+  value: ProviderOptions
+  onChange: OnChangeHandler
+}) {
+  // Unset is on: the connection sends what is sent to every bus, as before
+  // the setting existed.
+  const checked = value.sendBroadcastOutput !== false
+  return (
+    <Form.Group as={Row} className="mb-3">
+      <Col xs="3" md="3">
+        <Form.Label htmlFor="provider-sendBroadcastOutput">
+          Send broadcast N2K output
+        </Form.Label>
+      </Col>
+      <Col xs="2" md="3">
+        <Form.Label className="switch switch-text switch-primary">
+          <input
+            type="checkbox"
+            id="provider-sendBroadcastOutput"
+            name="options.sendBroadcastOutput"
+            className="switch-input"
+            onChange={(event) => onChange(event)}
+            checked={checked}
+          />
+          <span className="switch-label" data-on="Yes" data-off="No" />
+          <span className="switch-handle" />
+        </Form.Label>
+      </Col>
+      <Col xs="7" md="6" className="form-text text-muted small">
+        Send the PGNs that plugins send to every NMEA 2000 connection. Turn off
+        to send only the PGNs sent to this connection, e.g. for the second bus
+        of a bridge or a gateway that should only listen.
+      </Col>
+    </Form.Group>
+  )
+}
+
 function CreateDeviceInput({
   value,
   onChange
@@ -2013,6 +2071,10 @@ function NMEA2000({ value, onChange, hasAnalyzer }: TypeComponentProps) {
       {value.options.type !== undefined &&
         /^ydwg02/.test(value.options.type) && (
           <CreateDeviceInput value={value.options} onChange={onChange} />
+        )}
+      {value.options.type !== undefined &&
+        N2K_WRITERS.includes(value.options.type) && (
+          <SendBroadcastOutputInput value={value.options} onChange={onChange} />
         )}
     </div>
   )
