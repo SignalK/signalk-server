@@ -698,8 +698,7 @@ export default class Simple extends Transform {
 
     let mappingType = dataType
     let n2kOutput:
-      | { eventNames: Record<string, string>; broadcast: boolean }
-      | undefined
+      { eventNames: Record<string, string>; broadcast: boolean } | undefined
 
     if (options.type === 'NMEA2000' && opts.subOptions) {
       if (

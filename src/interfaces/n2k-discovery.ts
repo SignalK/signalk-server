@@ -495,8 +495,7 @@ module.exports = (app: N2kDiscoveryApp) => {
     const statuses: SourceStatus[] = []
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const sourceMeta = (app.signalk as any)?.sourceMeta as
-      | Record<string, { lastSeen?: number }>
-      | undefined
+      Record<string, { lastSeen?: number }> | undefined
     // sourceMeta is the canonical per-source freshness map. Its keys are
     // already in `sourceRef` form (e.g. "can0.44", "0183-1.II",
     // "derived-data") matching getSourceId(). Walk it directly so we
@@ -555,8 +554,7 @@ module.exports = (app: N2kDiscoveryApp) => {
     if (debug.enabled) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const sourceMeta = (app.signalk as any)?.sourceMeta as
-        | Record<string, { lastSeen?: number }>
-        | undefined
+        Record<string, { lastSeen?: number }> | undefined
       debug(
         'tick: %d statuses, %d sourceMeta entries, %d source providers',
         statuses.length,
@@ -1034,8 +1032,7 @@ module.exports = (app: N2kDiscoveryApp) => {
         const sources = app.signalk?.sources
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const sourceMeta = (app.signalk as any).sourceMeta as
-          | Record<string, { lastSeen?: number }>
-          | undefined
+          Record<string, { lastSeen?: number }> | undefined
         const removedRefs: string[] = []
 
         if (sources && typeof sources === 'object') {
