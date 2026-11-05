@@ -16,7 +16,7 @@ import * as readline from 'readline'
 import Debug from 'debug'
 import { RouteAccessLevel, RoutePermission } from '@signalk/server-api'
 import { WasmHttpEndpoint, WasmPlugin } from './types'
-import { WithSecurityStrategy } from '../../security'
+import { PluginRoutePermission, WithSecurityStrategy } from '../../security'
 import { WasmPluginInstance } from '../wasm-runtime'
 import { getWasmRuntime } from '../wasm-runtime'
 import {
@@ -170,32 +170,28 @@ const ROUTE_ACCESS_LEVELS: ReadonlySet<string> = new Set<RouteAccessLevel>([
 ])
 
 /**
- * The non-admin access level one WASM endpoint declares, mirroring
- * `router.access()` for Node plugins. Endpoints without a recognised level
- * have none, so the /plugins gate keeps them admin-only.
+ * The access level one WASM endpoint declares, mirroring `router.access()`
+ * for Node plugins. Endpoints without a recognised level stay admin-only.
  */
-function toRoutePermission(
-  endpoint: WasmHttpEndpoint
-): RoutePermission | undefined {
-  if (endpoint.access === undefined) {
-    return undefined
+function toRoutePermission(endpoint: WasmHttpEndpoint): PluginRoutePermission {
+  const method = endpoint.method.toUpperCase() as RoutePermission['method']
+  const { access, path } = endpoint
+  if (access !== undefined && ROUTE_ACCESS_LEVELS.has(access)) {
+    return { method, path, permission: access }
   }
-  if (!ROUTE_ACCESS_LEVELS.has(endpoint.access)) {
+  if (access !== undefined) {
     debug(
-      `Ignoring unknown access level "${endpoint.access}" for ${endpoint.method} ${endpoint.path}, route stays admin-only`
+      `Ignoring unknown access level "${access}" for ${endpoint.method} ${path}, route stays admin-only`
     )
-    return undefined
   }
-  return {
-    method: endpoint.method.toUpperCase() as RoutePermission['method'],
-    path: endpoint.path,
-    permission: endpoint.access
-  }
+  return { method, path, permission: 'admin' }
 }
 
 interface EndpointRoutes {
   router: IRouter
-  permissions: RoutePermission[]
+  // Every endpoint in registration order: the access gate takes the first
+  // entry matching a request, which must be the route that handles it
+  permissions: PluginRoutePermission[]
 }
 
 /**
@@ -311,7 +307,7 @@ function buildEndpointRoutes(
 
   const endpoints: WasmHttpEndpoint[] = JSON.parse(endpointsJson)
   debug(`Registering ${endpoints.length} HTTP endpoints for ${plugin.id}`)
-  const permissions: RoutePermission[] = []
+  const permissions: PluginRoutePermission[] = []
 
   for (const endpoint of endpoints) {
     const { method, path: endpointPath, handler } = endpoint
@@ -324,10 +320,7 @@ function buildEndpointRoutes(
     }
 
     debug(`Registering ${method} ${endpointPath} -> ${handler}`)
-    const permission = toRoutePermission(endpoint)
-    if (permission) {
-      permissions.push(permission)
-    }
+    permissions.push(toRoutePermission(endpoint))
 
     router[routeMethod](endpointPath, async (req: Request, res: Response) => {
       // Set a timeout to catch hangs (declare outside try so catch can access it)

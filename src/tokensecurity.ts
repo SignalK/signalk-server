@@ -51,6 +51,7 @@ import {
   saveSecurityConfig,
   RequestStatusData,
   ACL,
+  PluginRoutePermission,
   SecurityStrategy,
   SkPrincipal,
   LoginResponse as SecurityLoginResponse,
@@ -251,14 +252,14 @@ function tokenSecurityFactory(
     pluginId: string
     method: string
     regex: RegExp
-    permission: 'readwrite' | 'readonly'
+    permission: PluginRoutePermission['permission']
   }
 
   const pluginRoutePermissions: PluginRoutePermissionEntry[] = []
 
   function toPermissionEntries(
     pluginId: string,
-    permissions: RoutePermission[]
+    permissions: PluginRoutePermission[]
   ): PluginRoutePermissionEntry[] {
     const entries: PluginRoutePermissionEntry[] = []
     for (const { method, path, permission } of permissions) {
@@ -288,7 +289,7 @@ function tokenSecurityFactory(
 
   strategy.replacePluginRoutePermissions = function (
     pluginId: string,
-    permissions: RoutePermission[]
+    permissions: PluginRoutePermission[]
   ): void {
     // Built first, so a path that fails to compile leaves the old entries
     const entries = toPermissionEntries(pluginId, permissions)
@@ -688,7 +689,9 @@ function tokenSecurityFactory(
           }
           return handlePermissionDenied(req, res)
         }
-        return writeMw(req, res, next)
+        if (match.permission === 'readwrite') {
+          return writeMw(req, res, next)
+        }
       }
 
       return adminMw(req, res, next)

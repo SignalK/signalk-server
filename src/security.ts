@@ -15,7 +15,7 @@
  * limitations under the License.
 */
 
-import { RoutePermission } from '@signalk/server-api'
+import { RouteAccessLevel, RoutePermission } from '@signalk/server-api'
 import { Request, Response } from 'express'
 import { PartialOIDCConfig } from './oidc/types'
 import {
@@ -39,6 +39,11 @@ import { ICallback } from './types'
 export const SECRET_KEY_FILENAME = 'security-secret.key'
 
 const debug = createDebug('signalk-server:security')
+
+/** A plugin route's access level, where `admin` keeps it admin-only */
+export type PluginRoutePermission = Omit<RoutePermission, 'permission'> & {
+  permission: RouteAccessLevel | 'admin'
+}
 
 export interface WithSecurityStrategy {
   securityStrategy: SecurityStrategy
@@ -268,10 +273,14 @@ export interface SecurityStrategy {
     permissions: RoutePermission[]
   ) => void
 
-  /** Replace all access levels recorded for a plugin's routes (optional - only available when token security is active) */
+  /**
+   * Replace all access levels recorded for a plugin's routes (optional - only available when token security is active).
+   * Pass every route in the order it is registered, admin-only ones included,
+   * so a request is judged by the route that will actually handle it.
+   */
   replacePluginRoutePermissions?: (
     pluginId: string,
-    permissions: RoutePermission[]
+    permissions: PluginRoutePermission[]
   ) => void
 
   /** Update OIDC config in memory (optional - only available when token security is active) */
