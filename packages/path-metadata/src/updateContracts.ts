@@ -27,6 +27,9 @@ export const updateContracts: Readonly<Record<string, UpdateContract>> =
     // covers the subtree only — steering.rudderAngle is outside it and stays
     // periodic, because it is a measurement of where the rudder actually is.
     'steering.autopilot': 'event',
+    // Day/night is a setting a person or a plugin switches, and the last
+    // switch stands until the next one.
+    'environment.mode': 'event',
     'navigation.home': 'event',
     'navigation.course': 'event',
     uuid: 'event',

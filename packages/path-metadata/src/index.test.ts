@@ -355,6 +355,12 @@ describe('updateContract inheritance', () => {
     )
   })
 
+  it('treats the day/night mode as event-driven', () => {
+    // A night mode switched on by hand must not fall back to null after the
+    // timeout and undim every display.
+    expect(contractFor(self('environment.mode'))).to.equal('event')
+  })
+
   it('treats resource announcements as event-driven', () => {
     // Null on a resource path is a delete, so a timeout must never produce it.
     expect(updateContractForPath('resources.charts.nautical-charts')).to.equal(
