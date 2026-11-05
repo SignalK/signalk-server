@@ -826,7 +826,25 @@ describe('NotificationApi', () => {
     })
 
     it('REST: raise sets location and update changes or removes it', async function () {
-      const { get, post, put, stop } = await startServer()
+      const { get, post, put, stop, server } = await startServer()
+      const emitted: Delta[] = []
+      const app = server.app as unknown as {
+        handleMessage: (id: string, delta: Delta, ...rest: unknown[]) => void
+      }
+      const handleMessage = app.handleMessage.bind(app)
+      app.handleMessage = (id, delta, ...rest) => {
+        if (id === 'notificationApi') {
+          emitted.push(delta)
+        }
+        handleMessage(id, delta, ...rest)
+      }
+      const lastEmitted = () => {
+        const update = emitted[emitted.length - 1].updates![0]
+        if (!('values' in update)) {
+          throw new Error('Expected update to have values property')
+        }
+        return update.values[0].value as Notification
+      }
       try {
         let response = await post(`/notifications`, {
           state: 'alarm',
@@ -852,10 +870,12 @@ describe('NotificationApi', () => {
         response = await put(`/notifications/${id}`, { location: 'Galley' })
         response.status.should.equal(200)
         expect(await location()).to.equal('Galley')
+        expect(lastEmitted().location).to.equal('Galley')
 
         response = await put(`/notifications/${id}`, { location: '' })
         response.status.should.equal(200)
         expect(await location()).to.equal(undefined)
+        expect(lastEmitted()).to.not.have.property('location')
 
         response = await put(`/notifications/${id}`, { location: 'Galley' })
         response.status.should.equal(200)
@@ -863,6 +883,7 @@ describe('NotificationApi', () => {
         response = await put(`/notifications/${id}`, { location: null })
         response.status.should.equal(200)
         expect(await location()).to.equal(undefined)
+        expect(lastEmitted()).to.not.have.property('location')
 
         response = await put(`/notifications/${id}`, { location: { room: 1 } })
         response.status.should.equal(400)
