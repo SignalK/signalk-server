@@ -87,6 +87,25 @@ import { Value } from '@sinclair/typebox/value'
 const readdir = util.promisify(fs.readdir)
 const debug = createDebug('signalk-server:serverroutes')
 
+// Resolved rather than joined to the server's own node_modules, as npm
+// hoists the admin UI next to the server when the server is installed as a
+// dependency (the Docker image runs `npm install signalk-server`).
+function getAdminUiPath() {
+  try {
+    return path.join(
+      path.dirname(require.resolve('@signalk/server-admin-ui/package.json')),
+      'public'
+    )
+  } catch (err) {
+    // An optional dependency, so it may not be installed at all.
+    debug(err)
+    return path.join(
+      __dirname,
+      '/../node_modules/@signalk/server-admin-ui/public'
+    )
+  }
+}
+
 // Schemas for the atomic priorities payload and its sub-documents. These are
 // the same shapes the delta engine and the persisted settings.json already
 // expect; the schemas exist so bad admin requests cannot poison settings.json
@@ -410,17 +429,14 @@ module.exports = function (
     )
   }
 
+  const adminUiPath = getAdminUiPath()
+
   // Vite 8 (Rolldown) changed CSS url() rewriting for publicDir assets: the built CSS
   // references logos as url(public_src/img/...) which resolves to assets/public_src/img/
   // relative to the CSS file, not the actual img/ location. Serve default logos from there.
   app.use(
     '/admin/assets/public_src/img',
-    express.static(
-      path.join(
-        __dirname,
-        '/../node_modules/@signalk/server-admin-ui/public/img'
-      )
-    )
+    express.static(path.join(adminUiPath, 'img'))
   )
 
   // mount before the main /admin
@@ -439,11 +455,6 @@ module.exports = function (
       res.redirect(301, to)
     })
   }
-
-  const adminUiPath = path.join(
-    __dirname,
-    '/../node_modules/@signalk/server-admin-ui/public'
-  )
 
   function serveIndexWithAddonScripts(indexPath: string, res: Response) {
     fs.readFile(indexPath, (err, indexContent) => {
