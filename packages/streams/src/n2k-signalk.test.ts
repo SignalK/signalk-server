@@ -368,3 +368,45 @@ describe('N2kToSignalK canName warmup', () => {
     expect(paths).to.include('notifications.propulsion.starboard.checkEngine')
   })
 })
+
+// What a connection's mapper sends, its requests for a device's identity
+// among it, is about devices on that connection's bus, so it goes there,
+// on nmea2000JsonOut:<providerId>, when the connection takes PGNs sent to
+// it; to every bus otherwise.
+describe('N2kToSignalK sends to its own bus', () => {
+  const sent = (app: ReturnType<typeof createMockApp>) => {
+    const events: string[] = []
+    for (const event of ['nmea2000JsonOut', 'nmea2000JsonOut:bus2']) {
+      app.on(event, () => events.push(event))
+    }
+    return events
+  }
+  const mapper = (stream: N2kToSignalK) =>
+    (
+      stream as unknown as {
+        n2kMapper: { n2kOutEvent?: string; emit(e: string, p: object): void }
+      }
+    ).n2kMapper
+
+  it('on its own event when its connection takes PGNs sent to it', () => {
+    const app = createMockApp({ isNmea2000OutAvailable: true })
+    app.on('nmea2000JsonOut:bus2', () => undefined)
+    const events = sent(app)
+    const stream = new N2kToSignalK({ app, providerId: 'bus2' })
+    expect(mapper(stream).n2kOutEvent).to.equal('nmea2000JsonOut:bus2')
+    mapper(stream).emit('n2kOut', { pgn: 59904, dst: 35 })
+    // Its request to every device, when output became available, as well.
+    expect(events).to.not.be.empty
+    expect(new Set(events)).to.deep.equal(new Set(['nmea2000JsonOut:bus2']))
+  })
+
+  it('to every bus when its connection does not', () => {
+    const app = createMockApp({ isNmea2000OutAvailable: true })
+    const events = sent(app)
+    const stream = new N2kToSignalK({ app, providerId: 'bus3' })
+    expect(mapper(stream).n2kOutEvent).to.equal('nmea2000JsonOut')
+    mapper(stream).emit('n2kOut', { pgn: 59904, dst: 35 })
+    expect(events).to.not.be.empty
+    expect(new Set(events)).to.deep.equal(new Set(['nmea2000JsonOut']))
+  })
+})
