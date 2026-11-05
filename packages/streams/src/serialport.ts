@@ -46,7 +46,9 @@ export default class SerialStream extends Transform {
       ? [...this.options.toStdout]
       : ([this.options.toStdout].filter(Boolean) as string[])
     const standardOutEventName = `serial-${this.options.providerId}-toStdout`
-    stdOutEvents.push(standardOutEventName)
+    // The same event in the <event>:<providerId> form new events use.
+    const toStdoutEventName = `serial-toStdout:${this.options.providerId}`
+    stdOutEvents.push(standardOutEventName, toStdoutEventName)
 
     for (const event of stdOutEvents) {
       this.options.app.on(event, (d: string | Buffer) => {
@@ -81,7 +83,7 @@ export default class SerialStream extends Transform {
     this.options.app.emitPropertyValue('serialport', {
       id: this.options.providerId,
       eventNames: {
-        toStdout: standardOutEventName
+        toStdout: toStdoutEventName
       }
     })
 

@@ -109,6 +109,9 @@ interface SubOptions {
   filtersEnabled?: boolean
   useCanName?: boolean
   tcp?: boolean
+  // false: send only what is targeted at this connection, not what is sent
+  // to every NMEA 2000 connection.
+  sendBroadcastOutput?: boolean
   [key: string]: unknown
 }
 
@@ -138,6 +141,61 @@ type PipeStartFactory = (
   subOptions: SubOptions,
   logging?: boolean
 ) => PipeElement[]
+
+// Each gateway connection writes on a transmit event of its own, so a
+// frame encoded for one connection reaches only that gateway and two
+// gateways can carry different traffic (a bridge between two buses). The
+// canboatjs driver sends on it (its txEvent option) and the connection's
+// transport writes what arrives on it.
+const gatewayTxEvent = (base: string, subOptions: SubOptions): string =>
+  `${base}:${subOptions.providerId}`
+
+// The NMEA 2000 connections whose driver writes the PGNs it gets on its
+// outEvent and jsonOutEvent: the canboatjs ones, except the receive-only
+// NavLink2 UDP.
+const N2K_WRITERS = new Set([
+  'ngt-1-canboatjs',
+  'canbus-canboatjs',
+  'ikonvert-canboatjs',
+  'navlink2-tcp-canboatjs',
+  'canboat-csv-canboatjs',
+  'ydwg02-canboatjs',
+  'ydwg02-udp-canboatjs',
+  'ydwg02-usb-canboatjs',
+  'w2k-1-n2k-ascii-canboatjs',
+  'w2k-1-n2k-actisense-canboatjs',
+  'n2k-ip-gateway-canboatjs',
+  'maretron-ipg-canboatjs'
+])
+
+/**
+ * The events an NMEA 2000 connection sends what it gets on: `broadcast`
+ * (`nmea2000out` or `nmea2000JsonOut`), unless the connection is set not
+ * to, and its own `<broadcast>:<providerId>`. A list given in the
+ * connection's options replaces the broadcast name.
+ */
+function n2kOutEvents(
+  configured: unknown,
+  broadcast: string,
+  providerId: string,
+  sendBroadcast: boolean
+): string {
+  const given =
+    typeof configured === 'string'
+      ? configured
+          .split(',')
+          .map((event) => event.trim())
+          .filter((event) => event !== '')
+      : []
+  const events = given.length > 0 ? given : [broadcast]
+  const targeted = `${broadcast}:${providerId}`
+  return [
+    ...events.filter(
+      (event) => event !== targeted && (sendBroadcast || event !== broadcast)
+    ),
+    targeted
+  ].join(',')
+}
 
 const discriminatorByDataType: Record<string, string> = {
   NMEA2000JS: 'A',
@@ -211,7 +269,16 @@ const dataTypeMapping: Record<string, PipelineFactory> = {
     {
       let subOptions: SubOptions
       if (options.subOptions.type === 'navlink2-tcp-canboatjs') {
-        subOptions = { ...options.subOptions, tcp: true }
+        subOptions = {
+          ...options.subOptions,
+          tcp: true,
+          txEvent: gatewayTxEvent('navlink2-out', options.subOptions)
+        }
+      } else if (options.subOptions.type === 'ikonvert-canboatjs') {
+        subOptions = {
+          ...options.subOptions,
+          txEvent: gatewayTxEvent('ikonvertOut', options.subOptions)
+        }
       } else {
         subOptions = options.subOptions
       }
@@ -227,7 +294,10 @@ const dataTypeMapping: Record<string, PipelineFactory> = {
     const Ydwg02Ctor = canboatjs.Ydwg02 as unknown as CanboatCtor
     const result: PipeElement[] = [
       new Ydwg02Ctor(
-        { ...options.subOptions },
+        {
+          ...options.subOptions,
+          txEvent: gatewayTxEvent('ydwg02-out', options.subOptions)
+        },
         options.subOptions.type === 'ydwg02-usb-canboatjs' ? 'usb' : 'network'
       )
     ]
@@ -302,12 +372,15 @@ function nmea2000input(
       new (Ctor as new (options: object) => PipeElement)({
         ...subOptions,
         baudrate: 230400,
-        toStdout: 'ikonvertOut'
+        toStdout: gatewayTxEvent('ikonvertOut', subOptions)
       })
     ]
   } else if (subOptions.type === 'ydwg02-canboatjs') {
     return [
-      new Tcp({ ...subOptions, outEvent: 'ydwg02-out' } as SubOptions & {
+      new Tcp({
+        ...subOptions,
+        outEvent: gatewayTxEvent('ydwg02-out', subOptions)
+      } as SubOptions & {
         host: string
         port: number
         outEvent: string
@@ -316,7 +389,10 @@ function nmea2000input(
     ]
   } else if (subOptions.type === 'ydwg02-udp-canboatjs') {
     return [
-      new Udp({ ...subOptions, outEvent: 'ydwg02-out' } as SubOptions & {
+      new Udp({
+        ...subOptions,
+        outEvent: gatewayTxEvent('ydwg02-out', subOptions)
+      } as SubOptions & {
         port: number
         outEvent: string
       }),
@@ -324,7 +400,10 @@ function nmea2000input(
     ]
   } else if (subOptions.type === 'navlink2-tcp-canboatjs') {
     return [
-      new Tcp({ ...subOptions, outEvent: 'navlink2-out' } as SubOptions & {
+      new Tcp({
+        ...subOptions,
+        outEvent: gatewayTxEvent('navlink2-out', subOptions)
+      } as SubOptions & {
         host: string
         port: number
         outEvent: string
@@ -348,23 +427,35 @@ function nmea2000input(
   } else if (subOptions.type === 'w2k-1-n2k-ascii-canboatjs') {
     const W2k01Ctor = requireW2k01()
     return [
-      new Tcp({ ...subOptions, outEvent: 'w2k-1-out' } as SubOptions & {
+      new Tcp({
+        ...subOptions,
+        outEvent: gatewayTxEvent('w2k-1-out', subOptions)
+      } as SubOptions & {
         host: string
         port: number
         outEvent: string
       }),
       new Liner(subOptions),
-      new W2k01Ctor(subOptions, 'ascii', 'w2k-1-out')
+      new W2k01Ctor(
+        { ...subOptions, txEvent: gatewayTxEvent('w2k-1-out', subOptions) },
+        'ascii'
+      )
     ]
   } else if (subOptions.type === 'w2k-1-n2k-actisense-canboatjs') {
     const W2k01Ctor = requireW2k01()
     return [
-      new Tcp({ ...subOptions, outEvent: 'w2k-1-out' } as SubOptions & {
+      new Tcp({
+        ...subOptions,
+        outEvent: gatewayTxEvent('w2k-1-out', subOptions)
+      } as SubOptions & {
         host: string
         port: number
         outEvent: string
       }),
-      new W2k01Ctor(subOptions, 'actisense', 'w2k-1-out')
+      new W2k01Ctor(
+        { ...subOptions, txEvent: gatewayTxEvent('w2k-1-out', subOptions) },
+        'actisense'
+      )
     ]
   } else if (subOptions.type === 'n2k-ip-gateway-canboatjs') {
     const canboatjs = require('@canboat/canboatjs') as {
@@ -392,7 +483,7 @@ function nmea2000input(
       new (Ctor as new (options: object) => PipeElement)({
         ...subOptions,
         baudrate: 38400,
-        toStdout: 'ydwg02-out'
+        toStdout: gatewayTxEvent('ydwg02-out', subOptions)
       })
     ]
   } else {
@@ -606,6 +697,8 @@ export default class Simple extends Transform {
     opts.subOptions.app = options.app
 
     let mappingType = dataType
+    let n2kOutput:
+      { eventNames: Record<string, string>; broadcast: boolean } | undefined
 
     if (options.type === 'NMEA2000' && opts.subOptions) {
       if (
@@ -630,20 +723,32 @@ export default class Simple extends Transform {
       ) {
         mappingType = 'NMEA2000YD'
       }
-      options.app.on('nmea2000out', () => {
-        setImmediate(() =>
-          options.app.emit('connectionwrite', {
-            providerId: options.providerId
-          })
+      // A plugin sends to every bus on nmea2000out / nmea2000JsonOut and
+      // to this one on nmea2000out:<providerId> / nmea2000JsonOut:<id>.
+      // The driver reports a write itself (connectionwrite), so a bus
+      // lights up only when it sends.
+      if (N2K_WRITERS.has(opts.subOptions.type ?? '')) {
+        const sendBroadcast = opts.subOptions.sendBroadcastOutput !== false
+        opts.subOptions.outEvent = n2kOutEvents(
+          opts.subOptions.outEvent,
+          'nmea2000out',
+          options.providerId,
+          sendBroadcast
         )
-      })
-      options.app.on('nmea2000JsonOut', () => {
-        setImmediate(() =>
-          options.app.emit('connectionwrite', {
-            providerId: options.providerId
-          })
+        opts.subOptions.jsonOutEvent = n2kOutEvents(
+          opts.subOptions.jsonOutEvent,
+          'nmea2000JsonOut',
+          options.providerId,
+          sendBroadcast
         )
-      })
+        n2kOutput = {
+          eventNames: {
+            nmea2000out: `nmea2000out:${options.providerId}`,
+            nmea2000JsonOut: `nmea2000JsonOut:${options.providerId}`
+          },
+          broadcast: sendBroadcast
+        }
+      }
     }
 
     const pipeStart = pipeStartByType[options.type]!
@@ -660,6 +765,8 @@ export default class Simple extends Transform {
     ]
 
     const dataReceivedEventName = `${opts.subOptions.providerId}-received`
+    // The same event in the <event>:<providerId> form new events use.
+    const receivedEventName = `received:${opts.subOptions.providerId}`
 
     const spy = new Transform({
       objectMode: true,
@@ -669,6 +776,7 @@ export default class Simple extends Transform {
         callback: TransformCallback
       ) {
         options.app.emit(dataReceivedEventName, chunk)
+        options.app.emit(receivedEventName, chunk)
         callback(null, chunk)
       }
     })
@@ -678,8 +786,10 @@ export default class Simple extends Transform {
       id: opts.subOptions.providerId,
       type: mappingType,
       eventNames: {
-        received: dataReceivedEventName
-      }
+        received: receivedEventName,
+        ...n2kOutput?.eventNames
+      },
+      ...(n2kOutput && { broadcast: n2kOutput.broadcast })
     })
 
     if (opts.subOptions.overrideTimestamp) {

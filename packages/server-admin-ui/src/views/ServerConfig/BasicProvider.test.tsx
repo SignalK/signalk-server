@@ -173,3 +173,70 @@ describe('BasicProvider NMEA 0183 $MXPGN byte order', () => {
     )
   })
 })
+
+describe('BasicProvider NMEA 2000 send broadcast output', () => {
+  const SWITCH = 'Send broadcast N2K output'
+
+  function renderNmea2000(
+    options: Record<string, unknown>,
+    onChange = vi.fn()
+  ) {
+    render(
+      <BasicProvider
+        value={{
+          type: 'NMEA2000',
+          id: 'bus2',
+          enabled: true,
+          options: { type: 'ydwg02-canboatjs', ...options }
+        }}
+        onChange={onChange}
+        onPropChange={vi.fn()}
+      />
+    )
+    return onChange
+  }
+
+  beforeEach(() => {
+    // The form fetches the serial ports and more, and a Response is read
+    // only once.
+    vi.spyOn(globalThis, 'fetch').mockImplementation((url) =>
+      Promise.resolve(
+        new Response(
+          JSON.stringify(
+            String(url).includes('serialports') ? { serialports: [] } : false
+          )
+        )
+      )
+    )
+  })
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('is on for a connection without the setting', () => {
+    renderNmea2000({})
+    expect(screen.getByLabelText(SWITCH)).toHaveProperty('checked', true)
+  })
+
+  it('is off when sendBroadcastOutput is false', () => {
+    renderNmea2000({ sendBroadcastOutput: false })
+    expect(screen.getByLabelText(SWITCH)).toHaveProperty('checked', false)
+  })
+
+  it('reports the switch as options.sendBroadcastOutput', () => {
+    // React puts a controlled checkbox back after the event, so the state
+    // is read while the handler runs.
+    const changes: Array<[string, boolean]> = []
+    renderNmea2000(
+      {},
+      vi.fn((event) => changes.push([event.target.name, event.target.checked]))
+    )
+    fireEvent.click(screen.getByLabelText(SWITCH))
+    expect(changes).toEqual([['options.sendBroadcastOutput', false]])
+  })
+
+  it('is not shown for a connection that does not write', () => {
+    renderNmea2000({ type: 'ngt-1' })
+    expect(screen.queryByLabelText(SWITCH)).toBeNull()
+  })
+})

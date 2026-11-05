@@ -12,6 +12,7 @@ import { faCircleDot } from '@fortawesome/free-regular-svg-icons/faCircleDot'
 import { faSpinner } from '@fortawesome/free-solid-svg-icons/faSpinner'
 import dayjs from 'dayjs'
 import jsonlint from 'jsonlint-mod'
+import { N2K_WRITERS } from '../utils/n2kWriters'
 
 const timestampFormat = 'MM/DD HH:mm:ss'
 const inputStorageKey = 'admin.v1.playground.input'
@@ -87,6 +88,16 @@ const Playground: React.FC = () => {
   )
   const [sending, setSending] = useState(false)
   const [sendingN2K, setSendingN2K] = useState(false)
+  // The NMEA 2000 connections a PGN can be sent to, and the chosen one;
+  // '' sends to every connection.
+  const [n2kTargets, setN2kTargets] = useState<
+    Array<{ id: string; broadcast: boolean }>
+  >([])
+  const [n2kTarget, setN2kTarget] = useState('')
+  const n2kTargetRef = useRef(n2kTarget)
+  useEffect(() => {
+    n2kTargetRef.current = n2kTarget
+  }, [n2kTarget])
   const [activeTab, setActiveTab] = useState(DELTAS_TAB_ID)
   const [error, setError] = useState<string | null>(null)
   const [jsonError, setJsonError] = useState<string | null>(null)
@@ -123,7 +134,13 @@ const Playground: React.FC = () => {
         }
       }
 
-      const body = { value: currentInput, sendToServer, sendToN2K }
+      const body = {
+        value: currentInput,
+        sendToServer,
+        sendToN2K,
+        ...(sendToN2K &&
+          n2kTargetRef.current && { n2kTarget: n2kTargetRef.current })
+      }
       localStorage.setItem(inputStorageKey, currentInput)
 
       if (sendToServer) {
@@ -268,6 +285,35 @@ const Playground: React.FC = () => {
     }
   }, [])
 
+  useEffect(() => {
+    fetch(`${window.serverRoutesPrefix}/providers`, { credentials: 'include' })
+      .then((response) => (response.ok ? response.json() : []))
+      .then(
+        (
+          providers: Array<{
+            id: string
+            type?: string
+            enabled?: boolean
+            options?: { type?: string; sendBroadcastOutput?: boolean }
+          }>
+        ) =>
+          setN2kTargets(
+            providers
+              .filter(
+                (provider) =>
+                  provider.enabled &&
+                  provider.type === 'NMEA2000' &&
+                  N2K_WRITERS.includes(provider.options?.type ?? '')
+              )
+              .map((provider) => ({
+                id: provider.id,
+                broadcast: provider.options?.sendBroadcastOutput !== false
+              }))
+          )
+      )
+      .catch(() => setN2kTargets([]))
+  }, [])
+
   // Auto-send on mount if there's saved input
   // The ref is only read when scheduling the initial send, never during render
   useEffect(() => {
@@ -349,6 +395,26 @@ const Playground: React.FC = () => {
               </Row>
               <Row style={{ paddingBottom: '0.25rem' }}>
                 <Col className="text-end">
+                  {n2kTargets.length > 1 && (
+                    <Form.Select
+                      size="sm"
+                      aria-label="NMEA 2000 connection to send to"
+                      value={n2kTarget}
+                      onChange={(event) => setN2kTarget(event.target.value)}
+                      style={{
+                        display: 'inline-block',
+                        width: 'auto',
+                        marginRight: '0.5rem'
+                      }}
+                    >
+                      <option value="">All NMEA 2000 connections</option>
+                      {n2kTargets.map(({ id, broadcast }) => (
+                        <option key={id} value={id}>
+                          {broadcast ? id : `${id} (no broadcast)`}
+                        </option>
+                      ))}
+                    </Form.Select>
+                  )}
                   <Button
                     size="sm"
                     variant="primary"

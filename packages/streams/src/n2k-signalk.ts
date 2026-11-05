@@ -32,6 +32,7 @@ interface N2kToSignalKOptions {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     on(event: string, cb: (...args: any[]) => void): void
     emit(event: string, ...args: unknown[]): void
+    listenerCount?(event: string): number
     handleMessage(id: string, delta: object): void
   }
   providerId: string
@@ -127,10 +128,16 @@ export default class N2kToSignalK extends Transform {
       sendMetaData: true
     }) as N2kMapper & EventEmitter
 
-    const n2kOutEvent = 'nmea2000JsonOut'
+    // What this connection's mapper sends, such as its requests for a
+    // device's Address Claim and Product Information, is about devices on
+    // this connection's bus: it goes there, on the connection's own event,
+    // when the connection takes PGNs sent to it, and to every bus otherwise.
+    const ownBus = `nmea2000JsonOut:${options.providerId}`
+    const n2kOutEvent = () =>
+      (this.app.listenerCount?.(ownBus) ?? 0) > 0 ? ownBus : 'nmea2000JsonOut'
 
     this.n2kMapper.on('n2kOut', (pgn: object) =>
-      this.app.emit('nmea2000JsonOut', pgn)
+      this.app.emit(n2kOutEvent(), pgn)
     )
 
     this.n2kMapper.on(
@@ -219,10 +226,10 @@ export default class N2kToSignalK extends Transform {
     )
 
     if (this.app.isNmea2000OutAvailable) {
-      this.n2kMapper.n2kOutIsAvailable(this.app, n2kOutEvent)
+      this.n2kMapper.n2kOutIsAvailable(this.app, n2kOutEvent())
     } else {
       this.app.on('nmea2000OutAvailable', () =>
-        this.n2kMapper.n2kOutIsAvailable(this.app, n2kOutEvent)
+        this.n2kMapper.n2kOutIsAvailable(this.app, n2kOutEvent())
       )
     }
   }

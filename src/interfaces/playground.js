@@ -104,6 +104,9 @@ module.exports = function (app) {
   app.post(`${serverRoutesPrefix}/inputTest`, (req, res) => {
     const sendToServer = req.body.sendToServer
     const sendToN2K = req.body.sendToN2K
+    // The connection to send to, by provider id; unset sends to every
+    // NMEA 2000 connection.
+    const n2kTarget = req.body.n2kTarget || undefined
 
     if (
       (sendToServer || sendToN2K) &&
@@ -118,6 +121,17 @@ module.exports = function (app) {
 
     if (error) {
       res.status(400).json({ error: error })
+      return
+    }
+
+    if (
+      sendToN2K &&
+      n2kTarget !== undefined &&
+      !(app.config.settings.pipedProviders || []).some(
+        (provider) => provider.id === n2kTarget
+      )
+    ) {
+      res.status(400).json({ error: `No connection ${n2kTarget}` })
       return
     }
 
@@ -186,7 +200,8 @@ module.exports = function (app) {
         res.json({ deltas: msgs })
       }
     } else if (sendToN2K) {
-      const event = type === 'n2k' ? 'nmea2000out' : 'nmea2000JsonOut'
+      const broadcast = type === 'n2k' ? 'nmea2000out' : 'nmea2000JsonOut'
+      const event = n2kTarget ? `${broadcast}:${n2kTarget}` : broadcast
       msgs.forEach((msg) => {
         app.emit(event, msg)
       })
