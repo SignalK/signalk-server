@@ -8,7 +8,7 @@ title: Best Practices for WASM Plugins
 
 A rebuilt WASM binary takes effect without restarting the server. Enabling a WASM plugin always loads its binary from disk, so disabling and re-enabling the plugin in **Plugin Config** swaps in a new `plugin.wasm`: `stop()` runs on the old instance when it is disabled, and `start()` runs on the new one with the saved configuration. The plugin's HTTP endpoints follow the new binary.
 
-Saving the plugin configuration stops and restarts the plugin inside the same WASM instance. Global state survives that restart, so the plugin's start handler must reset any state it depends on.
+Saving the configuration of a plugin that is running and stays enabled stops and restarts it inside the same WASM instance; a plugin that is not running only has its configuration saved, and picks it up on its next start. Global state survives that restart, so the plugin's start handler must reset any state it depends on.
 
 ## Error Handling
 
