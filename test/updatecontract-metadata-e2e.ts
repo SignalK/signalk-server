@@ -49,6 +49,61 @@ describe('update contracts in path metadata', function () {
     return body as { updateContract?: unknown }
   }
 
+  const putMeta = async (path: string, value: Record<string, unknown>) => {
+    const url =
+      `http://localhost:${port}/signalk/v1/api/vessels/self/` +
+      `${path.split('.').join('/')}/meta`
+    const res = await fetch(url, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ value })
+    })
+    expect(res.ok, `PUT ${path}/meta returned ${res.status}`).to.equal(true)
+  }
+
+  const savedMeta = (path: string) =>
+    (
+      runningServer().app as unknown as {
+        config: {
+          baseDeltaEditor: {
+            getMeta: (
+              context: string,
+              path: string
+            ) => Record<string, unknown> | undefined
+          }
+        }
+      }
+    ).config.baseDeltaEditor.getMeta('vessels.self', path)
+
+  it('does not save an inherited contract sent back with other metadata', async function () {
+    this.timeout(TEST_TIMEOUT_MS)
+    await putMeta('navigation.anchor.maxRadius', {
+      description: 'Swing radius',
+      updateContract: 'event'
+    })
+
+    expect(savedMeta('navigation.anchor.maxRadius')).to.deep.equal({
+      description: 'Swing radius'
+    })
+    expect(
+      (await metaOverRest('navigation.anchor.maxRadius')).updateContract
+    ).to.equal('event')
+  })
+
+  it('saves a contract that differs from the inherited one', async function () {
+    this.timeout(TEST_TIMEOUT_MS)
+    await putMeta('navigation.anchor.currentRadius', {
+      updateContract: 'periodic'
+    })
+
+    expect(savedMeta('navigation.anchor.currentRadius')).to.deep.equal({
+      updateContract: 'periodic'
+    })
+    expect(
+      (await metaOverRest('navigation.anchor.currentRadius')).updateContract
+    ).to.equal('periodic')
+  })
+
   it('reports an inherited contract over the REST metadata API', async function () {
     this.timeout(TEST_TIMEOUT_MS)
     await sendDelta(

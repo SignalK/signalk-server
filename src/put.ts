@@ -246,6 +246,22 @@ export function start(app: PutApp): void {
 
     const previousMeta = app.config.baseDeltaEditor.getMeta(context, metaPath)
 
+    // A client that sends back the metadata it was shown includes the
+    // contract the path inherits. Stored, it would become an override that
+    // pins the path to today's classification as if the user had chosen it.
+    if (
+      metaValue.updateContract !== undefined &&
+      (previousMeta as { updateContract?: unknown } | null | undefined)
+        ?.updateContract === undefined &&
+      metaValue.updateContract ===
+        (
+          getMetadata('vessels.self.' + metaPath) as
+            { updateContract?: unknown } | undefined
+        )?.updateContract
+    ) {
+      delete metaValue.updateContract
+    }
+
     if (metaValue.displayUnits) {
       metaValue.displayUnits = stripResolvedDisplayUnits(
         metaValue.displayUnits as DisplayUnitsMetadata,
