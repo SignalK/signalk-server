@@ -348,13 +348,10 @@ plugin.start = async (options) => {
   await app.setDefaultMetadata('propulsion.port.state', {
     updateContract: 'event'
   })
-
-  // Published once at start, so it must never be flagged as stale.
-  await app.setDefaultMetadata('environment.depth.surfaceToTransducer', {
-    timeout: 0
-  })
 }
 ```
+
+A `timeout` of `0` exempts a periodic path from stale detection altogether, which suits a value published once and not repeated.
 
 Per-field merge applies here too: if the user has set a `timeout` for the path in the Data Browser, theirs wins and the plugin's suggestion is ignored.
 
