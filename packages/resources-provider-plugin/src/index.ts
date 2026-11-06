@@ -19,6 +19,7 @@ interface ProviderSettings {
     notes: boolean
     regions: boolean
     charts: boolean
+    logentries: boolean
   }
   custom: Array<{ name: string; description: string }>
 }
@@ -50,6 +51,13 @@ const CONFIG_SCHEMA = {
         charts: {
           type: 'boolean',
           title: 'CHART SOURCES'
+        },
+        logentries: {
+          type: 'boolean',
+          title: 'LOG ENTRIES',
+          default: false,
+          description:
+            'Log entries are normally provided by a logbook plugin (e.g. signalk-logbook) implementing the logentries resource contract. Enable only to keep log entries in generic file storage instead.'
         }
       }
     },
@@ -103,6 +111,11 @@ const CONFIG_UISCHEMA = {
       'ui:widget': 'checkbox',
       'ui:title': ' ',
       'ui:help': '/signalk/v2/api/resources/charts'
+    },
+    logentries: {
+      'ui:widget': 'checkbox',
+      'ui:title': ' ',
+      'ui:help': '/signalk/v2/api/resources/logentries'
     }
   }
 }
@@ -211,7 +224,10 @@ module.exports = (server: ResourceProviderApp): Plugin => {
         waypoints: true,
         notes: true,
         regions: true,
-        charts: true
+        charts: true,
+        // Log entries belong to a logbook plugin implementing the logentries
+        // resource contract; generic file storage is an explicit opt-in.
+        logentries: false
       },
       custom: []
     }
@@ -234,7 +250,7 @@ module.exports = (server: ResourceProviderApp): Plugin => {
 
     SIGNALKRESOURCETYPES.forEach((r) => {
       if (!(r in options.standard)) {
-        options.standard[r] = true
+        options.standard[r] = defaultConfig.standard[r]
       }
     })
 

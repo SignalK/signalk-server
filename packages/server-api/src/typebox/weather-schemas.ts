@@ -245,8 +245,11 @@ export const WeatherDataModelSchema = Type.Object(
             )
           })
         ),
-        seaState: Type.Optional(
-          Type.Number({ description: 'Sea state (Beaufort)', examples: [2] })
+        seaStateValue: Type.Optional(
+          Type.Number({
+            description: 'Sea state (Beaufort)',
+            examples: [2]
+          })
         ),
         salinity: Type.Optional(
           Type.Number({

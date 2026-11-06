@@ -14,7 +14,7 @@ WebSocket delta channels for Signal K resource changes.
 ## Overview
 The Resources API emits deltas under \`resources.{type}.{id}\` when
 resources are created, updated, or deleted. Resource types include
-routes, waypoints, notes, regions, and charts.
+routes, waypoints, notes, regions, charts, and logentries.
 
 ## Subscribing
 \`\`\`json
@@ -144,6 +144,41 @@ For the REST API documentation, see OpenAPI at \`/admin/openapi/\`.
           ])
         }
       }
+    },
+    'resources.logentries': {
+      address: 'resources.logentries.*',
+      description:
+        'Log entry resource changes. An entry is a line in the vessel logbook: `text`, time-anchored by `datetime`, with an optional `telemetry` snapshot of Signal K paths observed at that moment.',
+      messages: {
+        logentry: {
+          name: 'resources.logentries.*',
+          title: 'Log Entry Change',
+          summary: 'A log entry resource was created, updated, or deleted',
+          contentType: 'application/json',
+          payload: Type.Union([
+            Type.Object({
+              id: Type.Optional(Type.String()),
+              datetime: Type.Optional(Type.String()),
+              text: Type.String(),
+              telemetry: Type.Optional(
+                Type.Array(
+                  Type.Object({
+                    path: Type.String(),
+                    value: Type.Unknown(),
+                    $source: Type.Optional(Type.String()),
+                    timestamp: Type.Optional(Type.String())
+                  })
+                )
+              ),
+              end: Type.Optional(Type.Boolean()),
+              author: Type.Optional(Type.String()),
+              origin: Type.Optional(Type.String()),
+              category: Type.Optional(Type.String())
+            }),
+            Type.Null()
+          ])
+        }
+      }
     }
   },
   operations: {
@@ -166,6 +201,11 @@ For the REST API documentation, see OpenAPI at \`/admin/openapi/\`.
       action: 'receive',
       channel: { $ref: '#/channels/resources.regions' },
       summary: 'Receive region resource changes'
+    },
+    receiveLogEntryChange: {
+      action: 'receive',
+      channel: { $ref: '#/channels/resources.logentries' },
+      summary: 'Receive log entry resource changes'
     }
   }
 }
