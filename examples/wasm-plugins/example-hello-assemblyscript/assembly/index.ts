@@ -371,11 +371,7 @@ export function handle_get_status(
 const ICON_PNG_BASE64 =
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='
 
-/**
- * Handle GET /api/icon.png
- * Returns binary data: the server base64-decodes the body because of
- * "bodyEncoding": "base64"
- */
+// The server base64-decodes the body because of "bodyEncoding": "base64".
 export function handle_get_icon(requestPtr: usize, requestLen: usize): string {
   return `{
     "statusCode": 200,

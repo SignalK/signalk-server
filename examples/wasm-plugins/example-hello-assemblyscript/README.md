@@ -155,7 +155,7 @@ Returns:
 curl -o icon.png http://localhost:3000/plugins/_signalk_example-hello-assemblyscript/api/icon.png
 ```
 
-Returns a 1x1 PNG image, sent as a base64 body with `"bodyEncoding": "base64"`.
+Returns a 1x1 PNG image as raw bytes. The plugin hands the server a base64 body with `"bodyEncoding": "base64"`, and the server decodes it before sending the response.
 
 ## Configuration
 
