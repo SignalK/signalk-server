@@ -64,7 +64,11 @@ export interface DataSliceActions {
     path: string,
     metaData: Partial<MetaData>
   ) => void
-  removeMetaKeys: (context: string, path: string, keys: string[]) => void
+  removeMetaKeys: (
+    context: string,
+    path: string,
+    cleared: Record<string, unknown>
+  ) => void
   getPathData: (context: string, path$SourceKey: string) => PathData | undefined
   getMeta: (context: string, path: string) => MetaData | undefined
   getPath$SourceKeys: (context: string) => string[]
@@ -155,16 +159,22 @@ export const createDataSlice: StateCreator<DataSlice, [], [], DataSlice> = (
   // Meta deltas are merged, because some carry only the field they change
   // (registerPutHandler sends `{ supportsPut: true }`). A field the user
   // cleared in the editor therefore survives the save it was removed in, so
-  // the editor drops it here explicitly.
-  removeMetaKeys: (context, path, keys) => {
+  // the editor drops it here explicitly. `cleared` holds each field's value
+  // before the save; a field the server has since given another value (an
+  // inherited contract, say) is newer than the save and is kept.
+  removeMetaKeys: (context, path, cleared) => {
     set((state) => {
       const existing = state.signalkMeta[context]?.[path]
       if (!existing) return state
       const remaining = { ...existing }
       let changed = false
-      for (const key of keys) {
-        if (key in remaining) {
-          delete remaining[key as keyof MetaData]
+      for (const [field, before] of Object.entries(cleared)) {
+        const key = field as keyof MetaData
+        if (
+          key in remaining &&
+          JSON.stringify(remaining[key]) === JSON.stringify(before)
+        ) {
+          delete remaining[key]
           changed = true
         }
       }

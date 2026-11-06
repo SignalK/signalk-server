@@ -811,7 +811,9 @@ const Meta: React.FC<MetaProps> = ({ meta, path, context, showContext }) => {
 
   const handleSave = () => {
     const saved = normalizeMetaForSave(localMeta)
-    const cleared = Object.keys(meta).filter((key) => !(key in saved))
+    const cleared = Object.fromEntries(
+      Object.entries(meta).filter(([key]) => !(key in saved))
+    )
     // Editing reopens as soon as the request is sent, so a second save can
     // start while this one is pending. Only the newest save may prune the
     // store, or an older callback would drop a key the newer one restored.
@@ -822,7 +824,7 @@ const Meta: React.FC<MetaProps> = ({ meta, path, context, showContext }) => {
       // into the store rather than replacing the entry, so a cleared field
       // would linger in this session until a reload. Only drop it locally
       // once the server has accepted the save, or the two would disagree.
-      if (ok && cleared.length > 0) {
+      if (ok && Object.keys(cleared).length > 0) {
         // saveMeta always writes to vessels/self, and signalkMeta is keyed by
         // the full context, so the local drop has to name the same entry.
         useStore

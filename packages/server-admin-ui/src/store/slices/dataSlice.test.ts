@@ -93,9 +93,9 @@ describe('dataSlice', () => {
         updateContract: 'event'
       } as Partial<MetaData>)
 
-      useStore
-        .getState()
-        .removeMetaKeys('vessels.self', 'navigation.state', ['updateContract'])
+      useStore.getState().removeMetaKeys('vessels.self', 'navigation.state', {
+        updateContract: 'event'
+      })
 
       const meta = useStore
         .getState()
@@ -111,20 +111,40 @@ describe('dataSlice', () => {
         .getState()
         .getMeta('vessels.self', 'navigation.state')
 
-      useStore
-        .getState()
-        .removeMetaKeys('vessels.self', 'navigation.state', ['updateContract'])
+      useStore.getState().removeMetaKeys('vessels.self', 'navigation.state', {
+        updateContract: 'event'
+      })
 
       expect(
         useStore.getState().getMeta('vessels.self', 'navigation.state')
       ).toBe(before)
     })
 
+    it('keeps a key the server has given a newer value', () => {
+      useStore
+        .getState()
+        .updateMeta('vessels.self', 'navigation.anchor.position', {
+          updateContract: 'event'
+        } as Partial<MetaData>)
+
+      useStore
+        .getState()
+        .removeMetaKeys('vessels.self', 'navigation.anchor.position', {
+          updateContract: 'periodic'
+        })
+
+      expect(
+        useStore
+          .getState()
+          .getMeta('vessels.self', 'navigation.anchor.position')
+      ).toEqual({ updateContract: 'event' })
+    })
+
     it('ignores a path it has no metadata for', () => {
       expect(() =>
         useStore
           .getState()
-          .removeMetaKeys('vessels.self', 'navigation.unknown', ['units'])
+          .removeMetaKeys('vessels.self', 'navigation.unknown', { units: 'm' })
       ).not.toThrow()
     })
   })
