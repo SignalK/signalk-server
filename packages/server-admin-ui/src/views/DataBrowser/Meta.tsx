@@ -396,9 +396,7 @@ export const UpdateContractSelect: React.FC<ValueRenderProps> = ({
     disabled={disabled}
     value={(value as string) ?? ''}
     size="sm"
-    onChange={(e) =>
-      setValue(e.target.value === '' ? undefined : e.target.value)
-    }
+    onChange={(e) => setValue(e.target.value)}
   >
     {UPDATE_CONTRACTS.map(([contract, label]) => (
       <option key={contract || 'unset'} value={contract}>
@@ -695,10 +693,11 @@ const METAFIELDRENDERERS: Record<
   )
 }
 
-// `Add Field` seeds a new key with an empty string, and choosing "Use the
-// shipped classification" sets it to undefined. Only the two valid contracts
-// are sent; anything else drops the key, so the shipped classification keeps
-// applying and a contract saved earlier is cleared from the store.
+// `Add Field` and the "Use the shipped classification" option both leave the
+// key as an empty string, which keeps its row in the open editor. Only the
+// two valid contracts are sent; anything else drops the key, so the shipped
+// classification keeps applying and a contract saved earlier is cleared from
+// the store.
 const UPDATE_CONTRACT_VALUES = ['periodic', 'event']
 
 export const normalizeMetaForSave = (meta: MetaData): MetaData => {

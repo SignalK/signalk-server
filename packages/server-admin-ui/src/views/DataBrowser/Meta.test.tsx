@@ -292,13 +292,13 @@ describe('UpdateContractSelect', () => {
     expect(setValue).toHaveBeenCalledWith('event')
   })
 
-  it('clears the field rather than storing an empty string', () => {
-    // An empty selection must remove the key so the shipped classification
-    // applies again, not persist '' as the contract.
+  it('keeps the field as an empty string when reset', () => {
+    // undefined would drop the row from the open editor; '' keeps it, and
+    // normalizeMetaForSave leaves it out of the save.
     const setValue = vi.fn()
     renderContract('event', setValue)
     fireEvent.change(screen.getByRole('combobox'), { target: { value: '' } })
-    expect(setValue).toHaveBeenCalledWith(undefined)
+    expect(setValue).toHaveBeenCalledWith('')
   })
 })
 
@@ -321,8 +321,8 @@ describe('normalizeMetaForSave', () => {
   })
 
   it('drops a contract reset to the shipped classification', () => {
-    // The select's unset option leaves the key in place with no value; it
-    // must still be dropped, or handleSave would not count it as cleared.
+    // A key left in place with no value must still be dropped, or
+    // handleSave would not count it as cleared.
     expect(
       normalizeMetaForSave({ description: 'x', updateContract: undefined })
     ).to.deep.equal({ description: 'x' })
@@ -451,6 +451,37 @@ describe('Meta save clears removed fields', () => {
         useStore.getState().getMeta('vessels.self', path)?.updateContract
       ).to.equal(undefined)
     )
+  })
+
+  it('keeps the contract row open when reset, and clears it on save', async () => {
+    useStore.getState().updateMeta('vessels.self', path, meta)
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200 })
+    vi.stubGlobal('fetch', fetchMock)
+
+    renderMeta()
+    fireEvent.click(screen.getByRole('button', { name: /edit/i }))
+    const contractSelect = screen
+      .getAllByRole('combobox')
+      .find((s) => (s as HTMLSelectElement).value === 'event')
+    expect(contractSelect).to.not.equal(undefined)
+    fireEvent.change(contractSelect!, { target: { value: '' } })
+
+    expect(
+      screen.getByRole('button', { name: 'Delete updateContract' })
+    ).to.not.equal(null)
+
+    fireEvent.click(screen.getByRole('button', { name: /save/i }))
+    await vi.waitFor(() =>
+      expect(
+        useStore.getState().getMeta('vessels.self', path)?.updateContract
+      ).to.equal(undefined)
+    )
+    const put = fetchMock.mock.calls.find(
+      ([, init]) => (init as RequestInit | undefined)?.method === 'PUT'
+    )
+    expect(JSON.parse(String((put![1] as RequestInit).body))).to.deep.equal({
+      value: { description: 'Navigational state' }
+    })
   })
 
   it('drops the field locally once the save succeeds', async () => {
