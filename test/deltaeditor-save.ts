@@ -21,8 +21,9 @@ describe('DeltaEditor save', () => {
     fs.rmSync(dir, { recursive: true, force: true })
   })
 
-  // Holds the first write to the temporary file until released, and
-  // records the order in which writes start and finish.
+  // Unordered writes only lose data when the first finishes after the
+  // second, which real disk timing rarely produces, so the test decides when
+  // the first one completes.
   const holdFirstWrite = () => {
     const events: string[] = []
     let release: () => void = () => {}

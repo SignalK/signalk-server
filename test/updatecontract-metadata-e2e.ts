@@ -1,5 +1,6 @@
 import { expect } from 'chai'
-import { freeport } from './ts-servertestutilities'
+import { getMetadata } from '@signalk/path-metadata'
+import { awaitPutSuccess, freeport } from './ts-servertestutilities'
 import { startServerP, sendDelta, WsPromiser } from './servertestutilities'
 
 // Update contracts live in the path metadata registry, inherited by every
@@ -58,7 +59,7 @@ describe('update contracts in path metadata', function () {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ value })
     })
-    expect(res.ok, `PUT ${path}/meta returned ${res.status}`).to.equal(true)
+    await awaitPutSuccess(port, res)
   }
 
   const savedMeta = (path: string) =>
@@ -114,7 +115,7 @@ describe('update contracts in path metadata', function () {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ value: 'event' })
     })
-    expect(res.ok, `PUT returned ${res.status}`).to.equal(true)
+    await awaitPutSuccess(port, res)
 
     expect(savedMeta('navigation.anchor.position')).to.deep.equal({
       updateContract: 'event'
@@ -142,14 +143,56 @@ describe('update contracts in path metadata', function () {
     const field = await fetch(`${base}/first/meta/timeout`, {
       method: 'DELETE'
     })
-    expect(field.ok, `DELETE returned ${field.status}`).to.equal(true)
+    await awaitPutSuccess(port, field)
     expect(savedMeta('zzzUnregistered.first')).to.deep.equal({
       description: 'x'
     })
 
     const whole = await fetch(`${base}/second/meta`, { method: 'DELETE' })
-    expect(whole.ok, `DELETE returned ${whole.status}`).to.equal(true)
+    await awaitPutSuccess(port, whole)
     expect(savedMeta('zzzUnregistered.second')).to.equal(undefined)
+  })
+
+  it('rejects a contract other than periodic or event', async function () {
+    this.timeout(TEST_TIMEOUT_MS)
+    const base =
+      `http://localhost:${port}/signalk/v1/api/vessels/self/` +
+      'navigation/anchor/bearingTrue/meta'
+    const field = await fetch(`${base}/updateContract`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ value: 'manual' })
+    })
+    expect(field.status).to.equal(400)
+    const whole = await fetch(base, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ value: { updateContract: 'manual' } })
+    })
+    expect(whole.status).to.equal(400)
+    expect(savedMeta('navigation.anchor.bearingTrue')).to.equal(undefined)
+  })
+
+  it('restores the shipped contract when an override is deleted', async function () {
+    this.timeout(TEST_TIMEOUT_MS)
+    await putMeta('sensors.gps.fromBow', { updateContract: 'periodic' })
+    expect(
+      getMetadata('vessels.self.sensors.gps.fromBow')?.updateContract
+    ).to.equal('periodic')
+
+    const res = await fetch(
+      `http://localhost:${port}/signalk/v1/api/vessels/self/` +
+        'sensors/gps/fromBow/meta/updateContract',
+      { method: 'DELETE' }
+    )
+    await awaitPutSuccess(port, res)
+
+    const restored = getMetadata('vessels.self.sensors.gps.fromBow')
+    expect(restored?.updateContract).to.equal('event')
+    expect(restored?.units).to.equal('m')
+    expect((await metaOverRest('sensors.gps.fromBow')).updateContract).to.equal(
+      'event'
+    )
   })
 
   it('reports an inherited contract over the REST metadata API', async function () {
