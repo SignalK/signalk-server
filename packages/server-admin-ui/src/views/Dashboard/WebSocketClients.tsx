@@ -14,6 +14,9 @@ interface WebSocketClient {
 // The count arrives with the server statistics, but a client can leave and
 // another arrive between two of them, so the list is also polled.
 const REFRESH_INTERVAL_MS = 10000
+// Long enough for a busy server to answer over several polls, short enough
+// that a request that never answers does not stop the refreshing.
+const REQUEST_TIMEOUT_MS = 60000
 
 export default function WebSocketClients({
   clientCount
@@ -32,20 +35,32 @@ export default function WebSocketClients({
   const lastClientCount = useRef(clientCount)
 
   useEffect(() => {
-    let cancelled = false
-    // Requests can take longer than the polling interval, so responses may
-    // arrive out of order; an older one must not replace a newer list.
-    let sentRequests = 0
-    let appliedRequest = 0
+    let stopped = false
+    let request: AbortController | null = null
+    // One request at a time: a refresh asked for while one is pending runs
+    // once it has answered or timed out.
+    let refreshWanted = false
     const load = () => {
-      const request = ++sentRequests
+      if (request) {
+        refreshWanted = true
+        return
+      }
+      const current = new AbortController()
+      request = current
+      const timeout = setTimeout(() => current.abort(), REQUEST_TIMEOUT_MS)
       const apply = (clients: WebSocketClient[] | null) => {
-        if (cancelled || request < appliedRequest) return
-        appliedRequest = request
+        clearTimeout(timeout)
+        if (stopped) return
         setLoaded({ identity, clients })
+        request = null
+        if (refreshWanted) {
+          refreshWanted = false
+          load()
+        }
       }
       fetch(`${window.serverRoutesPrefix}/websocketClients`, {
-        credentials: 'include'
+        credentials: 'include',
+        signal: current.signal
       })
         .then((response) => (response.ok ? response.json() : null))
         .then(apply)
@@ -55,14 +70,15 @@ export default function WebSocketClients({
     load()
     const timer = setInterval(load, REFRESH_INTERVAL_MS)
     return () => {
-      cancelled = true
+      stopped = true
+      request?.abort()
       loadRef.current = null
       clearInterval(timer)
     }
   }, [identity])
 
   // A changed count means a client came or went: refresh at once, without
-  // restarting the polling and dropping the requests still in flight.
+  // restarting the polling and dropping the request still in flight.
   useEffect(() => {
     if (lastClientCount.current === clientCount) return
     lastClientCount.current = clientCount

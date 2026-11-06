@@ -53,7 +53,7 @@ describe('WebSocketClients', () => {
     await vi.waitFor(() => expect(container.textContent).toBe(''))
   })
 
-  it('keeps the newer list when an older request answers last', async () => {
+  it('sends one request at a time and refreshes once it answers', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true })
     let answerFirst: (response: Partial<Response>) => void = () => {}
     const fetchMock = vi
@@ -67,14 +67,15 @@ describe('WebSocketClients', () => {
     vi.stubGlobal('fetch', fetchMock)
     render(<WebSocketClients clientCount={1} />)
 
-    await act(() => vi.advanceTimersByTimeAsync(10000))
-    await screen.findByText('ESP32 Websocket Client')
+    await act(() => vi.advanceTimersByTimeAsync(30000))
+    expect(fetchMock).toHaveBeenCalledTimes(1)
 
     await act(async () => answerFirst(listResponse([])))
-    expect(screen.getByText('ESP32 Websocket Client')).toBeDefined()
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(await screen.findByText('ESP32 Websocket Client')).toBeDefined()
   })
 
-  it('shows the list when every request outlasts the polling interval', async () => {
+  it('shows the list when a request outlasts the polling interval', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true })
     const answers: ((response: Partial<Response>) => void)[] = []
     vi.stubGlobal(
@@ -88,8 +89,7 @@ describe('WebSocketClients', () => {
     )
     render(<WebSocketClients clientCount={1} />)
 
-    await act(() => vi.advanceTimersByTimeAsync(10000))
-    expect(answers).toHaveLength(2)
+    await act(() => vi.advanceTimersByTimeAsync(25000))
     await act(async () => answers[0](listResponse([spark])))
     expect(screen.getByText('ESP32 Websocket Client')).toBeDefined()
   })
@@ -109,10 +109,44 @@ describe('WebSocketClients', () => {
     )
     const { rerender } = render(<WebSocketClients clientCount={1} />)
     rerender(<WebSocketClients clientCount={2} />)
-    expect(fetch).toHaveBeenCalledTimes(2)
 
     await act(async () => answerFirst(listResponse([spark])))
     expect(screen.getByText('ESP32 Websocket Client')).toBeDefined()
+    expect(fetch).toHaveBeenCalledTimes(2)
+  })
+
+  it('gives up on a request that never answers and polls again', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    const fetchMock = vi
+      .fn()
+      .mockImplementationOnce(
+        (_url: string, init: RequestInit) =>
+          new Promise((_resolve, reject) => {
+            init.signal?.addEventListener('abort', () =>
+              reject(new DOMException('Aborted', 'AbortError'))
+            )
+          })
+      )
+      .mockResolvedValue(listResponse([spark]))
+    vi.stubGlobal('fetch', fetchMock)
+    render(<WebSocketClients clientCount={1} />)
+
+    await act(() => vi.advanceTimersByTimeAsync(59000))
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    await act(() => vi.advanceTimersByTimeAsync(1000))
+    expect(fetchMock.mock.calls.length).toBeGreaterThan(1)
+    expect(await screen.findByText('ESP32 Websocket Client')).toBeDefined()
+  })
+
+  it('aborts the pending request when it goes away', () => {
+    const fetchMock = vi.fn().mockReturnValue(new Promise(() => {}))
+    vi.stubGlobal('fetch', fetchMock)
+    const { unmount } = render(<WebSocketClients clientCount={1} />)
+    const { signal } = fetchMock.mock.calls[0][1] as RequestInit
+    expect(signal?.aborted).toBe(false)
+
+    unmount()
+    expect(signal?.aborted).toBe(true)
   })
 
   it('hides the list from the next login before its own answer', async () => {
