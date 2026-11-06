@@ -645,6 +645,43 @@ describe('StalenessEnforcer', () => {
       expect(app.captured).to.have.lengthOf(1)
     })
 
+    it('derives a timeout when the global default is zero', () => {
+      const app = makeMockApp({
+        defaultTimeout: 0,
+        metaByPath: { 'environment.wind.speedTrue': { timeout: 'auto' } }
+      })
+      const enforcer = makeEnforcer(app)
+      seedLeaf(
+        app,
+        SELF_CONTEXT,
+        'environment.wind.speedTrue',
+        'wind.1',
+        new Date(virtualNow - 6_000).toISOString(),
+        2.5
+      )
+      runTick(enforcer)
+      expect(app.captured).to.have.lengthOf(0)
+
+      for (let i = 0; i < 11; i++) {
+        enforcer.onIncoming(
+          SELF_CONTEXT,
+          'environment.wind.speedTrue',
+          'wind.1'
+        )
+        advance(1000)
+      }
+      seedLeaf(
+        app,
+        SELF_CONTEXT,
+        'environment.wind.speedTrue',
+        'wind.1',
+        new Date(virtualNow - 6_000).toISOString(),
+        2.5
+      )
+      runTick(enforcer)
+      expect(app.captured).to.have.lengthOf(1)
+    })
+
     it('clamps the derived timeout to the 2..300s envelope', () => {
       const app = makeMockApp({
         defaultTimeout: 60,

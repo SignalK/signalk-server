@@ -262,7 +262,9 @@ export class StalenessEnforcer {
     if (updateContract !== 'periodic') return
 
     const baseTimeoutMs = this.resolveBaseTimeoutMs(context, path, meta)
-    if (baseTimeoutMs === NEVER_TIMEOUT) return
+    // An 'auto' path can still derive a timeout per source when the
+    // warm-up ceiling (the global default) is zero.
+    if (baseTimeoutMs === NEVER_TIMEOUT && meta?.timeout !== 'auto') return
 
     const failoverMs = this.getFailoverFloorMs(path)
 

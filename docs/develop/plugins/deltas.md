@@ -361,7 +361,7 @@ plugin.start = (options) => {
 
 A `timeout` of `0` exempts a periodic path from stale detection altogether, which suits a value published once and not repeated.
 
-`'auto'` suits paths that update every few seconds or minutes. Until it has seen enough updates it uses the global default timeout, and the timeout it derives never exceeds 300 seconds, so a path that updates less often than every few minutes needs a numeric `timeout`.
+`'auto'` suits paths that update every few seconds or minutes. Until it has seen enough updates it uses the global default timeout (no timeout while that is 0), and the timeout it derives never exceeds 300 seconds, so a path that updates less often than every few minutes needs a numeric `timeout`.
 
 Per-field merge applies here too: a field the user has set in the Data Browser wins, and the plugin's suggestion for that field is ignored. The merge is per field, so a user's `timeout` does not stop a plugin from declaring `updateContract: 'event'`, and an event-driven path is never timed out. A user who wants their timeout enforced on such a path also sets `updateContract` to `periodic`.
 
