@@ -51,7 +51,7 @@ There is no 32-bit ARM (armv7) platform: Signal K Server requires Node.js 22 or 
 
 ### Build
 
-The plugin is built once, on Linux with Node `build-node-version` (24 by default), and every desktop and integration job tests that build output. Desktop jobs install dependencies for their platform and Node version, then rebuild them so install scripts run and native addons are compiled, without rerunning the plugin's `prepare` script. Integration jobs do not rebuild the dependencies: they pack the build output and install it into the test server. The build command itself therefore runs only on that one platform and Node version. Set `build-node-version` if your build needs another Node.
+The plugin is built once, on Linux with Node `build-node-version` (24 by default), and every desktop and integration job tests that build output. Before installing, the build job fails if `dependencies`, `optionalDependencies` or a non-optional `peerDependencies` entry is another App Store plugin or webapp (a package with the `signalk-node-server-plugin`, `signalk-webapp` or `signalk-embeddable-webapp` keyword); declare those in `signalk.requires` / `signalk.recommends` instead, see [Publishing](./publishing.md#requires-and-recommends). Desktop jobs install dependencies for their platform and Node version, then rebuild them so install scripts run and native addons are compiled, without rerunning the plugin's `prepare` script. Integration jobs do not rebuild the dependencies: they pack the build output and install it into the test server. The build command itself therefore runs only on that one platform and Node version. Set `build-node-version` if your build needs another Node.
 
 ### Validation Checks
 

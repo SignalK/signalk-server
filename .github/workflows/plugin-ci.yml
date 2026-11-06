@@ -241,6 +241,68 @@ jobs:
           esac
           npm --version
 
+      # Another App Store plugin or webapp in dependencies is installed by
+      # npm into the user's ~/.signalk at this plugin's range, outside the
+      # App Store, and the server loads that copy as a plugin of its own.
+      # signalk.requires / signalk.recommends is how the App Store installs
+      # companions. Mirrors the plugin registry's bundles-plugins check.
+      - name: Check for bundled App Store plugins
+        shell: bash
+        run: |
+          cat << 'BUNDLED' > "$RUNNER_TEMP/bundled-plugins.mjs"
+          import { readFileSync } from 'node:fs';
+          const pkg = JSON.parse(readFileSync('package.json', 'utf8'));
+          const APPSTORE_KEYWORDS = ['signalk-node-server-plugin', 'signalk-webapp', 'signalk-embeddable-webapp'];
+          const GUIDE = 'https://github.com/SignalK/signalk-server/blob/master/docs/develop/plugins/publishing.md#requires-and-recommends';
+          const declared = [];
+          for (const field of ['dependencies', 'optionalDependencies', 'peerDependencies']) {
+            for (const [name, range] of Object.entries(pkg[field] || {})) {
+              if (typeof range !== 'string') continue;
+              if (field === 'peerDependencies' && pkg.peerDependenciesMeta?.[name]?.optional === true) continue;
+              let target = name;
+              if (range.startsWith('npm:')) {
+                const spec = range.slice(4);
+                const at = spec.indexOf('@', 1);
+                target = at === -1 ? spec : spec.slice(0, at);
+              }
+              if (target !== pkg.name) declared.push({ field, name: target, range });
+            }
+          }
+          async function keywordsOf(name) {
+            const url = 'https://registry.npmjs.org/' + encodeURIComponent(name) + '/latest';
+            for (let attempt = 0; attempt < 2; attempt++) {
+              try {
+                const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
+                if (res.status === 404) return [];
+                if (res.ok) {
+                  const data = await res.json();
+                  return Array.isArray(data.keywords) ? data.keywords : [];
+                }
+              } catch {}
+            }
+            return null;
+          }
+          const errors = [];
+          for (const dep of declared) {
+            const keywords = await keywordsOf(dep.name);
+            if (keywords === null) {
+              console.log('::warning::Could not look up ' + dep.name + ' on the npm registry; skipped the bundled-plugin check for it');
+              continue;
+            }
+            if (!keywords.some((k) => APPSTORE_KEYWORDS.includes(k))) continue;
+            errors.push(
+              dep.field + ' lists ' + dep.name + ' (' + dep.range + '), which is an App Store plugin or webapp. ' +
+              'npm installs it into the user\'s ~/.signalk at this range, outside the App Store, and the server loads that copy as a plugin of its own. ' +
+              'Remove it from ' + dep.field + ' and add it to "signalk": { "requires": [...] } (the App Store installs it with your plugin) ' +
+              'or "signalk": { "recommends": [...] } (suggested to the user). See ' + GUIDE
+            );
+          }
+          errors.forEach((e) => console.log('::error::' + e));
+          if (errors.length > 0) process.exit(1);
+          console.log('No bundled App Store plugins');
+          BUNDLED
+          node "$RUNNER_TEMP/bundled-plugins.mjs"
+
       - name: Install dependencies
         shell: bash
         run: |
