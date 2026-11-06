@@ -51,6 +51,12 @@ export interface HistoryProvidersState {
   configuredAvailable: boolean
 }
 
+export interface DefaultPackagesState {
+  status: 'offer' | 'installing' | 'failed' | 'done'
+  packages: Record<string, string>
+  failed?: Record<string, string>
+}
+
 export interface AppSliceState {
   plugins: Plugin[]
   webapps: Webapp[]
@@ -67,6 +73,8 @@ export interface AppSliceState {
   restoreStatus: RestoreStatus
   vesselInfo: VesselInfo
   backpressureWarning: BackpressureWarning | null
+  defaultPackages: DefaultPackagesState | null
+  installedPackagesNeedingRestart: string[]
   serverStatistics: ServerStatistics | null
   providerStatus: ProviderStatus[]
   nodeInfo: NodeInfo
@@ -158,6 +166,8 @@ export interface AppSliceActions {
   setVesselInfo: (info: VesselInfo) => void
   setNodeInfo: (info: NodeInfo) => void
   setBackpressureWarning: (warning: BackpressureWarning | null) => void
+  setDefaultPackages: (state: DefaultPackagesState | null) => void
+  setInstalledPackagesNeedingRestart: (packages: string[]) => void
   setSourcesData: (data: SourcesData) => void
   setSourceAliases: (aliases: Record<string, string>) => void
   setIgnoredInstanceConflicts: (conflicts: Record<string, string>) => void
@@ -242,6 +252,8 @@ const initialAppState: AppSliceState = {
   restoreStatus: {},
   vesselInfo: {},
   backpressureWarning: null,
+  defaultPackages: null,
+  installedPackagesNeedingRestart: [],
   serverStatistics: null,
   providerStatus: [],
   nodeInfo: {},
@@ -351,6 +363,14 @@ export const createAppSlice: StateCreator<AppSlice, [], [], AppSlice> = (
 
   setBackpressureWarning: (backpressureWarning) => {
     set({ backpressureWarning })
+  },
+
+  setDefaultPackages: (defaultPackages) => {
+    set({ defaultPackages })
+  },
+
+  setInstalledPackagesNeedingRestart: (installedPackagesNeedingRestart) => {
+    set({ installedPackagesNeedingRestart })
   },
 
   setSourcesData: (sourcesData) => {

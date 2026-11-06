@@ -1,5 +1,6 @@
 import { useStore, type SignalKStore } from '../store'
 import { sanitizeGnssConfig } from '../store/slices/gnssPositionSlice'
+import type { DefaultPackagesState } from '../store/slices/appSlice'
 import { fetchAllData } from '../dataFetching'
 
 export type WebSocketStatus =
@@ -19,6 +20,45 @@ type ZustandStateSetter = (
   partial:
     Partial<SignalKStore> | ((state: SignalKStore) => Partial<SignalKStore>)
 ) => void
+
+const DEFAULT_PACKAGES_STATUSES: ReadonlySet<string> = new Set([
+  'offer',
+  'installing',
+  'failed',
+  'done'
+])
+
+function parseVersions(value: object): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(value).filter(
+      (entry): entry is [string, string] => typeof entry[1] === 'string'
+    )
+  )
+}
+
+function parseDefaultPackages(data: unknown): DefaultPackagesState | null {
+  const { status, packages, failed } = (data ?? {}) as {
+    status?: unknown
+    packages?: unknown
+    failed?: unknown
+  }
+  if (
+    typeof status !== 'string' ||
+    !DEFAULT_PACKAGES_STATUSES.has(status) ||
+    typeof packages !== 'object' ||
+    packages === null
+  ) {
+    return null
+  }
+  const state: DefaultPackagesState = {
+    status: status as DefaultPackagesState['status'],
+    packages: parseVersions(packages)
+  }
+  if (typeof failed === 'object' && failed !== null) {
+    state.failed = parseVersions(failed)
+  }
+  return state
+}
 
 export class WebSocketService {
   private state: WebSocketServiceState = {
@@ -205,7 +245,11 @@ export class WebSocketService {
         this.lastServerStartId &&
         serverStartId !== this.lastServerStartId
       ) {
-        useStore.getState().clearData()
+        const store = useStore.getState()
+        store.clearData()
+        store.setInstalledPackagesNeedingRestart([])
+        store.setDefaultPackages(null)
+        store.setRestartRequired(false)
       }
       if (serverStartId) {
         this.lastServerStartId = serverStartId
@@ -407,6 +451,22 @@ export class WebSocketService {
             data as unknown as Parameters<SignalKStore['setAppStore']>[0]
           )
         break
+      case 'DEFAULT_PACKAGES':
+        useStore.getState().setDefaultPackages(parseDefaultPackages(data))
+        break
+      case 'RESTART_REQUIRED': {
+        const packages = (data as { packages?: unknown } | undefined)?.packages
+        useStore
+          .getState()
+          .setInstalledPackagesNeedingRestart(
+            Array.isArray(packages)
+              ? packages.filter(
+                  (item): item is string => typeof item === 'string'
+                )
+              : []
+          )
+        break
+      }
       case 'PLUGINS_CHANGED':
         useStore
           .getState()

@@ -20,13 +20,21 @@ export async function logoutAction(): Promise<void> {
   await fetchLoginStatus()
 }
 
+export async function requestRestart(): Promise<void> {
+  const res = await fetch(`${window.serverRoutesPrefix}/restart`, {
+    credentials: 'include',
+    method: 'PUT'
+  })
+  if (!res.ok) {
+    throw new Error(`Restart failed (${res.status}).`)
+  }
+  useStore.getState().setRestarting(true)
+}
+
 export function restartAction(): void {
   if (confirm('Are you sure you want to restart?')) {
-    fetch(`${window.serverRoutesPrefix}/restart`, {
-      credentials: 'include',
-      method: 'PUT'
-    }).then(() => {
-      useStore.getState().setRestarting(true)
+    requestRestart().catch((err: unknown) => {
+      console.error(err)
     })
   }
 }

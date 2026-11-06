@@ -15,6 +15,7 @@ import {
   useBackpressureWarning
 } from '../../store'
 import { logoutAction, restartAction } from '../../actions'
+import { mayRestartServer } from '../../utils/permissions'
 
 // Header banners are absolutely positioned just below the navbar. The
 // stacked offset places a second banner below the first when both show.
@@ -69,10 +70,7 @@ export default function Header() {
     restartAction()
   }
 
-  const showRestartBanner =
-    restartRequired &&
-    loginStatus.status === 'loggedIn' &&
-    loginStatus.userLevel === 'admin'
+  const showRestartBanner = restartRequired && mayRestartServer(loginStatus)
 
   return (
     <header className="app-header navbar">
@@ -139,19 +137,18 @@ export default function Header() {
       </button>
       <Nav className="ms-auto">
         {/* Desktop: show items directly */}
-        {loginStatus.status === 'loggedIn' &&
-          loginStatus.userLevel === 'admin' && (
-            <Nav.Item className="d-none d-sm-block px-3">
-              <Nav.Link href="#/" onClick={handleRestart}>
-                <FontAwesomeIcon
-                  icon={faCircleNotch}
-                  spin={restarting}
-                  className={restarting ? 'text-danger' : ''}
-                />{' '}
-                Restart
-              </Nav.Link>
-            </Nav.Item>
-          )}
+        {mayRestartServer(loginStatus) && (
+          <Nav.Item className="d-none d-sm-block px-3">
+            <Nav.Link href="#/" onClick={handleRestart}>
+              <FontAwesomeIcon
+                icon={faCircleNotch}
+                spin={restarting}
+                className={restarting ? 'text-danger' : ''}
+              />{' '}
+              Restart
+            </Nav.Link>
+          </Nav.Item>
+        )}
         {loginStatus.status === 'loggedIn' && (
           <Nav.Item className="d-none d-sm-block px-3">
             <Nav.Link href="#/" onClick={handleLogout}>
@@ -174,17 +171,16 @@ export default function Header() {
               <FontAwesomeIcon icon={faBars} />
             </Dropdown.Toggle>
             <Dropdown.Menu align="end">
-              {loginStatus.status === 'loggedIn' &&
-                loginStatus.userLevel === 'admin' && (
-                  <Dropdown.Item onClick={handleRestart}>
-                    <FontAwesomeIcon
-                      icon={faCircleNotch}
-                      spin={restarting}
-                      className={restarting ? 'text-danger' : ''}
-                    />{' '}
-                    Restart
-                  </Dropdown.Item>
-                )}
+              {mayRestartServer(loginStatus) && (
+                <Dropdown.Item onClick={handleRestart}>
+                  <FontAwesomeIcon
+                    icon={faCircleNotch}
+                    spin={restarting}
+                    className={restarting ? 'text-danger' : ''}
+                  />{' '}
+                  Restart
+                </Dropdown.Item>
+              )}
               {loginStatus.status === 'loggedIn' && (
                 <Dropdown.Item onClick={handleLogout}>
                   <FontAwesomeIcon icon={faLock} /> Logout

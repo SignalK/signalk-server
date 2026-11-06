@@ -247,6 +247,14 @@ export function useBackpressureWarning() {
   return useStore((s) => s.backpressureWarning)
 }
 
+export function useDefaultPackages() {
+  return useStore((s) => s.defaultPackages)
+}
+
+export function useInstalledPackagesNeedingRestart() {
+  return useStore((s) => s.installedPackagesNeedingRestart)
+}
+
 export function useActivePreset() {
   return useStore((s) => s.activePreset)
 }

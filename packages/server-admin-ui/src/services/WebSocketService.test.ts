@@ -155,4 +155,71 @@ describe('WebSocketService serverStartId tracking', () => {
       configuredAvailable: true
     })
   })
+
+  it('stores RESTART_REQUIRED and DEFAULT_PACKAGES serverevents', () => {
+    service.setZustandState(useStore.setState)
+    ws.receive({
+      type: 'RESTART_REQUIRED',
+      data: { reason: 'defaultPackagesInstalled', packages: ['@mxtommy/kip'] }
+    })
+    ws.receive({
+      type: 'DEFAULT_PACKAGES',
+      data: { status: 'failed', packages: { '@mxtommy/kip': '^4.8.0' } }
+    })
+    expect(useStore.getState().installedPackagesNeedingRestart).toEqual([
+      '@mxtommy/kip'
+    ])
+    expect(useStore.getState().defaultPackages).toEqual({
+      status: 'failed',
+      packages: { '@mxtommy/kip': '^4.8.0' }
+    })
+  })
+
+  it('forgets the restart reminder once the server has restarted', () => {
+    service.setZustandState(useStore.setState)
+    ws.receive(helloMessage('start-1'))
+    ws.receive({
+      type: 'RESTART_REQUIRED',
+      data: { reason: 'defaultPackagesInstalled', packages: ['@mxtommy/kip'] }
+    })
+
+    useStore.getState().setRestartRequired(true)
+
+    ws.receive(helloMessage('start-2'))
+
+    expect(useStore.getState().installedPackagesNeedingRestart).toEqual([])
+    expect(useStore.getState().defaultPackages).toBeNull()
+    expect(useStore.getState().restartRequired).toBe(false)
+  })
+
+  it('ignores a DEFAULT_PACKAGES serverevent it cannot read', () => {
+    service.setZustandState(useStore.setState)
+    ws.receive({ type: 'DEFAULT_PACKAGES', data: { status: 'unknown' } })
+    expect(useStore.getState().defaultPackages).toBeNull()
+    ws.receive({
+      type: 'DEFAULT_PACKAGES',
+      data: { status: 'offer', packages: { a: '1.0.0', b: 2 } }
+    })
+    expect(useStore.getState().defaultPackages).toEqual({
+      status: 'offer',
+      packages: { a: '1.0.0' }
+    })
+  })
+
+  it('keeps the failed packages that come with an offer', () => {
+    service.setZustandState(useStore.setState)
+    ws.receive({
+      type: 'DEFAULT_PACKAGES',
+      data: {
+        status: 'offer',
+        packages: { a: '1.0.0' },
+        failed: { b: '^2.0.0', c: 3 }
+      }
+    })
+    expect(useStore.getState().defaultPackages).toEqual({
+      status: 'offer',
+      packages: { a: '1.0.0' },
+      failed: { b: '^2.0.0' }
+    })
+  })
 })
