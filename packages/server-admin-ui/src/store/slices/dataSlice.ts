@@ -87,6 +87,33 @@ const initialDataState: DataSliceState = {
   contextNames: {}
 }
 
+// Metadata values are JSON, and a delta may carry an object's keys in another
+// order than the editor saw them, so objects compare by key regardless of
+// order while arrays keep theirs.
+function sameMetaValue(a: unknown, b: unknown): boolean {
+  if (a === b) return true
+  if (typeof a !== 'object' || typeof b !== 'object' || !a || !b) return false
+  if (Array.isArray(a) || Array.isArray(b)) {
+    return (
+      Array.isArray(a) &&
+      Array.isArray(b) &&
+      a.length === b.length &&
+      a.every((item, i) => sameMetaValue(item, b[i]))
+    )
+  }
+  const aRecord = a as Record<string, unknown>
+  const bRecord = b as Record<string, unknown>
+  const keys = Object.keys(aRecord)
+  return (
+    keys.length === Object.keys(bRecord).length &&
+    keys.every(
+      (key) =>
+        Object.prototype.hasOwnProperty.call(bRecord, key) &&
+        sameMetaValue(aRecord[key], bRecord[key])
+    )
+  )
+}
+
 // Re-resolve one context's entry in the contextNames map after its data
 // changed in a way that can affect the name. Returns the previous map
 // unchanged (same identity) when the resolved name is the same.
@@ -170,10 +197,7 @@ export const createDataSlice: StateCreator<DataSlice, [], [], DataSlice> = (
       let changed = false
       for (const [field, before] of Object.entries(cleared)) {
         const key = field as keyof MetaData
-        if (
-          key in remaining &&
-          JSON.stringify(remaining[key]) === JSON.stringify(before)
-        ) {
+        if (key in remaining && sameMetaValue(remaining[key], before)) {
           delete remaining[key]
           changed = true
         }

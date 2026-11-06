@@ -140,6 +140,47 @@ describe('dataSlice', () => {
       ).toEqual({ updateContract: 'event' })
     })
 
+    it('drops an object field whose keys arrive in another order', () => {
+      useStore
+        .getState()
+        .updateMeta('vessels.self', 'navigation.speedOverGround', {
+          description: 'SOG',
+          displayScale: { upper: 10, lower: 0 }
+        } as Partial<MetaData>)
+
+      useStore
+        .getState()
+        .removeMetaKeys('vessels.self', 'navigation.speedOverGround', {
+          displayScale: { lower: 0, upper: 10 }
+        })
+
+      expect(
+        useStore
+          .getState()
+          .getMeta('vessels.self', 'navigation.speedOverGround')
+      ).toEqual({ description: 'SOG' })
+    })
+
+    it('keeps an object field whose content has changed', () => {
+      useStore
+        .getState()
+        .updateMeta('vessels.self', 'navigation.speedOverGround', {
+          displayScale: { lower: 0, upper: 20 }
+        } as Partial<MetaData>)
+
+      useStore
+        .getState()
+        .removeMetaKeys('vessels.self', 'navigation.speedOverGround', {
+          displayScale: { lower: 0, upper: 10 }
+        })
+
+      expect(
+        useStore
+          .getState()
+          .getMeta('vessels.self', 'navigation.speedOverGround')
+      ).toEqual({ displayScale: { lower: 0, upper: 20 } })
+    })
+
     it('ignores a path it has no metadata for', () => {
       expect(() =>
         useStore
