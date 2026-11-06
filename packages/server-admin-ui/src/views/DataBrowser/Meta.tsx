@@ -730,10 +730,7 @@ const putMeta = async (path: string, meta: MetaData): Promise<boolean> => {
 // saves of one path can be persisted in the order the writes finish rather
 // than the order they were sent — a later restore can land before an earlier
 // clear and be undone by it. Queue per path so each save is sent only once
-// the previous has settled. Same shape as applySettingsUpdate in #2999.
-// putMeta resolves false rather than rejecting, so the second `run` and the
-// swallowing `.then` below are defensive only: they keep one failure from
-// wedging the queue if that ever changes.
+// the previous has settled, whether it succeeded or not.
 const saveQueues = new Map<string, Promise<unknown>>()
 
 export const saveMeta = (path: string, meta: MetaData): Promise<boolean> => {
