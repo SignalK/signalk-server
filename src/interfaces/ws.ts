@@ -38,6 +38,7 @@ import {
   UpdateOptions
 } from '../requestResponse'
 import { putPath, deletePath } from '../put'
+import ServerSubscriptionManager from '../subscriptionmanager'
 import { createDebug } from '../debug'
 import { JsonWebTokenError, TokenExpiredError } from 'jsonwebtoken'
 import { startEvents, startServerEvents } from '../events'
@@ -191,7 +192,12 @@ interface SubscriptionManager {
     sourcePolicy?: string,
     excludeSources?: string[]
   ) => void
-  unsubscribe: (msg: WsMessage, unsubscribes: Array<() => void>) => void
+  unsubscribe: (
+    msg: WsMessage,
+    unsubscribes: Array<() => void>,
+    sourcePolicy?: string,
+    excludeSources?: string[]
+  ) => void
 }
 
 interface HistoryProvider {
@@ -1299,11 +1305,15 @@ function processSubscribe(
       },
       spark.request.skPrincipal,
       msg.sourcePolicy ?? spark.sourcePolicy,
-      Array.isArray(msg.excludeSources) && msg.excludeSources.length > 0
-        ? msg.excludeSources
-        : undefined
+      excludeSourcesOf(msg)
     )
   }
+}
+
+function excludeSourcesOf(msg: WsMessage): string[] | undefined {
+  return Array.isArray(msg.excludeSources) && msg.excludeSources.length > 0
+    ? msg.excludeSources
+    : undefined
 }
 
 function processUnsubscribe(
@@ -1324,11 +1334,22 @@ function processUnsubscribe(
         spark.logUnsubscribe = undefined
       }
     } else {
-      app.subscriptionmanager.unsubscribe(msg, unsubscribes)
-      const deltaEvent =
-        spark.sourcePolicy === 'all' ? 'unfilteredDelta' : 'delta'
-      app.signalk.removeListener(deltaEvent, onChange)
-      spark.sentMetaData = {}
+      // Resolved as processSubscribe does, so that echoing a subscribe
+      // message ends the rows it made.
+      app.subscriptionmanager.unsubscribe(
+        msg,
+        unsubscribes,
+        msg.sourcePolicy ?? spark.sourcePolicy,
+        excludeSourcesOf(msg)
+      )
+      // The connection-wide stream from ?subscribe= is not a subscription
+      // row, so only unsubscribe-all stops it.
+      if (ServerSubscriptionManager.isUnsubscribeAll(msg)) {
+        const deltaEvent =
+          spark.sourcePolicy === 'all' ? 'unfilteredDelta' : 'delta'
+        app.signalk.removeListener(deltaEvent, onChange)
+        spark.sentMetaData = {}
+      }
     }
   } catch (e) {
     console.log(e)

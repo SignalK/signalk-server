@@ -126,27 +126,10 @@ class SubscriptionManager implements ISubscriptionManager {
       command,
       errorCallback
     )
-    // Exclude semantics only make sense under the priority cascade.
-    // Under sourcePolicy='all' the caller has opted into raw fan-out
-    // and partial filtering would be surprising — log and ignore.
-    // Sanitize at the boundary: a WebSocket message or plugin command
-    // can carry empty strings or non-string entries, and an array
-    // length > 0 of garbage shouldn't flip the subscription into
-    // per-engine mode.
-    const sanitizedExcludes = Array.isArray(excludeSources)
-      ? excludeSources.filter(
-          (ref): ref is SourceRef => typeof ref === 'string' && ref.length > 0
-        )
-      : []
-    const effectiveExcludes =
-      sourcePolicy === 'all' || sanitizedExcludes.length === 0
-        ? undefined
-        : sanitizedExcludes
-    if (sourcePolicy === 'all' && sanitizedExcludes.length > 0) {
-      debug(
-        "ignoring excludeSources under sourcePolicy:'all' — excludes only apply to 'preferred'"
-      )
-    }
+    const effectiveExcludes = effectiveExcludeSources(
+      sourcePolicy,
+      excludeSources
+    )
     // When the caller asks for exclude semantics, route through a
     // per-subscription priority engine fed from the unfiltered bus
     // (every source). Without excludes, keep the existing fast paths:
@@ -161,21 +144,52 @@ class SubscriptionManager implements ISubscriptionManager {
       ? this.streambundle.unfilteredBuses
       : this.streambundle.buses
     if (Array.isArray(command.subscribe)) {
-      handleSubscribeRows(
-        this.app,
-        command.subscribe,
-        unsubscribes,
-        buses,
-        contextFilter,
-        guardedCallback,
-        errorCallback,
-        user,
-        sourcePolicy,
-        perSubEngine,
-        this.selfContext,
-        true,
-        trusted
-      )
+      const rows: RowSubscription[] = []
+      for (const options of command.subscribe) {
+        if (typeof options.path !== 'string') {
+          if (options.path !== undefined) {
+            errorCallback(
+              `ignoring subscribe row with invalid path ${JSON.stringify(options.path)}`
+            )
+          }
+        } else {
+          rows.push({
+            key: rowKey(
+              command.context,
+              options,
+              sourcePolicy,
+              effectiveExcludes
+            ),
+            options,
+            unsubscribes: [],
+            closed: false
+          })
+        }
+      }
+      const subscribeRows = (
+        rowBuses: BusesMap,
+        bootstrapFromCache: boolean
+      ) => {
+        for (const row of rows) {
+          if (!row.closed) {
+            handleSubscribeRow(
+              this.app,
+              row.options,
+              row.unsubscribes,
+              rowBuses,
+              contextFilter,
+              guardedCallback,
+              errorCallback,
+              user,
+              sourcePolicy,
+              perSubEngine,
+              this.selfContext,
+              bootstrapFromCache,
+              trusted
+            )
+          }
+        }
+      }
       // listen to new keys and then use the same logic to check if we
       // want to subscribe, passing in a map with just that single bus.
       // No cache bootstrap here: a keys announcement is triggered by the
@@ -183,28 +197,32 @@ class SubscriptionManager implements ISubscriptionManager {
       // (index.ts ingests before it emits), and its live push follows the
       // attach within the same dispatch — a cache replay would deliver
       // that first delta twice.
-      unsubscribes.push(
-        this.streambundle.keys.onValue((path) => {
-          const newBuses: BusesMap = {}
-          newBuses[path] = useUnfiltered
-            ? this.streambundle.getUnfilteredBus(path)
-            : this.streambundle.getBus(path)
-          handleSubscribeRows(
-            this.app,
-            command.subscribe,
-            unsubscribes,
-            newBuses,
-            contextFilter,
-            guardedCallback,
-            errorCallback,
-            user,
-            sourcePolicy,
-            perSubEngine,
-            this.selfContext,
-            false
-          )
-        })
-      )
+      const stopNewPaths = this.streambundle.keys.onValue((path) => {
+        const newBuses: BusesMap = {}
+        newBuses[path] = useUnfiltered
+          ? this.streambundle.getUnfilteredBus(path)
+          : this.streambundle.getBus(path)
+        subscribeRows(newBuses, false)
+      })
+      // Handed to the caller before the cache replay, so a callback that
+      // tears the subscription down from a replayed value reaches all of it.
+      const subscription: CommandSubscription = { rows, stopNewPaths }
+      for (const row of rows) {
+        const teardown = () => endRow(row)
+        rowTeardowns.set(teardown, { row, subscription })
+        unsubscribes.push(teardown)
+      }
+      unsubscribes.push(stopNewPaths)
+      // Over the buses as they are now: a path that first appears during
+      // the replay reaches the rows through the new-path listener.
+      subscribeRows({ ...buses }, true)
+      // A row ended during its replay went on to attach to its remaining
+      // buses.
+      for (const row of rows) {
+        if (row.closed) {
+          endRow(row)
+        }
+      }
     }
 
     // Handle announceNewPaths: announce all paths matching context (once each)
@@ -284,63 +302,158 @@ class SubscriptionManager implements ISubscriptionManager {
     }
   }
 
-  unsubscribe(msg: UnsubscribeMessage, unsubscribes: Unsubscribes) {
-    if (
-      msg.unsubscribe &&
+  static isUnsubscribeAll(msg: {
+    context?: unknown
+    unsubscribe?: ReadonlyArray<{ path?: string }>
+  }): boolean {
+    return (
       msg.context === '*' &&
-      msg.unsubscribe &&
-      msg.unsubscribe.length === 1 &&
-      msg.unsubscribe[0].path === '*'
-    ) {
+      msg.unsubscribe?.length === 1 &&
+      msg.unsubscribe[0]?.path === '*'
+    )
+  }
+
+  unsubscribe(
+    msg: UnsubscribeMessage,
+    unsubscribes: Unsubscribes,
+    sourcePolicy?: 'preferred' | 'all',
+    excludeSources?: SourceRef[]
+  ) {
+    if (!Array.isArray(msg.unsubscribe)) {
+      throw new Error(
+        `unsubscribe must be an array of paths, received ${JSON.stringify(msg)}`
+      )
+    }
+    if (SubscriptionManager.isUnsubscribeAll(msg)) {
       debug('Unsubscribe all')
       unsubscribes.forEach((unsubscribe) => unsubscribe())
       // clear unsubscribes
       unsubscribes.length = 0
-    } else {
-      throw new Error(
-        `Only '{"context":"*","unsubscribe":[{"path":"*"}]}' supported, received ${JSON.stringify(
-          msg
-        )}`
-      )
+      return
     }
+    const excludes = effectiveExcludeSources(sourcePolicy, excludeSources)
+    const keys = new Set<string>()
+    for (const row of msg.unsubscribe) {
+      if (typeof row?.path === 'string') {
+        keys.add(rowKey(msg.context, row, sourcePolicy, excludes))
+      }
+    }
+    const ended: Array<{ teardown: () => void } & RowTeardown> = []
+    for (const teardown of unsubscribes) {
+      const entry = rowTeardowns.get(teardown)
+      if (entry && keys.has(entry.row.key)) {
+        ended.push({ teardown, ...entry })
+      }
+    }
+    for (const { teardown, subscription } of ended) {
+      teardown()
+      removeFrom(unsubscribes, teardown)
+      if (subscription.rows.every((row) => row.closed)) {
+        subscription.stopNewPaths()
+        removeFrom(unsubscribes, subscription.stopNewPaths)
+      }
+    }
+    debug.enabled &&
+      debug(`Unsubscribed ${ended.length} rows: ${JSON.stringify(msg)}`)
   }
 }
 
-function handleSubscribeRows(
-  app: any,
-  rows: SubscriptionOptions[],
-  unsubscribes: Unsubscribes,
-  buses: BusesMap,
-  filter: ContextMatcher,
-  callback: SubscribeCallback,
-  errorCallback: any,
-  user?: string,
-  sourcePolicy?: 'preferred' | 'all',
-  perSubEngine?: ToPreferredDelta | null,
-  selfContext?: string,
-  bootstrapFromCache?: boolean,
-  trusted?: boolean
-) {
-  rows.reduce((acc, subscribeRow) => {
-    if (subscribeRow.path !== undefined) {
-      handleSubscribeRow(
-        app,
-        subscribeRow,
-        unsubscribes,
-        buses,
-        filter,
-        callback,
-        errorCallback,
-        user,
-        sourcePolicy,
-        perSubEngine,
-        selfContext,
-        bootstrapFromCache,
-        trusted
+interface RowSubscription {
+  readonly key: string
+  readonly options: SubscriptionOptions
+  readonly unsubscribes: Unsubscribes
+  closed: boolean
+}
+
+interface CommandSubscription {
+  readonly rows: RowSubscription[]
+  readonly stopNewPaths: () => void
+}
+
+interface RowTeardown {
+  readonly row: RowSubscription
+  readonly subscription: CommandSubscription
+}
+
+// Keyed by the teardown function a caller's Unsubscribes array holds, so
+// that array stays the only record of which rows are live: a caller that
+// runs and clears it, as plugins do on stop, needs no further bookkeeping.
+const rowTeardowns = new WeakMap<() => void, RowTeardown>()
+
+function endRow(row: RowSubscription) {
+  row.closed = true
+  for (const unsubscribe of row.unsubscribes) {
+    unsubscribe()
+  }
+  row.unsubscribes.length = 0
+}
+
+// The criteria a client sets on a row, so that an unsubscribe echoing a
+// row ends that row and not another one on the same path.
+function rowKey(
+  context: SubscribeMessage['context'] | '*',
+  row: {
+    path?: string
+    period?: unknown
+    minPeriod?: unknown
+    policy?: unknown
+  },
+  sourcePolicy: 'preferred' | 'all' | undefined,
+  excludeSources: SourceRef[] | undefined
+): string {
+  return JSON.stringify([
+    context,
+    row.path,
+    toNumber(row.period),
+    toNumber(row.minPeriod),
+    row.policy,
+    sourcePolicy === 'all' ? 'all' : 'preferred',
+    excludeSources ? [...new Set(excludeSources)].sort() : []
+  ])
+}
+
+// Subscribe messages may carry period and minPeriod as strings. A value
+// that is no finite number stays as given rather than collapsing into
+// the key of a row without it.
+function toNumber(value: unknown) {
+  if (value === undefined) {
+    return undefined
+  }
+  const number = Number(value)
+  return Number.isFinite(number) ? number : String(value)
+}
+
+// Exclude semantics only make sense under the priority cascade.
+// Under sourcePolicy='all' the caller has opted into raw fan-out
+// and partial filtering would be surprising — log and ignore.
+// Sanitize at the boundary: a WebSocket message or plugin command
+// can carry empty strings or non-string entries, and an array
+// length > 0 of garbage shouldn't flip the subscription into
+// per-engine mode.
+function effectiveExcludeSources(
+  sourcePolicy: 'preferred' | 'all' | undefined,
+  excludeSources: SourceRef[] | undefined
+): SourceRef[] | undefined {
+  const sanitized = Array.isArray(excludeSources)
+    ? excludeSources.filter(
+        (ref): ref is SourceRef => typeof ref === 'string' && ref.length > 0
       )
-    }
-    return acc
-  }, unsubscribes)
+    : []
+  if (sourcePolicy === 'all' && sanitized.length > 0) {
+    debug(
+      "ignoring excludeSources under sourcePolicy:'all' — excludes only apply to 'preferred'"
+    )
+  }
+  return sourcePolicy === 'all' || sanitized.length === 0
+    ? undefined
+    : sanitized
+}
+
+function removeFrom(unsubscribes: Unsubscribes, unsubscribe: () => void) {
+  const index = unsubscribes.indexOf(unsubscribe)
+  if (index !== -1) {
+    unsubscribes.splice(index, 1)
+  }
 }
 
 interface App {
