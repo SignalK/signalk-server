@@ -262,6 +262,7 @@ jobs:
         shell: bash
         run: |
           cat << 'BUNDLED' > "$RUNNER_TEMP/bundled-plugins.mjs"
+          import { execFileSync } from 'node:child_process';
           import { existsSync, readFileSync } from 'node:fs';
           import { dirname, join } from 'node:path';
           const pkg = JSON.parse(readFileSync('package.json', 'utf8'));
@@ -276,6 +277,27 @@ jobs:
               if (dirname(dir) === dir) return null;
             }
           }
+          // A required peer can be left out here (legacy-peer-deps in the
+          // repo's .npmrc) although a user's install would add it, so a
+          // registry spec that was not installed is resolved on npm instead.
+          // Anything else cannot be inspected and fails the check.
+          function publishedManifest(key, range) {
+            let spec;
+            if (range.startsWith('npm:')) spec = range.slice(4);
+            else if (!/^(git\+|git:|github:|file:|link:|workspace:|https?:)/.test(range) && !range.includes('/')) spec = key + '@' + range;
+            if (!spec) return null;
+            try {
+              const out = execFileSync('npm', ['view', '--json', '--', spec, 'name', 'keywords'], { encoding: 'utf8' });
+              // One entry per matching version, newest last; npm prints just
+              // the name when the version has no keywords.
+              const parsed = JSON.parse(out);
+              const latest = Array.isArray(parsed) ? parsed[parsed.length - 1] : parsed;
+              if (typeof latest === 'string') return { name: latest, keywords: [] };
+              return latest && typeof latest.name === 'string' ? latest : null;
+            } catch {
+              return null;
+            }
+          }
           const errors = [];
           const seen = new Set();
           for (const field of ['dependencies', 'optionalDependencies', 'peerDependencies']) {
@@ -283,12 +305,18 @@ jobs:
               if (typeof range !== 'string' || seen.has(key)) continue;
               if (field === 'peerDependencies' && pkg.peerDependenciesMeta?.[key]?.optional === true) continue;
               seen.add(key);
-              const dep = installedManifest(key);
+              let dep = installedManifest(key);
               if (!dep) {
-                if (field !== 'optionalDependencies') {
-                  console.log('::warning::' + key + ' from ' + field + ' is not installed; skipped the bundled-plugin check for it');
+                if (field === 'optionalDependencies') continue;
+                dep = publishedManifest(key, range);
+                if (!dep) {
+                  errors.push(
+                    field + ' lists ' + key + ' (' + range + '), which was not installed and could not be looked up on npm, ' +
+                    'so the bundled-plugin check cannot tell whether it is an App Store plugin or webapp. ' +
+                    'Make sure npm installs it (for a peer, do not set legacy-peer-deps) or mark an optional peer in peerDependenciesMeta.'
+                  );
+                  continue;
                 }
-                continue;
               }
               if (dep.name === pkg.name) continue;
               const keywords = Array.isArray(dep.keywords) ? dep.keywords : [];
