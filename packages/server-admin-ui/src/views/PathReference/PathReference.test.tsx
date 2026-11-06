@@ -43,7 +43,7 @@ describe('PathReference update contracts', () => {
     expect(badge.getAttribute('title')).to.contain('never marked stale')
   })
 
-  it('labels a path with no declared contract as periodic', async () => {
+  it('labels a path declared periodic as periodic', async () => {
     renderReference()
     await waitFor(() => {
       expect(screen.getByText('Speed over ground')).to.not.equal(null)

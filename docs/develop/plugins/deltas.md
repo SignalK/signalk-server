@@ -349,8 +349,10 @@ plugin.start = async (options) => {
     updateContract: 'event'
   })
 
-  // Never meaningful to time out.
-  await app.setDefaultMetadata('design.airHeight', { timeout: 0 })
+  // Published once at start, so it must never be flagged as stale.
+  await app.setDefaultMetadata('environment.depth.surfaceToTransducer', {
+    timeout: 0
+  })
 }
 ```
 
