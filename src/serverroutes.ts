@@ -895,7 +895,11 @@ module.exports = function (
           app.config.settings.notifications?.manageNotifications ?? true
       },
       staleness: {
-        enforceDataTimeouts: app.config.settings.enforceDataTimeouts === true
+        enforceDataTimeouts: app.config.settings.enforceDataTimeouts === true,
+        // Sent as stored, so a settings page that echoes them back does not
+        // turn the server's defaults into saved values
+        useDefaultTimeouts: app.config.settings.useDefaultTimeouts,
+        defaultTimeout: app.config.settings.defaultTimeout
       }
     }
 

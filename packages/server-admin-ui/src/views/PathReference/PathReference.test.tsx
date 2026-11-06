@@ -17,14 +17,28 @@ const PATHS = {
   }
 }
 
-const renderReference = () => {
+const renderReference = (
+  staleness?: Record<string, unknown>,
+  paths: Record<string, unknown> = PATHS
+) => {
   vi.stubGlobal('serverRoutesPrefix', '/skServer')
   vi.stubGlobal(
     'fetch',
-    vi.fn().mockResolvedValue({ ok: true, json: async () => PATHS })
+    vi.fn((url: string) =>
+      Promise.resolve(
+        url.endsWith('/settings')
+          ? staleness
+            ? { ok: true, json: async () => ({ staleness }) }
+            : { ok: false, status: 401, json: async () => ({}) }
+          : { ok: true, json: async () => paths }
+      )
+    )
   )
   return render(<PathReference />)
 }
+
+const timeoutCell = (description: string) =>
+  screen.getByText(description).closest('tr')!.querySelectorAll('td')[3]!
 
 describe('PathReference update contracts', () => {
   afterEach(() => {
@@ -75,5 +89,80 @@ describe('PathReference update contracts', () => {
 
     const link = screen.getByRole('link', { name: 'About update contracts' })
     expect(link.getAttribute('href')).to.contain('Stale_Data_Detection')
+  })
+})
+
+describe('PathReference timeouts', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+    vi.unstubAllGlobals()
+  })
+
+  it('shows the configured global fallback for a periodic path', async () => {
+    renderReference({
+      enforceDataTimeouts: true,
+      useDefaultTimeouts: true,
+      defaultTimeout: 120
+    })
+    await waitFor(() => {
+      expect(timeoutCell('Speed over ground').textContent).to.equal(
+        '120 s (global fallback)'
+      )
+    })
+  })
+
+  it('uses the server default when no fallback is configured', async () => {
+    renderReference({ enforceDataTimeouts: true })
+    await waitFor(() => {
+      expect(timeoutCell('Speed over ground').textContent).to.equal(
+        '60 s (global fallback)'
+      )
+    })
+  })
+
+  it('shows a timeout defined for the path instead of the fallback', async () => {
+    renderReference(
+      { enforceDataTimeouts: true, defaultTimeout: 120 },
+      {
+        '/vessels/*/navigation/state': {
+          description: 'Navigation state',
+          updateContract: 'periodic',
+          timeout: 900
+        }
+      }
+    )
+    await waitFor(() => {
+      expect(timeoutCell('Navigation state').textContent).to.equal('900 s')
+    })
+  })
+
+  it('shows no fallback when default timeouts are off', async () => {
+    renderReference({ enforceDataTimeouts: true, useDefaultTimeouts: false })
+    await waitFor(() => {
+      expect(timeoutCell('Speed over ground').textContent).to.equal('none')
+    })
+  })
+
+  it('never times out an event-driven path', async () => {
+    renderReference({ enforceDataTimeouts: true })
+    await waitFor(() => {
+      expect(timeoutCell('Anchor position').textContent).to.equal('never')
+    })
+  })
+
+  it('names the fallback without a value when settings are not readable', async () => {
+    renderReference()
+    await waitFor(() => {
+      expect(timeoutCell('Speed over ground').textContent).to.equal(
+        'global fallback'
+      )
+    })
+  })
+
+  it('says when stale data detection is off', async () => {
+    renderReference({ enforceDataTimeouts: false })
+    await waitFor(() => {
+      expect(screen.getByText(/Stale data detection is off/)).to.not.equal(null)
+    })
   })
 })

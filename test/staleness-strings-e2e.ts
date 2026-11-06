@@ -31,6 +31,21 @@ describe('staleness on string-valued paths', function () {
     await server?.stop()
   })
 
+  it('reports the stored fallback timeout settings', async function () {
+    this.timeout(TEST_TIMEOUT_MS)
+    const res = await fetch(`http://localhost:${port}/skServer/settings`)
+    expect(res.ok, `GET settings returned ${res.status}`).to.equal(true)
+    const body = (await res.json()) as {
+      staleness?: Record<string, unknown>
+    }
+    // Unset values stay unset, so a settings page echoing them back does not
+    // save the server's defaults.
+    expect(body.staleness).to.deep.equal({
+      enforceDataTimeouts: true,
+      defaultTimeout: STALE_TIMEOUT_S
+    })
+  })
+
   it('emits null and state.timedOut for a stale string enum path', async function () {
     this.timeout(TEST_TIMEOUT_MS)
 
