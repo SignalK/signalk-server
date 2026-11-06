@@ -173,6 +173,10 @@ export interface ServerAPI
    * path that only emits on change. A value the user has set in the Data
    * Browser always wins.
    *
+   * `'auto'` uses the global default until it has seen enough updates, and
+   * the timeout it derives never exceeds 300 seconds, so a path that updates
+   * less often than every few minutes needs a number of seconds instead.
+   *
    * @example
    * ```javascript
    * await app.setDefaultMetadata('electrical.batteries.house.energy', {

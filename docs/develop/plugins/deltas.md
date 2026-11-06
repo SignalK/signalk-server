@@ -334,26 +334,36 @@ The `displayUnits.category` is validated against the path's SI unit. If the cate
 
 The same method is how a plugin tells [Stale Data Detection](../../setup/staleness.md) how its paths behave. Declare it once at plugin start. A numeric `timeout` in a meta delta can also affect timeout resolution when the user has not set one, but repeating metadata on every delta adds traffic.
 
+The server does not await `plugin.start()`, so the plugin handles a failed declaration itself. Settling them together keeps one failure from skipping the rest:
+
 ```javascript
-plugin.start = async (options) => {
-  // Republished every 10 minutes, so the 60s default would flag it as stale.
-  await app.setDefaultMetadata('navigation.state', { timeout: 900 })
-
-  // Or let the server derive the timeout from the observed update rate.
-  await app.setDefaultMetadata('environment.inside.temperature', {
-    timeout: 'auto'
-  })
-
-  // Emitted only when the value changes; silence means unchanged.
-  await app.setDefaultMetadata('propulsion.port.state', {
-    updateContract: 'event'
+plugin.start = (options) => {
+  Promise.allSettled([
+    // Republished every 10 minutes, so the 60s default would flag it as stale.
+    app.setDefaultMetadata('navigation.state', { timeout: 900 }),
+    // Updates every few seconds; let the server derive the timeout.
+    app.setDefaultMetadata('environment.inside.temperature', {
+      timeout: 'auto'
+    }),
+    // Emitted only when the value changes; silence means unchanged.
+    app.setDefaultMetadata('propulsion.port.state', {
+      updateContract: 'event'
+    })
+  ]).then((results) => {
+    for (const result of results) {
+      if (result.status === 'rejected') {
+        app.error(`Could not declare stale data behaviour: ${result.reason}`)
+      }
+    }
   })
 }
 ```
 
 A `timeout` of `0` exempts a periodic path from stale detection altogether, which suits a value published once and not repeated.
 
-Per-field merge applies here too: if the user has set a `timeout` for the path in the Data Browser, theirs wins and the plugin's suggestion is ignored.
+`'auto'` suits paths that update every few seconds or minutes. Until it has seen enough updates it uses the global default timeout, and the timeout it derives never exceeds 300 seconds, so a path that updates less often than every few minutes needs a numeric `timeout`.
+
+Per-field merge applies here too: a field the user has set in the Data Browser wins, and the plugin's suggestion for that field is ignored. The merge is per field, so a user's `timeout` does not stop a plugin from declaring `updateContract: 'event'`, and an event-driven path is never timed out. A user who wants their timeout enforced on such a path also sets `updateContract` to `periodic`.
 
 ## Display Units
 
