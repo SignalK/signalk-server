@@ -1,6 +1,7 @@
 import { afterEach, describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { useStore } from '../../store'
+import VirtualizedMetaTable from './VirtualizedMetaTable'
 import Meta, {
   CategorySelect,
   saveMeta,
@@ -568,5 +569,35 @@ describe('Meta editing scope', () => {
       />
     )
     expect(screen.getByRole('button', { name: /edit/i })).to.not.equal(null)
+  })
+
+  it('closes the editor and sends nothing when the context changes', () => {
+    const path = 'environment.depth.belowTransducer'
+    useStore.getState().updateMeta('self', path, { description: 'Depth' })
+    useStore.getState().updateMeta('vessels.urn:mrn:imo:mmsi:123456789', path, {
+      description: 'Depth'
+    })
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200 })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const { rerender } = render(
+      <VirtualizedMetaTable paths={[path]} context="self" />
+    )
+    fireEvent.click(screen.getByRole('button', { name: /edit/i }))
+    rerender(
+      <VirtualizedMetaTable
+        paths={[path]}
+        context="vessels.urn:mrn:imo:mmsi:123456789"
+      />
+    )
+
+    expect(screen.queryByRole('button', { name: /save/i })).to.equal(null)
+    expect(
+      fetchMock.mock.calls.filter(
+        ([, init]) => (init as RequestInit | undefined)?.method === 'PUT'
+      )
+    ).to.have.lengthOf(0)
+    vi.unstubAllGlobals()
+    useStore.getState().clearData()
   })
 })

@@ -828,6 +828,7 @@ const Meta: React.FC<MetaProps> = ({ meta, path, context, showContext }) => {
   }
 
   const handleSave = () => {
+    if (!canEditMetadata) return
     const saved = normalizeMetaForSave(localMeta)
     const known = { ...meta, ...pendingSent.current }
     const cleared = Object.fromEntries(
