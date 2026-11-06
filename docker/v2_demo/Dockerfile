@@ -11,6 +11,7 @@ RUN chmod +x startup.sh
 
 COPY resources /home/node/.signalk/resources
 COPY resources-provider.json /home/node/.signalk/plugin-config-data/
+COPY course-provider.json /home/node/.signalk/plugin-config-data/
 COPY course-data.json /home/node/.signalk/plugin-config-data/
 COPY serverState /home/node/.signalk/serverState
 RUN chown -R node /home/node/.signalk

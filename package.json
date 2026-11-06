@@ -71,6 +71,7 @@
     "packages/streams",
     "packages/server-api",
     "packages/resources-provider-plugin",
+    "packages/course-provider-plugin",
     "packages/typedoc-theme",
     "packages/assemblyscript-plugin-sdk"
   ],

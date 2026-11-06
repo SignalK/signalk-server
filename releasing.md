@@ -12,6 +12,7 @@ Npm Packages are:
 - @signalk/streams
 - @signalk/path-metadata
 - @signalk/resources-provider
+- @signalk/course-provider
 - signalk-server
 
 ### (1) create new server version
