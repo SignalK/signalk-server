@@ -320,6 +320,14 @@ describe('normalizeMetaForSave', () => {
     })
   })
 
+  it('drops a contract reset to the shipped classification', () => {
+    // The select's unset option leaves the key in place with no value; it
+    // must still be dropped, or handleSave would not count it as cleared.
+    expect(
+      normalizeMetaForSave({ description: 'x', updateContract: undefined })
+    ).to.deep.equal({ description: 'x' })
+  })
+
   it('drops an unrecognised contract', () => {
     expect(normalizeMetaForSave({ updateContract: 'sometimes' })).to.deep.equal(
       {}

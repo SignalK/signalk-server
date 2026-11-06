@@ -695,15 +695,20 @@ const METAFIELDRENDERERS: Record<
   )
 }
 
-// `Add Field` seeds a new key with an empty string, so a contract the user
-// never chose would otherwise be persisted as `updateContract: ''`. Only the
-// two valid contracts are sent; anything else drops the key so the shipped
-// classification keeps applying.
+// `Add Field` seeds a new key with an empty string, and choosing "Use the
+// shipped classification" sets it to undefined. Only the two valid contracts
+// are sent; anything else drops the key, so the shipped classification keeps
+// applying and a contract saved earlier is cleared from the store.
 const UPDATE_CONTRACT_VALUES = ['periodic', 'event']
 
 export const normalizeMetaForSave = (meta: MetaData): MetaData => {
-  if (meta.updateContract === undefined) return meta
-  if (UPDATE_CONTRACT_VALUES.includes(meta.updateContract)) return meta
+  if (!('updateContract' in meta)) return meta
+  if (
+    meta.updateContract !== undefined &&
+    UPDATE_CONTRACT_VALUES.includes(meta.updateContract)
+  ) {
+    return meta
+  }
   const { updateContract: _dropped, ...rest } = meta
   return rest
 }
