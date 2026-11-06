@@ -165,7 +165,7 @@ Check if your plugin:
 
 ### 2. Port the Logic
 
-Each call the Node.js plugin makes on `app` maps to a host function the WASM plugin imports. Host functions for optional features, such as network access, raw sockets, PUT handlers and resource, weather or radar providers, only work when the plugin declares the matching capability. Core calls, such as reading `vessels.self` data and emitting deltas, are always available. For example, emitting a delta with `app.handleMessage()` becomes building the delta as JSON and passing it to the host. The [example plugins](#example-plugins) show the current bindings for each language.
+Some calls the Node.js plugin makes on `app` map to a host function the WASM plugin imports. For example, emitting a delta with `app.handleMessage()` becomes building the delta as JSON and passing it to the host. Others turn into exports the plugin provides: instead of `app.subscriptionmanager.subscribe()`, the plugin exports `delta_handler`, which the server calls with every delta, and the plugin picks out the paths it needs (see [Receiving Deltas](deltas.md#receiving-deltas)). Host functions for optional features, such as network access, raw sockets, PUT handlers and resource, weather or radar providers, only work when the plugin declares the matching capability. Core calls, such as reading `vessels.self` data and emitting deltas, are always available. The [example plugins](#example-plugins) show the current bindings for each language.
 
 ## Example Plugins
 
