@@ -25,6 +25,9 @@ const SELF_VESSEL = 'vessels.self'
 
 class DeltaEditor {
   deltas: any[]
+  // atomicWriteFile stages every write in the same temporary file, so
+  // overlapping saves would rename it away from under each other
+  private pendingSave: Promise<void> = Promise.resolve()
 
   constructor() {
     this.deltas = []
@@ -46,7 +49,11 @@ class DeltaEditor {
   }
 
   save(filename: string): Promise<void> {
-    return atomicWriteFile(filename, JSON.stringify(this.deltas, null, 2))
+    const write = () =>
+      atomicWriteFile(filename, JSON.stringify(this.deltas, null, 2))
+    const saved = this.pendingSave.then(write)
+    this.pendingSave = saved.catch(() => undefined)
+    return saved
   }
 
   setValue(context: string, path: string, value: any) {
