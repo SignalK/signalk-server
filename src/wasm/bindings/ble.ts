@@ -48,9 +48,13 @@ type NotifyEvent = Extract<WasmBleEvent, { type: 'notify' }>
 interface GattEntry {
   mac: string
   handle: GATTSubscriptionHandle | undefined
-  // Providers may start notifications before subscribeGATT resolves; they
-  // are held back so that `connected` always precedes them
-  earlyNotifications: NotifyEvent[]
+  // Settles once subscribeGATT has resolved or rejected
+  setup: Promise<unknown>
+  connected: boolean
+  // Providers may start notifications before subscribeGATT resolves or the
+  // device connects; they are held back so that `connected` always
+  // precedes them
+  queuedNotifications: NotifyEvent[]
 }
 
 interface PluginBleState {
@@ -61,7 +65,15 @@ interface PluginBleState {
 
 const pluginStates = new Map<string, PluginBleState>()
 const eventSinks = new Map<string, (event: WasmBleEvent) => void>()
+// The BLE API keeps a device reserved until a cancelled subscribeGATT
+// settles, so a plugin restarted meanwhile waits for it instead of failing
+// with "GATT claim in progress"
+const settlingSetups = new Map<string, Promise<void>>()
 let nextHandleId = 1
+
+function setupKey(consumerId: string, mac: string): string {
+  return `${consumerId} ${mac.toUpperCase()}`
+}
 
 function stateFor(consumerId: string, bleApi: BLEApi): PluginBleState {
   let state = pluginStates.get(consumerId)
@@ -96,6 +108,14 @@ function releaseEntry(
 ): void {
   // A subscription still connecting has no handle yet; releasing the claim
   // makes the pending subscribeGATT call close its connection and reject
+  if (!entry.handle) {
+    const key = setupKey(consumerId, entry.mac)
+    const forget = (): void => {
+      if (settlingSetups.get(key) === settled) settlingSetups.delete(key)
+    }
+    const settled: Promise<void> = entry.setup.then(forget, forget)
+    settlingSetups.set(key, settled)
+  }
   const release = entry.handle
     ? entry.handle.close()
     : state.bleApi.releaseGATTDevice(entry.mac, consumerId)
@@ -172,23 +192,59 @@ export function createBleBindings(
   ): void => {
     if (state.gatt.get(id) !== entry) return
     entry.handle = handle
+    const markConnected = (): void => {
+      entry.connected = true
+      emit(consumerId, { type: 'connected', handle: id })
+      const queued = entry.queuedNotifications
+      entry.queuedNotifications = []
+      for (const event of queued) emit(consumerId, event)
+    }
     handle.onConnect(() => {
-      if (state.gatt.get(id) === entry) {
-        emit(consumerId, { type: 'connected', handle: id })
-      }
+      if (state.gatt.get(id) === entry) markConnected()
     })
     handle.onDisconnect(() => {
       if (state.gatt.get(id) === entry) {
+        entry.connected = false
         emit(consumerId, { type: 'disconnected', handle: id })
       }
     })
-    const early = entry.earlyNotifications
-    entry.earlyNotifications = []
-    if (handle.connected) {
-      emit(consumerId, { type: 'connected', handle: id })
-      for (const event of early) emit(consumerId, event)
-    }
+    if (handle.connected) markConnected()
   }
+
+  const startSubscription = (
+    bleApi: BLEApi,
+    state: PluginBleState,
+    id: number,
+    entry: GattEntry,
+    descriptor: GATTSubscriptionDescriptor
+  ): Promise<void> =>
+    bleApi
+      .subscribeGATT(descriptor, consumerId, (uuid, data) => {
+        if (state.gatt.get(id) !== entry) return
+        const event: NotifyEvent = {
+          type: 'notify',
+          handle: id,
+          uuid,
+          data: data.toString('hex')
+        }
+        if (entry.connected) {
+          emit(consumerId, event)
+        } else {
+          entry.queuedNotifications.push(event)
+        }
+      })
+      .then(
+        (handle) => watchHandle(state, id, entry, handle),
+        (error: unknown) => {
+          if (state.gatt.get(id) !== entry) return
+          state.gatt.delete(id)
+          emit(consumerId, {
+            type: 'error',
+            handle: id,
+            message: errorMessage(error)
+          })
+        }
+      )
 
   return {
     /**
@@ -215,37 +271,20 @@ export function createBleBindings(
       const entry: GattEntry = {
         mac: descriptor.mac,
         handle: undefined,
-        earlyNotifications: []
+        setup: Promise.resolve(),
+        connected: false,
+        queuedNotifications: []
       }
       state.gatt.set(id, entry)
 
-      bleApi
-        .subscribeGATT(descriptor, consumerId, (uuid, data) => {
-          if (state.gatt.get(id) !== entry) return
-          const event: NotifyEvent = {
-            type: 'notify',
-            handle: id,
-            uuid,
-            data: data.toString('hex')
-          }
-          if (entry.handle) {
-            emit(consumerId, event)
-          } else {
-            entry.earlyNotifications.push(event)
-          }
-        })
-        .then(
-          (handle) => watchHandle(state, id, entry, handle),
-          (error: unknown) => {
-            if (state.gatt.get(id) !== entry) return
-            state.gatt.delete(id)
-            emit(consumerId, {
-              type: 'error',
-              handle: id,
-              message: errorMessage(error)
-            })
-          }
-        )
+      const settling = settlingSetups.get(setupKey(consumerId, descriptor.mac))
+      entry.setup = settling
+        ? settling.then(() =>
+            state.gatt.get(id) === entry
+              ? startSubscription(bleApi, state, id, entry, descriptor)
+              : undefined
+          )
+        : startSubscription(bleApi, state, id, entry, descriptor)
 
       return id
     },
