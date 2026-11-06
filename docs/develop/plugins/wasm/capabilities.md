@@ -8,17 +8,19 @@ title: Plugin Capabilities
 
 Declare required capabilities in `package.json`:
 
-| Capability      | Description                              | Status                          |
-| --------------- | ---------------------------------------- | ------------------------------- |
-| `dataRead`      | Read Signal K data model                 | Supported                       |
-| `dataWrite`     | Emit delta messages                      | Supported                       |
-| `storage`       | Write to VFS (`vfs-only`)                | Supported                       |
-| `httpEndpoints` | Register custom HTTP endpoints           | Supported                       |
-| `staticFiles`   | Serve HTML/CSS/JS from `public/` folder  | Supported                       |
-| `network`       | HTTP requests (via as-fetch)             | Supported (AssemblyScript only) |
-| `putHandlers`   | Register PUT handlers for vessel control | Supported                       |
-| `rawSockets`    | UDP socket access for radar, NMEA, etc.  | Supported                       |
-| `serialPorts`   | Serial port access                       | Planned                         |
+| Capability         | Description                              | Status                          |
+| ------------------ | ---------------------------------------- | ------------------------------- |
+| `dataRead`         | Read Signal K data model                 | Supported                       |
+| `dataWrite`        | Emit delta messages                      | Supported                       |
+| `storage`          | Write to VFS (`vfs-only`)                | Supported                       |
+| `httpEndpoints`    | Register custom HTTP endpoints           | Supported                       |
+| `network`          | HTTP requests (via as-fetch)             | Supported (AssemblyScript only) |
+| `putHandlers`      | Register PUT handlers for vessel control | Supported                       |
+| `rawSockets`       | UDP socket access for radar, NMEA, etc.  | Supported                       |
+| `resourceProvider` | Serve Signal K resources                 | Supported                       |
+| `weatherProvider`  | Provide data to the Signal K Weather API | Supported                       |
+| `radarProvider`    | Provide radars to the Signal K Radar API | Supported                       |
+| `serialPorts`      | Serial port access                       | Planned                         |
 
 ## Network API (AssemblyScript)
 
@@ -32,65 +34,14 @@ AssemblyScript plugins can make HTTP requests using the `as-fetch` library integ
 - Must add `"transform": ["as-fetch/transform"]` to `asconfig.json` options
 - Must set `"exportRuntime": true` in `asconfig.json` options
 
-**Example: HTTP GET Request**
+A plugin checks `hasNetworkCapability()` from the SDK before making requests, then calls `fetchSync` from `as-fetch/sync`, which blocks the plugin until the response arrives. [example-weather-plugin](https://github.com/SignalK/signalk-server/tree/master/examples/wasm-plugins/example-weather-plugin) is a maintained example of the full pattern.
 
-```typescript
-import {
-  httpGet,
-  hasNetworkCapability
-} from '@signalk/assemblyscript-plugin-sdk/assembly/network'
-import { debug, setError } from '@signalk/assemblyscript-plugin-sdk/assembly'
+`fetchSync` relies on Asyncify, which the server drives only while the plugin is starting and while it serves weather and radar provider requests. Requests made from polling, delta, HTTP, PUT or resource handlers are not supported.
 
-class MyPlugin extends Plugin {
-  start(config: string): i32 {
-    // Always check capability first
-    if (!hasNetworkCapability()) {
-      setError('Network capability not granted')
-      return 1
-    }
+Two limitations of `fetchSync` in as-fetch 2.1.4 matter in practice:
 
-    // Make HTTP GET request
-    const response = httpGet('https://api.example.com/data')
-    if (response === null) {
-      setError('HTTP request failed')
-      return 1
-    }
-
-    debug('Received: ' + response)
-    return 0
-  }
-}
-```
-
-**Available Network Functions:**
-
-```typescript
-// Check if network capability is granted
-hasNetworkCapability(): boolean
-
-// HTTP GET request - returns response body or null on error
-httpGet(url: string): string | null
-
-// HTTP POST request - returns status code or -1 on error
-httpPost(url: string, body: string): i32
-
-// HTTP POST with response - returns response body or null
-httpPostWithResponse(url: string, body: string): string | null
-
-// HTTP PUT request - returns status code or -1 on error
-httpPut(url: string, body: string): i32
-
-// HTTP DELETE request - returns status code or -1 on error
-httpDelete(url: string): i32
-
-// Advanced HTTP request with full control
-httpRequest(
-  url: string,
-  method: string,
-  body: string | null,
-  contentType: string | null
-): HttpResponse | null
-```
+- A request that fails without any HTTP response, such as a DNS lookup or connection error, never resumes the plugin. A request at startup then leaves the plugin starting forever, and network plugins that start after it wait behind it, because their starts are serialized. Only request hosts the boat can be expected to reach at startup.
+- The response always reports status `200`, so `ok` is `true` even for an HTTP error such as `401`. Validate the response body before using it, rather than relying on the status.
 
 **Build Configuration (asconfig.json):**
 

@@ -4,11 +4,10 @@ This folder contains internal/maintainer documentation for Signal K Server. Thes
 
 ## Contents
 
-| Document                                     | Description                                                    |
-| -------------------------------------------- | -------------------------------------------------------------- |
-| [hotplug.md](hotplug.md)                     | Plugin hotplug implementation (enable/disable without restart) |
-| [wasm-architecture.md](wasm-architecture.md) | WASM plugin infrastructure overview                            |
-| [wasm-asyncify.md](wasm-asyncify.md)         | Asyncify implementation for async HTTP in WASM                 |
+| Document                                     | Description                                    |
+| -------------------------------------------- | ---------------------------------------------- |
+| [wasm-architecture.md](wasm-architecture.md) | WASM plugin infrastructure overview            |
+| [wasm-asyncify.md](wasm-asyncify.md)         | Asyncify implementation for async HTTP in WASM |
 
 ## Related Documentation
 
