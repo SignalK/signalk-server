@@ -287,6 +287,28 @@ describe('StalenessEnforcer', () => {
     expect(app.captured).to.have.lengthOf(0)
   })
 
+  it('times out a periodic path whose meta holds an unknown contract', () => {
+    const app = makeMockApp({
+      defaultTimeout: 60,
+      metaByPath: {
+        'environment.depth.belowKeel': {
+          updateContract: 'manual' as unknown as 'event'
+        }
+      }
+    })
+    seedLeaf(
+      app,
+      SELF_CONTEXT,
+      'environment.depth.belowKeel',
+      'depth.1',
+      isoSecondsAgo(3600),
+      4.2
+    )
+    const enforcer = makeEnforcer(app)
+    runTick(enforcer)
+    expect(app.captured).to.have.lengthOf(1)
+  })
+
   it('honours an explicit numeric meta.timeout per path', () => {
     const app = makeMockApp({
       defaultTimeout: 60,

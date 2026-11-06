@@ -318,7 +318,10 @@ export class StalenessEnforcer {
     path: string,
     meta: MetaValue | undefined
   ): UpdateContract {
-    if (meta?.updateContract) return meta.updateContract
+    // A meta PUT can store any string; only a recognised contract may
+    // override the shipped one, or an invalid value would exempt the path.
+    const declared = meta?.updateContract
+    if (declared === 'periodic' || declared === 'event') return declared
     return lookupSchemaMeta(context, path)?.updateContract ?? 'periodic'
   }
 
