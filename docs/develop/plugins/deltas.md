@@ -332,7 +332,7 @@ The `displayUnits.category` is validated against the path's SI unit. If the cate
 
 ### Declaring stale data behaviour
 
-The same method is how a plugin tells [Stale Data Detection](../../setup/staleness.md) how its paths behave. Declare it once at plugin start — metadata attached to individual deltas is not used to resolve timeouts, and repeating it on every delta would only add traffic.
+The same method is how a plugin tells [Stale Data Detection](../../setup/staleness.md) how its paths behave. Declare it once at plugin start. A numeric `timeout` in a meta delta can also affect timeout resolution when the user has not set one, but repeating metadata on every delta adds traffic.
 
 ```javascript
 plugin.start = async (options) => {
