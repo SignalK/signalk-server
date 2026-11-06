@@ -236,6 +236,9 @@ export class MetadataRegistry {
   private allMetadata: Record<string, PathMetadataEntry>
   private runtimeClones: Record<string, PathMetadataEntry>
   private regexEntries: RegexEntry[]
+  // The shipped entries alone, without the runtime clones prepended to
+  // regexEntries, so a removed field can be restored to its spec value.
+  private readonly specEntries: RegexEntry[]
   // A lookup is a linear regex scan, and a path with no match scans the
   // whole array twice. Callers such as the staleness sweep look up the same
   // paths every second, so results (misses included, as null) are memoised
@@ -248,6 +251,7 @@ export class MetadataRegistry {
     this.allMetadata = { ...entries }
     this.runtimeClones = {}
     this.regexEntries = buildRegexArray(this.allMetadata)
+    this.specEntries = buildRegexArray(this.allMetadata)
   }
 
   /**
@@ -285,6 +289,27 @@ export class MetadataRegistry {
       this.getMetadataForLookupPath(toLookupPath(path)) ??
       this.getMetadataForLookupPath('/' + path.replace(/\./g, '/'))
     )
+  }
+
+  /**
+   * Remove runtime-added fields from a path's entry. A field the spec
+   * declares for the path returns to its spec value rather than vanishing,
+   * so removing an override restores what the path shipped with.
+   */
+  removeMetaFields(path: string, fields: readonly string[]): void {
+    const entry = this.getStoredMetadata(path) as
+      Record<string, unknown> | undefined
+    if (!entry) return
+    const lookupPath = toLookupPath(path)
+    const spec = this.specEntries.find((e) => e.pattern.test(lookupPath))
+      ?.metadata as Record<string, unknown> | undefined
+    for (const field of fields) {
+      if (spec && Object.prototype.hasOwnProperty.call(spec, field)) {
+        entry[field] = structuredClone(spec[field])
+      } else {
+        delete entry[field]
+      }
+    }
   }
 
   // Match an already-normalized '/*/<tail>' lookup path against the regex
@@ -454,4 +479,12 @@ export function getMetadata(path: string): PathMetadataEntry | undefined {
 /** The registry's own entry for a path, for callers that remove fields. */
 export function getStoredMetadata(path: string): PathMetadataEntry | undefined {
   return metadataRegistry.getStoredMetadata(path)
+}
+
+/** Remove runtime-added fields from a path, restoring any spec value. */
+export function removeMetadataFields(
+  path: string,
+  fields: readonly string[]
+): void {
+  metadataRegistry.removeMetaFields(path, fields)
 }

@@ -10,7 +10,7 @@ import {
 } from './requestResponse'
 import * as skConfig from './config/config'
 import { ConfigApp } from './config/config'
-import { getMetadata, getStoredMetadata } from '@signalk/path-metadata'
+import { getMetadata, removeMetadataFields } from '@signalk/path-metadata'
 import {
   resolveDisplayUnits,
   stripResolvedDisplayUnits,
@@ -131,6 +131,8 @@ function metadataForBroadcast(metaPath: string): Record<string, unknown> {
 // Drop a deleted metadata field from the live self leaf. Metadata is merged
 // onto value-bearing leaves in the full model, so deleting it from the
 // registry alone would leave the field stuck on the tree leaf.
+const UPDATE_CONTRACTS: ReadonlySet<string> = new Set(['periodic', 'event'])
+
 function removeLeafMetaField(app: PutApp, metaPath: string, name: string) {
   const leaf = _get(app.signalk.self, metaPath) as
     { meta?: Record<string, unknown> } | undefined
@@ -222,6 +224,22 @@ export function start(app: PutApp): void {
       metaPath = parts.slice(0, parts.length - 1).join('.')
     }
 
+    const submittedContract = singleField
+      ? parts[parts.length - 1] === 'updateContract'
+        ? value
+        : undefined
+      : metaValue.updateContract
+    if (
+      submittedContract !== undefined &&
+      !UPDATE_CONTRACTS.has(submittedContract as string)
+    ) {
+      return {
+        state: 'COMPLETED' as RequestState,
+        statusCode: 400,
+        message: `updateContract must be one of ${[...UPDATE_CONTRACTS].join(', ')}`
+      }
+    }
+
     // Validate displayUnits.category if present
     const displayUnits = metaValue.displayUnits as
       { category?: string } | undefined
@@ -289,14 +307,11 @@ export function start(app: PutApp): void {
 
     // Remove fields that were deleted from the in-memory metadata registry
     // so they don't get re-injected via the spread below
-    const stored_meta = getStoredMetadata('vessels.self.' + metaPath) as
-      Record<string, unknown> | undefined
-    if (previousMeta && stored_meta) {
-      for (const key of Object.keys(previousMeta)) {
-        if (!(key in metaValue)) {
-          delete stored_meta[key]
-        }
-      }
+    if (previousMeta) {
+      removeMetadataFields(
+        'vessels.self.' + metaPath,
+        Object.keys(previousMeta).filter((key) => !(key in metaValue))
+      )
     }
     const full_meta = getMetadata('vessels.self.' + metaPath) as Record<
       string,
@@ -400,9 +415,7 @@ export function start(app: PutApp): void {
 
       delete metaValue[name]
 
-      const stored_meta = getStoredMetadata('vessels.self.' + metaPath) as
-        Record<string, unknown> | undefined
-      if (stored_meta) delete stored_meta[name]
+      removeMetadataFields('vessels.self.' + metaPath, [name])
       full_meta = metadataForBroadcast(metaPath)
 
       removeLeafMetaField(app, metaPath, name)
@@ -415,16 +428,14 @@ export function start(app: PutApp): void {
     } else {
       metaPath = parts.slice(0, parts.length - 1).join('.')
 
-      const stored_meta = getStoredMetadata('vessels.self.' + metaPath) as
-        Record<string, unknown> | undefined
       const metaValue = app.config.baseDeltaEditor.getMeta(context, metaPath)
 
       if (!metaValue) {
         return { state: 'COMPLETED', statusCode: 404 }
       }
 
+      removeMetadataFields('vessels.self.' + metaPath, Object.keys(metaValue))
       Object.keys(metaValue).forEach((key) => {
-        if (stored_meta) delete stored_meta[key]
         removeLeafMetaField(app, metaPath, key)
       })
       full_meta = metadataForBroadcast(metaPath)

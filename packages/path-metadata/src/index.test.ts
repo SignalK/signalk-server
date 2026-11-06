@@ -2,6 +2,7 @@ import { expect } from 'chai'
 import {
   getMetadata,
   getStoredMetadata,
+  removeMetadataFields,
   metadataRegistry,
   updateContractForPath
 } from './index'
@@ -288,6 +289,20 @@ describe('updateContract inheritance', () => {
     delete stored.displayName
     expect(getMetadata(path)).to.not.have.property('displayName')
     expect(getMetadata(path)?.updateContract).to.equal('event')
+  })
+
+  it('restores the spec value of a removed field', () => {
+    const path = self('sensors.gps.fromBow')
+    metadataRegistry.internalGetMetadata(path)
+    metadataRegistry.addMetaData('vessels.self', 'sensors.gps.fromBow', {
+      updateContract: 'periodic',
+      displayName: 'GPS offset'
+    })
+    removeMetadataFields(path, ['updateContract', 'displayName'])
+    const entry = getMetadata(path)
+    expect(entry?.updateContract).to.equal('event')
+    expect(entry).to.not.have.property('displayName')
+    expect(entry?.units).to.equal('m')
   })
 
   it('leaves a path no subtree covers unclassified', () => {
