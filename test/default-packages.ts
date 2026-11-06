@@ -7,11 +7,14 @@ import path from 'path'
 import { Config } from '../src/config/config'
 import {
   ConfigPackageJson,
+  createConfigPackageJson,
   DefaultPackagesApp,
   DefaultPackagesInput,
   planDefaultPackages,
   prepareDefaultPackages,
   registerDefaultPackagesRoutes,
+  DEFAULT_CONFIG_DIR_ENV,
+  seedConfigDirectory,
   SKIP_DEFAULT_PACKAGES_ENV,
   startDefaultPackages
 } from '../src/defaultPackages'
@@ -248,6 +251,107 @@ describe('markDefaultPackageRemoved', () => {
     const pkg: ConfigPackageJson = { dependencies: { other: '1.0.0' } }
     expect(markDefaultPackageRemoved(pkg, 'other', false)).to.equal(false)
     expect(pkg).to.deep.equal({ dependencies: { other: '1.0.0' } })
+  })
+})
+
+describe('seedConfigDirectory', () => {
+  let seedDir: string
+  let configDir: string
+  let originalSkip: string | undefined
+
+  const readConfigFile = (name: string) =>
+    fs.readFileSync(path.join(configDir, name), 'utf-8')
+
+  beforeEach(() => {
+    seedDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sk-seed-'))
+    configDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sk-seed-config-'))
+    fs.writeFileSync(path.join(seedDir, 'package.json'), '{"seeded":true}')
+    fs.writeFileSync(path.join(seedDir, '.npmrc'), 'package-lock=false\n')
+    fs.mkdirSync(path.join(seedDir, 'node_modules', KIP), { recursive: true })
+    fs.writeFileSync(
+      path.join(seedDir, 'node_modules', KIP, 'package.json'),
+      '{}'
+    )
+    process.env[DEFAULT_CONFIG_DIR_ENV] = seedDir
+    originalSkip = process.env[SKIP_DEFAULT_PACKAGES_ENV]
+    delete process.env[SKIP_DEFAULT_PACKAGES_ENV]
+  })
+
+  afterEach(() => {
+    delete process.env[DEFAULT_CONFIG_DIR_ENV]
+    if (originalSkip === undefined) {
+      delete process.env[SKIP_DEFAULT_PACKAGES_ENV]
+    } else {
+      process.env[SKIP_DEFAULT_PACKAGES_ENV] = originalSkip
+    }
+    fs.rmSync(seedDir, { recursive: true, force: true })
+    fs.rmSync(configDir, { recursive: true, force: true })
+  })
+
+  it('copies the default configuration into an empty directory', () => {
+    expect(seedConfigDirectory(configDir)).to.equal(true)
+    expect(readConfigFile('package.json')).to.equal('{"seeded":true}')
+    expect(readConfigFile('.npmrc')).to.equal('package-lock=false\n')
+    expect(
+      fs.existsSync(path.join(configDir, 'node_modules', KIP, 'package.json'))
+    ).to.equal(true)
+  })
+
+  it('keeps files that are already in the directory', () => {
+    fs.writeFileSync(path.join(configDir, '.npmrc'), 'registry=local\n')
+    seedConfigDirectory(configDir)
+    expect(readConfigFile('.npmrc')).to.equal('registry=local\n')
+    expect(readConfigFile('package.json')).to.equal('{"seeded":true}')
+  })
+
+  it('replaces a copy that an earlier start left unfinished', () => {
+    const partial = path.join(configDir, 'node_modules.seeding')
+    fs.mkdirSync(path.join(partial, 'broken'), { recursive: true })
+    seedConfigDirectory(configDir)
+    expect(fs.existsSync(partial)).to.equal(false)
+    expect(
+      fs.existsSync(path.join(configDir, 'node_modules', 'broken'))
+    ).to.equal(false)
+    expect(
+      fs.existsSync(path.join(configDir, 'node_modules', KIP, 'package.json'))
+    ).to.equal(true)
+  })
+
+  it('starts a new configuration when the copy fails', () => {
+    const cpSync = fs.cpSync
+    fs.cpSync = (source, destination, options) => {
+      cpSync(source, destination, options)
+      throw Object.assign(new Error('no space left on device'), {
+        code: 'ENOSPC'
+      })
+    }
+    try {
+      expect(createConfigPackageJson(configDir, { name: 'template' })).to.equal(
+        true
+      )
+    } finally {
+      fs.cpSync = cpSync
+    }
+    expect(JSON.parse(readConfigFile('package.json'))).to.deep.equal({
+      name: 'template'
+    })
+    expect(
+      fs.existsSync(path.join(configDir, 'node_modules.seeding'))
+    ).to.equal(false)
+  })
+
+  it('copies nothing when default packages are skipped', () => {
+    process.env[SKIP_DEFAULT_PACKAGES_ENV] = 'true'
+    expect(seedConfigDirectory(configDir)).to.equal(false)
+    expect(fs.readdirSync(configDir)).to.deep.equal([])
+  })
+
+  it('copies nothing without a default configuration', () => {
+    delete process.env[DEFAULT_CONFIG_DIR_ENV]
+    expect(seedConfigDirectory(configDir)).to.equal(false)
+    process.env[DEFAULT_CONFIG_DIR_ENV] = path.join(seedDir, 'missing')
+    expect(seedConfigDirectory(configDir)).to.equal(false)
+    expect(fs.readdirSync(configDir)).to.deep.equal([])
   })
 })
 

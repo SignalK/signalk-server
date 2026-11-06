@@ -8,6 +8,32 @@ This document lists breaking changes and deprecations in Signal K Server.
 
 ---
 
+## Default Webapps and Plugins Installed into the Configuration Directory
+
+The webapps and plugins that used to be installed with the server as optional dependencies are no longer part of the server package: KIP, Freeboard SK, Instrument Panel, App Dock, Set System Time, Signal K to NMEA 0183, UDP NMEA, N2K AIS to NMEA 0183 and Signal K to NMEA 2000. They are listed in the server's `signalk.defaultPackages` and installed into the configuration directory (`~/.signalk`) like any package from the Appstore.
+
+### What Changed
+
+| Situation                                            | What the server does                                                                                                                                                                                                                                 |
+| ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Fresh install                                        | Records the default packages in `package.json` in the configuration directory (`~/.signalk` by default) on the first start, installs them one at a time in the background like Appstore installs, and asks every Admin UI user to restart            |
+| Upgrade from a version that records default packages | Installs once the default packages the earlier version shipped; packages left out are not installed                                                                                                                                                  |
+| Upgrade from an older version                        | Installs nothing on its own and asks an administrator once which default packages to install. Until then the webapps and the NMEA 0183 and NMEA 2000 converters are missing, so upgrade through a version that records default packages to keep them |
+| Default package removed in the Appstore or with npm  | Never installs it again                                                                                                                                                                                                                              |
+| Docker image, new `.signalk`                         | The `full` image ships the default packages preinstalled and the `core` image records them as declined; the server copies them into a `.signalk` that has no `package.json` yet, so nothing is installed from the network                            |
+| Docker image, `.signalk` from an older image         | Installs the default packages the image's edition ships from the npm cache in the image, without the network                                                                                                                                         |
+| `SIGNALK_SKIP_DEFAULT_PACKAGES=true`                 | Does not install or record default packages                                                                                                                                                                                                          |
+
+The installed packages are updated from the Appstore and no longer change with server versions.
+
+### Action Required
+
+- Allow the server network access on the first start, or install the packages later from the Appstore
+- If the first start was offline, the server tries again on each start until the install succeeds; a package removed in the Appstore in the meantime is not retried
+- Set `SIGNALK_SKIP_DEFAULT_PACKAGES=true` on servers that should never install them, for example ones that never have network access
+
+---
+
 ## Node.js: Default Version Updated to 24
 
 Signal K Server now defaults to **Node.js 24** and requires **Node.js 22 or later**.

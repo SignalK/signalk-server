@@ -26,6 +26,8 @@ If you choose not to use `signalk-server-setup` you can start the server by ente
 signalk-server
 ```
 
+On its first start the server installs the default webapps and plugins, such as KIP, Freeboard SK and the NMEA 0183 and NMEA 2000 converters, into its configuration directory, so it needs network access then. Without it the server tries again on each start, and the Admin UI asks for a restart once they are installed.
+
 You are ready to now **[configure](../setup/configuration.md)** your installation and connect data from devices on your boat.
 
 ## Windows

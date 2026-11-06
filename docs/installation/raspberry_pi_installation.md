@@ -120,6 +120,8 @@ Clicking `Login` for the first time will prompt you to create a user and passwor
 
 Signal K server will now be started automatically when your RPi boots up.
 
+On its first start the server installs the default webapps and plugins, such as KIP, Freeboard SK and the NMEA 0183 and NMEA 2000 converters, into its configuration directory, so it needs network access then. Without it the server tries again on each start, and the Admin UI asks for a restart once they are installed.
+
 If you want to temporarily stop the Signal K server, you can do so by entering the following commands:
 
 ```

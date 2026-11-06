@@ -20,9 +20,15 @@ FROM base AS tarballs_installed
 WORKDIR /home/node/signalk
 COPY --chown=node:node *.tgz .
 
-# EDITION selects the published variant: "full" bundles the optional webapps and
-# plugins; "core" installs the server with --omit=optional, leaving the server,
-# the admin UI, serialport, local Bluetooth support, and required libraries.
+# EDITION selects the published variant: "full" installs every optional
+# dependency; "core" installs the server with --omit=optional, leaving the
+# server, the admin UI, serialport, local Bluetooth support, and required
+# libraries. "full" also installs the default webapps and plugins into
+# /home/node/signalk/default-config, and "core" records them there as declined.
+# The server copies that directory, named by SIGNALK_DEFAULT_CONFIG_DIR, into a
+# .signalk without a package.json. The npm cache of that install is copied too,
+# so a .signalk made by an older image gets the packages back without the
+# network.
 # The admin UI ships in core via its workspace tarball (kept in both editions
 # below); serialport and the Bluetooth packages are external optional packages,
 # so core reinstalls them explicitly at the versions the server declares. They
@@ -68,15 +74,20 @@ RUN case "$EDITION" in \
        exit 1; \
      fi
 
+COPY --chown=node:node --chmod=755 docker/install-default-packages.sh /tmp/install-default-packages.sh
+RUN /tmp/install-default-packages.sh /home/node/signalk/node_modules/signalk-server/package.json /home/node/signalk/default-config "$EDITION"
+
 FROM base
 
 # Copy locally installed modules from tarballs_installed stage
 COPY --from=tarballs_installed --chown=node:node /home/node/signalk /home/node/signalk
+COPY --from=tarballs_installed --chown=node:node /home/node/.npm /home/node/.npm
 
 COPY --chown=node:node --chmod=755 docker/startup.sh startup.sh
 
 EXPOSE 3000
 ENV SKIP_ADMINUI_VERSION_CHECK=true
+ENV SIGNALK_DEFAULT_CONFIG_DIR=/home/node/signalk/default-config
 WORKDIR /home/node/.signalk
 # tini as PID 1 forwards the signals of "docker stop" to the server, also
 # before the server has installed its handlers, and reaps the orphaned

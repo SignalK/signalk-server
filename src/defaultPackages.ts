@@ -13,6 +13,8 @@ const debug = createDebug('signalk:defaultPackages')
 export const DEFAULT_PACKAGES_EVENT = 'DEFAULT_PACKAGES'
 export const RESTART_REQUIRED_EVENT = 'RESTART_REQUIRED'
 export const SKIP_DEFAULT_PACKAGES_ENV = 'SIGNALK_SKIP_DEFAULT_PACKAGES'
+export const DEFAULT_CONFIG_DIR_ENV = 'SIGNALK_DEFAULT_CONFIG_DIR'
+const SEED_SUFFIX = '.seeding'
 
 export type DefaultPackageState =
   'pending' | 'bundled' | 'installed' | 'declined'
@@ -202,6 +204,78 @@ function statesEqual(a: DefaultPackageStates, b: DefaultPackageStates) {
   )
 }
 
+function seedDirectory(): string | undefined {
+  const seedDir = process.env[DEFAULT_CONFIG_DIR_ENV]
+  if (
+    !seedDir ||
+    process.env[SKIP_DEFAULT_PACKAGES_ENV] === 'true' ||
+    !fs.existsSync(path.join(seedDir, 'package.json'))
+  ) {
+    return undefined
+  }
+  return seedDir
+}
+
+function seedEntry(source: string, target: string) {
+  const partial = target + SEED_SUFFIX
+  fs.rmSync(partial, { recursive: true, force: true })
+  try {
+    fs.cpSync(source, partial, { recursive: true, verbatimSymlinks: true })
+    fs.renameSync(partial, target)
+  } catch (err) {
+    fs.rmSync(partial, { recursive: true, force: true })
+    throw err
+  }
+}
+
+export function seedConfigDirectory(configPath: string): boolean {
+  const seedDir = seedDirectory()
+  if (!seedDir) {
+    return false
+  }
+  console.log(`Copying the default configuration from ${seedDir}`)
+  for (const name of fs.readdirSync(seedDir)) {
+    const target = path.join(configPath, name)
+    if (name !== 'package.json' && !fs.existsSync(target)) {
+      seedEntry(path.join(seedDir, name), target)
+    }
+  }
+  seedEntry(
+    path.join(seedDir, 'package.json'),
+    path.join(configPath, 'package.json')
+  )
+  return true
+}
+
+// A configuration made before the server recorded default packages, in a
+// Docker image that ships them: the image edition tells what the user had,
+// so installed ones are reinstalled from the image's npm cache and declined
+// ones stay out.
+function seedStates(): DefaultPackageStates | undefined {
+  const seedDir = seedDirectory()
+  if (!seedDir) {
+    return undefined
+  }
+  try {
+    const seed: ConfigPackageJson = JSON.parse(
+      fs.readFileSync(path.join(seedDir, 'package.json'), 'utf-8')
+    )
+    const states: DefaultPackageStates = {}
+    for (const [name, state] of Object.entries(
+      seed.signalkDefaultPackages ?? {}
+    )) {
+      states[name] = state === 'installed' ? 'bundled' : state
+    }
+    return states
+  } catch (err) {
+    console.error(
+      `Could not read the default configuration in ${seedDir}:`,
+      err
+    )
+    return undefined
+  }
+}
+
 export function createConfigPackageJson(
   configPath: string,
   template: object
@@ -209,6 +283,18 @@ export function createConfigPackageJson(
   const configPackage = path.join(configPath, 'package.json')
   if (fs.existsSync(configPackage)) {
     return false
+  }
+  // A copy that fails, on a full disk or a volume that cannot hold symlinks,
+  // falls back to a new configuration, which installs the defaults with npm.
+  try {
+    if (seedConfigDirectory(configPath)) {
+      return false
+    }
+  } catch (err) {
+    console.error(
+      `Could not copy the default configuration from ${process.env[DEFAULT_CONFIG_DIR_ENV]}:`,
+      err
+    )
   }
   fs.writeFileSync(configPackage, JSON.stringify(template, null, 2))
   return true
@@ -228,7 +314,7 @@ export function prepareDefaultPackages(
   }
   try {
     const pkg = readConfigPackageJson(config)
-    const states = pkg.signalkDefaultPackages ?? {}
+    const states = pkg.signalkDefaultPackages ?? seedStates() ?? {}
     const plan = planDefaultPackages({
       defaults,
       bundled: new Set(

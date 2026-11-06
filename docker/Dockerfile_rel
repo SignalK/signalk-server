@@ -18,15 +18,20 @@ RUN npm config rm proxy \
 
 ARG TAG
 
-# EDITION selects the published variant: "full" bundles the optional webapps
-# and plugins; "core" installs with --omit=optional, then reinstates the admin
+# EDITION selects the published variant: "full" installs every optional
+# dependency; "core" installs with --omit=optional, then reinstates the admin
 # UI, serialport, and local Bluetooth support. These stay in optionalDependencies
 # (serialport is a native module that must degrade gracefully on unsupported
-# platforms), but unlike the other optionals they cannot be added back at the
-# .signalk layer — the server serves the admin UI from a fixed path in its own
-# install and require()s serialport, node-ble, and dbus-next directly. Their
-# version ranges are read from the installed server's optionalDependencies, so
-# they stay aligned with the server's declared requirements.
+# platforms), but they cannot be added back at the .signalk layer — the server
+# serves the admin UI from a fixed path in its own install and require()s
+# serialport, node-ble, and dbus-next directly. Their version ranges are read
+# from the installed server's optionalDependencies, so they stay aligned with
+# the server's declared requirements. "full" also installs the default webapps
+# and plugins into /home/node/signalk/default-config, and "core" records them
+# there as declined. The server copies that directory, named by
+# SIGNALK_DEFAULT_CONFIG_DIR, into a .signalk without a package.json. The npm
+# cache the install leaves in the image lets a .signalk made by an older image
+# get the packages back without the network.
 ARG EDITION=full
 
 # npm 12 gates dependency install-time lifecycle scripts behind an allowlist
@@ -38,9 +43,7 @@ RUN printf 'allow-scripts[]=@canboat/canboatjs\n' > /home/node/signalk/.npmrc
 
 # Install locally (not globally) to avoid permission issues, then relocate
 # nested packages to where webapp/plugin discovery expects them. The @signalk
-# packages are required in both editions, so that relocation always runs. The
-# @mxtommy/kip relocation is guarded on presence, so it is skipped automatically
-# in core, where kip is not installed.
+# packages are required in both editions, so that relocation always runs.
 #
 # A freshly published release can take a few minutes to become visible on
 # every npm registry edge, so installs are retried. --prefer-online keeps a
@@ -75,20 +78,20 @@ RUN npm_install() { \
   && mkdir -p node_modules/signalk-server/node_modules/@signalk/ \
   && cp -rf node_modules/@signalk/* node_modules/signalk-server/node_modules/@signalk/ \
   && rm -rf node_modules/@signalk/ \
-  && if [ -d node_modules/@mxtommy/kip ]; then \
-       mkdir -p node_modules/signalk-server/node_modules/@mxtommy/ \
-       && cp -rf node_modules/@mxtommy/kip node_modules/signalk-server/node_modules/@mxtommy/ \
-       && rm -rf node_modules/@mxtommy/; \
-     fi \
   && can_socket=$(find node_modules -path '*/@canboat/canboatjs/build/Release/canSocket.node' -print -quit) \
   && if [ -z "$can_socket" ]; then \
        echo "canSocket.node missing — canboatjs install script did not build the native CAN addon (npm allow-scripts gate skipped it, or node-gyp rebuild failed)" >&2; \
        exit 1; \
      fi
 
+COPY --chown=node:node --chmod=755 docker/install-default-packages.sh /tmp/install-default-packages.sh
+RUN /tmp/install-default-packages.sh /home/node/signalk/node_modules/signalk-server/package.json /home/node/signalk/default-config "$EDITION" \
+  && rm /tmp/install-default-packages.sh
+
 COPY --chown=node:node --chmod=755 docker/startup.sh startup.sh
 
 EXPOSE 3000
+ENV SIGNALK_DEFAULT_CONFIG_DIR=/home/node/signalk/default-config
 WORKDIR /home/node/.signalk
 # tini as PID 1 forwards the signals of "docker stop" to the server, also
 # before the server has installed its handlers, and reaps the orphaned

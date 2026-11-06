@@ -120,7 +120,7 @@ The core `-core` suffix is appended after the full variant's tag, so core mirror
 
 ### What's stripped
 
-The core image omits these packages — all declared in `package.json` `optionalDependencies` and discovered at runtime from `/home/node/.signalk`, so they can be reinstalled on demand (see below):
+The core image omits these packages — all declared in `package.json` `signalk.defaultPackages` and discovered at runtime from `/home/node/.signalk`, so they can be installed on demand (see below):
 
 - Webapps: `@signalk/freeboard-sk`, `@signalk/instrumentpanel`, `@mxtommy/kip`, `@signalk/app-dock`
 - Plugins and bridges: `@signalk/set-system-time`, `@signalk/signalk-to-nmea0183`, `@signalk/udp-nmea-plugin`, `signalk-n2kais-to-nmea0183`, `signalk-to-nmea2000`
@@ -137,10 +137,10 @@ Because the admin UI ships in core, its **app store is available** — the omitt
 
 ```Dockerfile
 FROM cr.signalk.io/signalk/signalk-server:core
-RUN npm install --prefix /home/node/.signalk @signalk/some-plugin
+RUN npm install --prefix "$SIGNALK_DEFAULT_CONFIG_DIR" @signalk/some-plugin
 ```
 
-Build with `docker build -t my-signalk-core .` and run as you would the base core image.
+Build with `docker build -t my-signalk-core .` and run as you would the base core image. The image keeps its default configuration in the directory that `SIGNALK_DEFAULT_CONFIG_DIR` names, and the server copies it into a `/home/node/.signalk` that has no `package.json` yet, so a package installed there reaches every new volume. A volume that already has a `package.json` keeps its own packages.
 
 **Ad-hoc — for incremental experimentation**
 
@@ -151,11 +151,15 @@ docker exec my-container npm install --prefix /home/node/.signalk @signalk/some-
 docker restart my-container
 ```
 
-Both patterns install into the persisted config directory (`/home/node/.signalk`), which the server scans for modules carrying the `signalk-node-server-plugin` or `signalk-webapp` keyword.
+The server scans the config directory (`/home/node/.signalk`) for modules carrying the `signalk-node-server-plugin` or `signalk-webapp` keyword.
+
+### Default webapps and plugins
+
+The full image installs the default webapps and plugins into `/home/node/signalk/default-config` at build time, and the core image records them there as declined. On the first start the server copies that directory into a `/home/node/.signalk` without a `package.json`, so a new container installs nothing from the network. A `.signalk` made by an older image, which bundled them inside the server, gets back the ones the image's edition ships on its first start, installed from the npm cache in the image without the network.
 
 ### Behavioral change for non-Docker consumers
 
-The bundled webapps, plugins, the admin UI, `serialport`, and local Bluetooth support are all declared in `optionalDependencies`, not `dependencies`. Standard npm installations include optional dependencies, as do the full Docker images. Installations configured to omit them are minimal headless servers: they have no admin UI, serial-port or local Bluetooth support, bundled webapps, or plugins. The core Docker image restores the admin UI, `serialport`, and the Bluetooth packages because they cannot be added at the config-directory layer.
+The admin UI, `serialport`, and local Bluetooth support are declared in `optionalDependencies`, not `dependencies`. Standard npm installations include optional dependencies, as do the full Docker images. Installations configured to omit them are minimal headless servers without an admin UI or serial-port and local Bluetooth support. The core Docker image restores them because they cannot be added at the config-directory layer. The default webapps and plugins are not server dependencies: the server installs them into the configuration directory on the first start, and the full Docker image ships them preinstalled.
 
 ## Development images
 

@@ -23,8 +23,35 @@ function readAppPackageJson(app, module) {
   )
 }
 
+const WEBAPPS = [
+  '@signalk/app-dock',
+  '@signalk/instrumentpanel',
+  '@signalk/freeboard-sk',
+  '@signalk/server-admin-ui',
+  '@mxtommy/kip'
+]
+
 describe('modulesWithKeyword', () => {
   let testTempDir
+  let appDir
+
+  before(() => {
+    appDir = fs.mkdtempSync(
+      path.join(require('os').tmpdir(), '_skservertest_appdir')
+    )
+    for (const name of WEBAPPS) {
+      const moduleDir = path.join(appDir, 'node_modules', name)
+      fs.mkdirSync(moduleDir, { recursive: true })
+      fs.writeFileSync(
+        path.join(moduleDir, 'package.json'),
+        JSON.stringify({ name, version: '1.0.0', keywords: ['signalk-webapp'] })
+      )
+    }
+  })
+
+  after(() => {
+    fs.rmSync(appDir, { recursive: true, force: true })
+  })
 
   afterEach(() => {
     if (testTempDir) {
@@ -34,13 +61,7 @@ describe('modulesWithKeyword', () => {
   })
 
   it('returns a list of modules with one "installed" update in config dir', () => {
-    const expectedModules = [
-      '@signalk/app-dock',
-      '@signalk/instrumentpanel',
-      '@signalk/freeboard-sk',
-      '@signalk/server-admin-ui',
-      '@mxtommy/kip'
-    ]
+    const expectedModules = WEBAPPS
     const updateInstalledModule = '@signalk/instrumentpanel'
 
     testTempDir = fs.mkdtempSync(
@@ -49,7 +70,7 @@ describe('modulesWithKeyword', () => {
 
     const app = {
       config: {
-        appPath: path.join(__dirname + '/../'),
+        appPath: appDir,
         configPath: testTempDir
       }
     }
@@ -88,7 +109,7 @@ describe('modulesWithKeyword', () => {
     )
     const app = {
       config: {
-        appPath: path.join(__dirname + '/../'),
+        appPath: appDir,
         configPath: testTempDir
       }
     }
@@ -106,16 +127,14 @@ describe('modulesWithKeyword', () => {
   it('prefers the app dir when the config dir has an older version', () => {
     const module = '@signalk/instrumentpanel'
     const moduleInfo = pickWithConfigDirVersion(module, '0.0.1')
-    chai
-      .expect(moduleInfo.location)
-      .to.eql(path.join(__dirname, '../node_modules/'))
+    chai.expect(moduleInfo.location).to.eql(path.join(appDir, 'node_modules/'))
     chai.expect(moduleInfo.metadata.version).to.not.eql('0.0.1')
   })
 
   it('prefers the config dir when both have the same version', () => {
     const module = '@signalk/instrumentpanel'
     const version = readAppPackageJson(
-      { config: { appPath: path.join(__dirname + '/../') } },
+      { config: { appPath: appDir } },
       module
     ).version
     const moduleInfo = pickWithConfigDirVersion(module, version)
