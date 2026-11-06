@@ -136,6 +136,15 @@ describe('PathReference timeouts', () => {
     })
   })
 
+  it('shows a global fallback of 0 as never', async () => {
+    renderReference({ enforceDataTimeouts: true, defaultTimeout: 0 })
+    await waitFor(() => {
+      expect(timeoutCell('Speed over ground').textContent).to.equal(
+        'never (global fallback)'
+      )
+    })
+  })
+
   it('shows no fallback when default timeouts are off', async () => {
     renderReference({ enforceDataTimeouts: true, useDefaultTimeouts: false })
     await waitFor(() => {

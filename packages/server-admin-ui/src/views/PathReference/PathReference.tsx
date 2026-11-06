@@ -90,9 +90,10 @@ function TimeoutCell({
       </span>
     )
   }
+  const fallback = staleness.defaultTimeout ?? SERVER_DEFAULT_TIMEOUT_SECONDS
   return (
     <span title="The global fallback from Server Settings; no timeout is defined for this path">
-      {staleness.defaultTimeout ?? SERVER_DEFAULT_TIMEOUT_SECONDS} s{' '}
+      {fallback === 0 ? 'never' : `${fallback} s`}{' '}
       <span className="text-muted small">(global fallback)</span>
     </span>
   )
