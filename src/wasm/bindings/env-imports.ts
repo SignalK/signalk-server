@@ -22,7 +22,6 @@ import {
 import { socketManager, tcpSocketManager } from './socket-manager'
 import { createBleBindings } from './ble'
 import { sendSseEvent } from './sse'
-import { derivePluginId } from '../../pluginid'
 import * as fs from 'fs'
 import * as path from 'path'
 import { atomicWriteFileSync } from '../../atomicWrite'
@@ -94,9 +93,6 @@ export function createEnvImports(
   } = options
 
   const readUtf8String = createUtf8Reader(memoryRef)
-  // SSE streams are registered by the HTTP routes under the plugin id,
-  // while the binding may be created with the package name
-  const ssePluginId = derivePluginId(pluginId)
   const readBinaryData = createBinaryDataReader(memoryRef)
 
   const envImports: Record<string, any> = {
@@ -692,7 +688,7 @@ export function createEnvImports(
     ): number => {
       try {
         return sendSseEvent(
-          ssePluginId,
+          pluginId,
           readUtf8String(channelPtr, channelLen),
           readUtf8String(eventPtr, eventLen),
           readUtf8String(dataPtr, dataLen)
