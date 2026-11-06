@@ -1,7 +1,7 @@
 import { constants } from 'fs'
 import { access, mkdir, readFile } from 'fs/promises'
 import path from 'path'
-import { WithConfig } from '../app'
+import { WithConfig } from '../config/config'
 import { atomicWriteFile } from '../atomicWrite'
 
 export const SERVERSTATEDIRNAME = 'serverState'

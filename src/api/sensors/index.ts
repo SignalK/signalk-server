@@ -2,7 +2,8 @@ import { createDebug } from '../../debug'
 const debug = createDebug('signalk-server:api:sensors')
 
 import { IRouter, Request, Response } from 'express'
-import { SignalKMessageHub, WithConfig } from '../../app'
+import { SignalKMessageHub } from '../../app'
+import { WithConfig } from '../../config/config'
 import { ConfigApp } from '../../config/config'
 import { WithSecurityStrategy } from '../../security'
 import { Responses } from '../'

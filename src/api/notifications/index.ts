@@ -2,7 +2,8 @@ import { createDebug } from '../../debug'
 const debug = createDebug('signalk-server:api:notification')
 
 import * as uuid from 'uuid'
-import { SignalKMessageHub, WithConfig } from '../../app'
+import { SignalKMessageHub } from '../../app'
+import { WithConfig } from '../../config/config'
 import {
   Context,
   Delta,
