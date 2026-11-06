@@ -421,6 +421,38 @@ describe('Meta save clears removed fields', () => {
     ).to.equal('event')
   })
 
+  it('drops the field when a newer save fails after it was accepted', async () => {
+    useStore.getState().updateMeta('vessels.self', path, meta)
+    let releaseFirst: (value: {
+      ok: boolean
+      status: number
+    }) => void = () => {}
+    const first = new Promise<{ ok: boolean; status: number }>((resolve) => {
+      releaseFirst = resolve
+    })
+    const putResponses = [first, Promise.resolve({ ok: false, status: 500 })]
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((_url: string, init?: RequestInit) =>
+        init?.method === 'PUT'
+          ? putResponses.shift()
+          : Promise.resolve({ ok: true, json: () => Promise.resolve({}) })
+      )
+    )
+
+    renderMeta()
+    await openEditorAndDeleteContract()
+    fireEvent.click(screen.getByRole('button', { name: /edit/i }))
+    fireEvent.click(screen.getByRole('button', { name: /save/i }))
+    releaseFirst({ ok: true, status: 200 })
+
+    await vi.waitFor(() =>
+      expect(
+        useStore.getState().getMeta('vessels.self', path)?.updateContract
+      ).to.equal(undefined)
+    )
+  })
+
   it('drops the field locally once the save succeeds', async () => {
     useStore.getState().updateMeta('vessels.self', path, meta)
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, status: 200 }))

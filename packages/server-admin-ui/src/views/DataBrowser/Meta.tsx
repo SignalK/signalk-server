@@ -762,6 +762,12 @@ const Meta: React.FC<MetaProps> = ({ meta, path, context, showContext }) => {
   const [isExpanded, setIsExpanded] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
   const saveGeneration = useRef(0)
+  // Fields an accepted save cleared while a newer save was still pending.
+  // The newer save supersedes them if it is accepted; if it fails, the
+  // server still holds the older save, so they are dropped then.
+  const supersededClears = useRef<Record<string, unknown> | undefined>(
+    undefined
+  )
   const [localMeta, setLocalMeta] = useState<MetaData>(meta)
   const [categoryToBaseUnit, setCategoryToBaseUnit] = useState<
     Record<string, string>
@@ -820,21 +826,27 @@ const Meta: React.FC<MetaProps> = ({ meta, path, context, showContext }) => {
       Object.entries(meta).filter(([key]) => !(key in saved))
     )
     // Editing reopens as soon as the request is sent, so a second save can
-    // start while this one is pending. Only the newest save may prune the
-    // store, or an older callback would drop a key the newer one restored.
+    // start while this one is pending. Saves of a path complete in order, and
+    // only the newest one may prune the store, or an older callback would
+    // drop a key the newer one restored.
     const generation = ++saveGeneration.current
     saveMeta(path, localMeta).then((ok) => {
-      if (generation !== saveGeneration.current) return
+      if (generation !== saveGeneration.current) {
+        if (ok) supersededClears.current = cleared
+        return
+      }
       // The server drops a key the save omits, but its meta delta is merged
       // into the store rather than replacing the entry, so a cleared field
       // would linger in this session until a reload. Only drop it locally
       // once the server has accepted the save, or the two would disagree.
-      if (ok && Object.keys(cleared).length > 0) {
+      const toRemove = ok ? cleared : supersededClears.current
+      supersededClears.current = undefined
+      if (toRemove && Object.keys(toRemove).length > 0) {
         // saveMeta always writes to vessels/self, and signalkMeta is keyed by
         // the full context, so the local drop has to name the same entry.
         useStore
           .getState()
-          .removeMetaKeys(context || 'vessels.self', path, cleared)
+          .removeMetaKeys(context || 'vessels.self', path, toRemove)
       }
     })
     setIsEditing(false)
