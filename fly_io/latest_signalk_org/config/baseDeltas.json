@@ -1,0 +1,28 @@
+[
+  {
+    "context": "vessels.self",
+    "updates": [
+      {
+        "values": [
+          {
+            "path": "",
+            "value": {
+              "name": "Signal K demo",
+              "mmsi": "244999000",
+              "uuid": "urn:mrn:signalk:uuid:6e08eb30-c05b-4877-86c8-9d58490d56f1"
+            }
+          },
+          { "path": "communication.callsignVhf", "value": "SKDEMO" },
+          { "path": "design.length", "value": { "overall": 11 } },
+          { "path": "design.beam", "value": 3.6 },
+          { "path": "design.draft", "value": { "maximum": 1.9 } },
+          { "path": "design.airHeight", "value": 16 },
+          {
+            "path": "design.aisShipType",
+            "value": { "id": 36, "name": "Sailing" }
+          }
+        ]
+      }
+    ]
+  }
+]

@@ -1,0 +1,18 @@
+{
+  "name": "signalk-demo-director",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Keeps the Signal K showcase boat under way: magnetic variation for the autopilot and an endless route between Harlingen and Vlieland",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "test": "node --test"
+  },
+  "keywords": [
+    "signalk-node-server-plugin"
+  ],
+  "license": "Apache-2.0",
+  "dependencies": {
+    "magvar": "2.2.0"
+  }
+}
