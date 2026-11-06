@@ -2276,6 +2276,17 @@ module.exports = function (
       res.status(401).send('Restore not allowed')
       return
     }
+    // The restore runs npm in the configuration directory, where it would
+    // undo the default packages install that is running there, and the other
+    // way round.
+    if (app.config.defaultPackagesInstalling) {
+      res
+        .status(409)
+        .send(
+          'Default apps and plugins are being installed, restore again when that has finished'
+        )
+      return
+    }
     const sessionId = getCookie(req, 'restoreSession')
     const restoreFilePath = sessionId
       ? restoreSessions.get(sessionId)

@@ -35,8 +35,9 @@ export function startEvents(
  *
  * The admin UI renders these for every logged-in user: VESSEL_INFO in the
  * footer on every page, SERVERSTATISTICS and PROVIDERSTATUS on the dashboard,
- * and RECEIVE_LOGIN_STATUS drives the login state itself (the equivalent REST
- * route is deliberately public too).
+ * RECEIVE_LOGIN_STATUS drives the login state itself (the equivalent REST
+ * route is deliberately public too), and RESTART_REQUIRED tells every user
+ * that the server must be restarted to load newly installed packages.
  *
  * Everything else - server configuration, source and priority state, debug
  * settings, plugin and appstore activity - is admin-only. An allowlist rather
@@ -46,7 +47,8 @@ const NON_ADMIN_SERVER_EVENTS = new Set([
   'VESSEL_INFO',
   'SERVERSTATISTICS',
   'PROVIDERSTATUS',
-  'RECEIVE_LOGIN_STATUS'
+  'RECEIVE_LOGIN_STATUS',
+  'RESTART_REQUIRED'
 ])
 
 export function startServerEvents(

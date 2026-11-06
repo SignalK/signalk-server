@@ -16,6 +16,7 @@
 
 import { createDebug } from '../debug'
 import fs from 'fs'
+import path from 'path'
 const debug = createDebug('signalk-server:interfaces:appstore')
 
 // Module-scope state for scheduleInstalledDetailRefresh. Lives here
@@ -130,6 +131,15 @@ module.exports = function (app) {
 
   return {
     start: function () {
+      app.queueModuleInstall = (name, version, options) => {
+        if (moduleInstalling) {
+          moduleInstallQueue.push({ name, version, options })
+          sendAppStoreChangedEvent()
+        } else {
+          installSKModule(name, version, options)
+        }
+      }
+
       app.post(
         [
           `${SERVERROUTESPREFIX}/appstore/install/:name/:version`,
@@ -1355,7 +1365,7 @@ module.exports = function (app) {
       const queued = moduleInstallQueue.find((p) => p.name === name)
       if (queued) {
         pluginInfo.isWaiting = true
-        if (!queued.isRemove && typeof queued.version === 'string') {
+        if (!queued.isRemove && semver.valid(queued.version)) {
           pluginInfo.pendingVersion = queued.version
         }
         addIfNotDuplicate(result.installing, pluginInfo)
@@ -1366,7 +1376,7 @@ module.exports = function (app) {
         // the UI can show what the user just installed. Removals carry a null
         // version, so only installs get the field.
         const operation = modulesInstalledSinceStartup[name]
-        if (!operation.isRemove && typeof operation.version === 'string') {
+        if (!operation.isRemove && semver.valid(operation.version)) {
           pluginInfo.pendingVersion = operation.version
         }
         if (moduleInstalling && moduleInstalling.name === name) {
@@ -1435,7 +1445,25 @@ module.exports = function (app) {
       })
   }
 
-  function installSKModule(module, version) {
+  function installedConfigVersion(module) {
+    try {
+      return JSON.parse(
+        fs.readFileSync(
+          path.join(
+            app.config.configPath,
+            'node_modules',
+            module,
+            'package.json'
+          ),
+          'utf-8'
+        )
+      ).version
+    } catch {
+      return undefined
+    }
+  }
+
+  function installSKModule(module, version, options = {}) {
     if (isTheServerModule(module, app.config)) {
       try {
         app.providers.forEach((providerHolder) => {
@@ -1451,7 +1479,7 @@ module.exports = function (app) {
         debug.enabled && debug(err)
       }
     }
-    updateSKModule(module, version, false)
+    updateSKModule(module, version, false, undefined, false, options)
   }
 
   function removeSKModule(module, deleteData) {
@@ -1460,7 +1488,14 @@ module.exports = function (app) {
     updateSKModule(module, null, true, pluginId, deleteData)
   }
 
-  function updateSKModule(module, version, isRemove, pluginId, deleteData) {
+  function updateSKModule(
+    module,
+    version,
+    isRemove,
+    pluginId,
+    deleteData,
+    options = {}
+  ) {
     // Drop the metadata cache entry up front so any read that comes in
     // while the install is in flight (status pings, refresh requests)
     // re-reads from disk and reflects the in-progress version, not the
@@ -1495,6 +1530,11 @@ module.exports = function (app) {
       cache.invalidatePluginDetail(module)
       debug.enabled && debug('close: ' + module)
       modulesInstalledSinceStartup[module].code = code
+      // A range such as ^4.8.0 is replaced by the version npm installed.
+      if (code === 0 && !isRemove && !semver.valid(version)) {
+        modulesInstalledSinceStartup[module].version =
+          installedConfigVersion(module)
+      }
       moduleInstalling = undefined
       debug.enabled && debug(`child process exited with code ${code}`)
 
@@ -1507,9 +1547,13 @@ module.exports = function (app) {
         if (next.isRemove) {
           removeSKModule(next.name, next.deleteData)
         } else {
-          installSKModule(next.name, next.version)
+          installSKModule(next.name, next.version, next.options)
         }
       }
+
+      // Runs after the queue has moved on, so an install the callback starts
+      // waits in the queue instead of running beside the next queued one.
+      options.onClose?.(code)
 
       sendAppStoreChangedEvent()
     }
@@ -1528,7 +1572,15 @@ module.exports = function (app) {
         )
       )
     } else {
-      installModule(app.config, module, version, onData, onErr, onClose)
+      installModule(
+        app.config,
+        module,
+        version,
+        onData,
+        onErr,
+        onClose,
+        options.npm
+      )
     }
   }
 }

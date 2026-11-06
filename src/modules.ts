@@ -21,6 +21,7 @@ import path from 'path'
 import semver, { SemVer } from 'semver'
 import { atomicWriteFileSync } from './atomicWrite'
 import { Config } from './config/config'
+import type { ConfigPackageJson } from './defaultPackages'
 import { createDebug } from './debug'
 import { pluginConfigPath, pluginDataDir } from './plugin-paths'
 const debug = createDebug('signalk:modules')
@@ -174,15 +175,20 @@ export function modulesWithKeyword(config: Config, keyword: string) {
   })
   return Array.from(modules.values()).sort(priorityPrefix)
 }
-function installModule(
+export interface NpmOptions {
+  preferOffline?: boolean
+}
+
+export function installModule(
   config: Config,
   name: string,
   version: string,
-  onData: () => any,
+  onData: (output: any) => any,
   onErr: (err: Error) => any,
-  onClose: (code: number) => any
+  onClose: (code: number) => any,
+  options: NpmOptions = {}
 ) {
-  runNpm(config, name, version, 'install', onData, onErr, onClose)
+  runNpm(config, name, version, 'install', onData, onErr, onClose, options)
 }
 
 // Bounds how long a plugin's stop() may hold up its removal: installs and
@@ -223,7 +229,7 @@ export async function stopBeforeRemove(
   }
 }
 
-function removeModule(
+export function removeModule(
   config: Config,
   name: string,
   version: any,
@@ -233,18 +239,46 @@ function removeModule(
   pluginId?: string,
   deleteData: boolean = false
 ) {
+  const hadConfigCopy = fs.existsSync(
+    path.join(config.configPath, 'node_modules', name, 'package.json')
+  )
   runNpm(config, name, null, 'remove', onData, onErr, (code: number) => {
-    cleanupAfterRemove(config.configPath, name, pluginId, deleteData)
+    cleanupAfterRemove(config, name, hadConfigCopy, pluginId, deleteData)
     onClose(code)
   })
 }
 
+// Removing the configuration directory's copy of a package that still comes
+// with the server goes back to the bundled copy, which keeps working, so the
+// package is still wanted once the server stops bundling it.
+export function markDefaultPackageRemoved(
+  pkg: ConfigPackageJson,
+  name: string,
+  stillBundled: boolean
+): boolean {
+  const states = pkg.signalkDefaultPackages
+  const state = stillBundled ? 'bundled' : 'declined'
+  if (states?.[name] === undefined || states[name] === state) {
+    return false
+  }
+  states[name] = state
+  return true
+}
+
+function hasServerCopy(config: Config, name: string) {
+  return getModulePaths(config)
+    .slice(1)
+    .some((dir) => fs.existsSync(path.join(dir, name, 'package.json')))
+}
+
 function cleanupAfterRemove(
-  configPath: string,
+  config: Config,
   packageName: string,
+  hadConfigCopy: boolean,
   pluginId?: string,
   deleteData: boolean = false
 ) {
+  const configPath = config.configPath
   const moduleDir = path.join(configPath, 'node_modules', packageName)
   if (fs.existsSync(moduleDir)) {
     console.warn(
@@ -268,12 +302,22 @@ function cleanupAfterRemove(
   if (fs.existsSync(packageJsonPath)) {
     try {
       const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8'))
-      if (packageJson.dependencies && packageJson.dependencies[packageName]) {
+      const hadDependency = Boolean(packageJson.dependencies?.[packageName])
+      if (hadDependency) {
         delete packageJson.dependencies[packageName]
+      }
+      const marked = markDefaultPackageRemoved(
+        packageJson,
+        packageName,
+        hadConfigCopy && hasServerCopy(config, packageName)
+      )
+      if (hadDependency || marked) {
         atomicWriteFileSync(
           packageJsonPath,
           JSON.stringify(packageJson, null, 2) + '\n'
         )
+      }
+      if (hadDependency) {
         console.warn(`${packageName}: removed from settings package.json`)
       }
     } catch (e: any) {
@@ -373,6 +417,18 @@ export function restoreModules(
 const PACKAGE_NAME_PATTERN =
   /^(@[a-z0-9-~][a-z0-9-._~]*\/)?[a-z0-9-~][a-z0-9-._~]*$/
 
+// A version or a single range such as ^1.2.0 or 0.x. Windows runs npm
+// through cmd.exe, where the package spec is quoted to keep ^ from being read
+// as an escape; these characters keep it one word that needs no other escaping.
+const NPM_VERSION_SPEC_PATTERN = /^[\w.^~*+-]+$/
+
+function isNpmVersionSpec(version: string) {
+  return (
+    NPM_VERSION_SPEC_PATTERN.test(version) &&
+    semver.validRange(version) !== null
+  )
+}
+
 export function runNpm(
   config: Config,
   name: any,
@@ -380,14 +436,15 @@ export function runNpm(
   command: string,
   onData: (output: any) => any,
   onErr: (err: Error) => any,
-  onClose: (code: number) => any
+  onClose: (code: number) => any,
+  options: NpmOptions = {}
 ) {
   if (name && !PACKAGE_NAME_PATTERN.test(name)) {
     onErr(new Error('Invalid package name: ' + name))
     onClose(-1)
     return
   }
-  if (version && version !== '' && !semver.valid(version)) {
+  if (version && !isNpmVersionSpec(version)) {
     onErr(new Error('Invalid version: ' + version))
     onClose(-1)
     return
@@ -418,11 +475,16 @@ export function runNpm(
       ? [command, '-g', '--allow-scripts=@canboat/canboatjs']
       : [command, '-g']
     : ['--save', '--ignore-scripts', command]
+  // An audit request waits for its connect timeout on a network without
+  // internet, which would hold up an install from the npm cache for minutes.
+  if (options.preferOffline) {
+    npmArgs.push('--prefer-offline', '--no-audit', '--no-fund')
+  }
 
   // npm allows a name to start with a hyphen, so the package follows -- to
   // keep npm from ever reading it as an option
   if (packageString) {
-    npmArgs.push('--', packageString)
+    npmArgs.push('--', opts.shell ? `"${packageString}"` : packageString)
   }
 
   if (isTheServerModule(name, config)) {
@@ -441,12 +503,20 @@ export function runNpm(
     }
   }
 
+  // A process that cannot be spawned emits 'error' and then 'close'.
+  let closed = false
+  const close = (code: number) => {
+    if (!closed) {
+      closed = true
+      onClose(code)
+    }
+  }
   npm.stdout.on('data', onData)
   npm.stderr.on('data', onErr)
-  npm.on('close', onClose)
+  npm.on('close', close)
   npm.on('error', (err: Error) => {
     onErr(err)
-    onClose(-1)
+    close(-1)
   })
 }
 
@@ -772,5 +842,6 @@ module.exports = {
   importOrRequire,
   runNpm,
   getPluginDataSize,
-  resetModuleCaches
+  resetModuleCaches,
+  markDefaultPackageRemoved
 }

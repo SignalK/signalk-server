@@ -45,6 +45,10 @@ import type { HistoryApiHttpRegistry } from './api/history'
 import { ServerApp, SignalKMessageHub, WithConfig } from './app'
 import { ConfigApp, load, sendBaseDeltas } from './config/config'
 import { createDebug } from './debug'
+import {
+  registerDefaultPackagesRoutes,
+  startDefaultPackages
+} from './defaultPackages'
 import DeltaCache, { buildSrcToCanonicalMap } from './deltacache'
 import DeltaChain from './deltachain'
 import {
@@ -182,6 +186,7 @@ class Server {
     startSecurity(app, opts ? opts.securityConfig : null)
 
     require('./serverroutes')(app, saveSecurityConfig, getSecurityConfig)
+    registerDefaultPackagesRoutes(app)
     require('./put').start(app)
 
     app.signalk = new FullSignalK(app.selfId, app.selfType)
@@ -769,6 +774,7 @@ class Server {
 
         app.apis = await startApis(app)
         await startInterfaces(app)
+        startDefaultPackages(app)
         startMdns(app)
         app.pipedProviders = pipedProviders(app as any)
         app.providers = app.pipedProviders.start()

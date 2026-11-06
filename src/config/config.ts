@@ -30,6 +30,12 @@ import DeltaEditor from '../deltaeditor'
 import { getExternalPort } from '../ports'
 import { atomicWriteFile } from '../atomicWrite'
 import {
+  createConfigPackageJson,
+  DefaultPackagesPlan,
+  PackageVersions,
+  prepareDefaultPackages
+} from '../defaultPackages'
+import {
   getPrioritiesFilePath,
   loadPrioritiesIntoSettings,
   migratePrioritiesIntoSeparateFile,
@@ -97,6 +103,10 @@ export interface Config {
    * there. They can still reach the file through any write, which is a
    * wider problem than this flag solves. */
   safeToPersistSettings: boolean
+  defaultPackagesPlan?: DefaultPackagesPlan
+  defaultPackagesOffer?: PackageVersions
+  defaultPackagesInstalling?: boolean
+  defaultPackagesInstalled?: string[]
   security: boolean
   settings: {
     useBaseDeltas?: boolean
@@ -472,13 +482,10 @@ function setConfigDirectory(app: ConfigApp) {
       fs.mkdirSync(app.config.configPath)
       debug(`configDir Created: ${app.config.configPath}`)
     }
-    const configPackage = path.join(app.config.configPath, 'package.json')
-    if (!fs.existsSync(configPackage)) {
-      fs.writeFileSync(
-        configPackage,
-        JSON.stringify(pluginsPackageJsonTemplate, null, 2)
-      )
-    }
+    const freshConfig = createConfigPackageJson(
+      app.config.configPath,
+      pluginsPackageJsonTemplate
+    )
     const npmrcPath = path.join(app.config.configPath, '.npmrc')
     if (!fs.existsSync(npmrcPath)) {
       fs.writeFileSync(npmrcPath, 'package-lock=false\n')
@@ -487,6 +494,15 @@ function setConfigDirectory(app: ConfigApp) {
       if (contents.indexOf('package-lock=') === -1) {
         fs.appendFileSync(npmrcPath, '\npackage-lock=false\n')
       }
+    }
+    // Settings passed to the constructor come from an embedding program or a
+    // test harness, which should not get packages installed behind its back.
+    if (!_.isObject(app.config.settings)) {
+      app.config.defaultPackagesPlan = prepareDefaultPackages(
+        app.config,
+        packageJson,
+        freshConfig
+      )
     }
   }
 }

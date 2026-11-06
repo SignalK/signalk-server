@@ -193,6 +193,11 @@ describe('appstore reports the just-installed version (issue #2791)', function (
   let binDir: string
   let host: string
   let originalPath: string | undefined
+  let queueModuleInstall: (
+    name: string,
+    version: string,
+    options: { npm: object; onClose: (code: number) => void }
+  ) => void
 
   before(async function () {
     if (process.platform === 'win32') {
@@ -218,6 +223,7 @@ describe('appstore reports the just-installed version (issue #2791)', function (
       configDir
     )
     stop = () => server.stop()
+    queueModuleInstall = server.app.queueModuleInstall
   })
 
   after(async function () {
@@ -313,6 +319,18 @@ describe('appstore reports the just-installed version (issue #2791)', function (
     }
 
     await waitForEntry(host, (e) => !e.isInstalling && !e.isWaiting, 'install')
+  })
+
+  it('reports the version npm installed for a range, not the range', async function () {
+    const closed = new Promise<number>((resolve) =>
+      queueModuleInstall(PLUGIN_NAME, `^${AVAILABLE_VERSION}`, {
+        npm: { preferOffline: true },
+        onClose: resolve
+      })
+    )
+    expect(await closed).to.equal(0)
+    const entry = await waitForEntry(host, (e) => !e.isInstalling, 'install')
+    expect(entry.pendingVersion).to.equal(AVAILABLE_VERSION)
   })
 
   it('does not report a pending version for a removal', async function () {

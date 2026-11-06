@@ -20,8 +20,9 @@ const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 // SERVERSTATISTICS and PROVIDERSTATUS are also allowed for non-admins, but a
 // freshly started server has not emitted them yet, so they never reach the
 // bootstrap replay here and cannot be asserted on.
-const NON_ADMIN = ['VESSEL_INFO', 'RECEIVE_LOGIN_STATUS']
+const NON_ADMIN = ['VESSEL_INFO', 'RECEIVE_LOGIN_STATUS', 'RESTART_REQUIRED']
 const ADMIN_ONLY = [
+  'DEFAULT_PACKAGES',
   'DEBUG_SETTINGS',
   'HISTORYPROVIDERS',
   'PRIORITYOVERRIDES',
@@ -57,6 +58,17 @@ describe('Server events websocket access', function () {
     server = await startServerP(port, true)
     adminToken = await getAdminToken(server)
     readToken = await getReadOnlyToken(server)
+    server.app.emit('serverevent', {
+      type: 'DEFAULT_PACKAGES',
+      data: { status: 'offer', packages: { '@signalk/freeboard-sk': '*' } }
+    })
+    server.app.emit('serverevent', {
+      type: 'RESTART_REQUIRED',
+      data: {
+        reason: 'defaultPackagesInstalled',
+        packages: ['@signalk/freeboard-sk']
+      }
+    })
   })
 
   after(async function () {
