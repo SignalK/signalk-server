@@ -156,7 +156,8 @@ export type SubscriptionOptions = (
  *
  * Servers without this accept only unsubscribe-all: their WebSocket and
  * TCP interfaces close the connection on any other unsubscribe, and their
- * plugin API throws.
+ * plugin API throws. WebSocket and TCP clients can check for
+ * `granularUnsubscribe` in the `capabilities` of the hello message.
  * @category Server API
  */
 export interface UnsubscribeMessage {

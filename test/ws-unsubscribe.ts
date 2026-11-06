@@ -63,6 +63,14 @@ describe('WebSocket unsubscribe', () => {
         `/signalk/v1/stream?subscribe=${subscribe}&metaDeltas=none&sendCachedValues=false`
     )
 
+  it('advertises granular unsubscribe in the hello message', async () => {
+    const ws = connect('none')
+    const hello = JSON.parse(await ws.nthMessage(1))
+
+    expect(hello.capabilities).to.include('granularUnsubscribe')
+    ws.close()
+  })
+
   it('ends one path and keeps the connection open', async () => {
     const ws = connect('none')
     await ws.nthMessage(1)
