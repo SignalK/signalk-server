@@ -61,6 +61,10 @@ class FakeHandle implements GATTSubscriptionHandle {
   onDisconnect(cb: () => void) {
     this.disconnectCallbacks.push(cb)
   }
+  fireConnect() {
+    this.connected = true
+    for (const cb of this.connectCallbacks) cb()
+  }
   fireDisconnect() {
     this.connected = false
     for (const cb of this.disconnectCallbacks) cb()
@@ -214,6 +218,28 @@ describe('WASM BLE bindings', () => {
     ])
   })
 
+  it('holds notifications back until a disconnected handle connects', async () => {
+    const { bindings, bleApi, putString, events } = setup()
+    const handleId = bindings.sk_ble_subscribe_gatt(
+      ...putString(JSON.stringify(DESCRIPTOR))
+    )
+    const [sub] = bleApi.subscriptions
+    sub!.notify(CHAR, Buffer.from([0x01]))
+    const handle = new FakeHandle()
+    handle.connected = false
+    sub!.resolve(handle)
+    await flush()
+    sub!.notify(CHAR, Buffer.from([0x02]))
+    expect(events).to.deep.equal([])
+
+    handle.fireConnect()
+    expect(events).to.deep.equal([
+      { type: 'connected', handle: handleId },
+      { type: 'notify', handle: handleId, uuid: CHAR, data: '01' },
+      { type: 'notify', handle: handleId, uuid: CHAR, data: '02' }
+    ])
+  })
+
   it('reports a failed subscription as an error event', async () => {
     const { bindings, bleApi, putString, events } = setup()
     const handleId = bindings.sk_ble_subscribe_gatt(
@@ -353,6 +379,30 @@ describe('WASM BLE bindings', () => {
     await flush()
     expect(lateHandle.closed).to.equal(false)
     expect(events).to.deep.equal([])
+  })
+
+  it('resubscribes after a restart once the cancelled setup settles', async () => {
+    const first = setup()
+    first.bindings.sk_ble_subscribe_gatt(
+      ...first.putString(JSON.stringify(DESCRIPTOR))
+    )
+    closeAllBleForPlugin(PLUGIN_ID)
+
+    const second = setup()
+    const handleId = second.bindings.sk_ble_subscribe_gatt(
+      ...second.putString(JSON.stringify(DESCRIPTOR))
+    )
+    await flush()
+    expect(second.bleApi.subscriptions).to.have.length(0)
+
+    first.bleApi.subscriptions[0]!.reject(new Error('released'))
+    await flush()
+    expect(second.bleApi.subscriptions).to.have.length(1)
+    second.bleApi.subscriptions[0]!.resolve(new FakeHandle())
+    await flush()
+    expect(second.events).to.deep.equal([
+      { type: 'connected', handle: handleId }
+    ])
   })
 
   it('delivers advertisements until unsubscribed', () => {
