@@ -700,6 +700,9 @@ const METAFIELDRENDERERS: Record<
 // the store.
 const UPDATE_CONTRACT_VALUES = ['periodic', 'event']
 
+// The Data Browser keys the server's own vessel as 'self'.
+const SELF_CONTEXT = 'self'
+
 export const normalizeMetaForSave = (meta: MetaData): MetaData => {
   if (!('updateContract' in meta)) return meta
   if (
@@ -764,6 +767,11 @@ const Meta: React.FC<MetaProps> = ({ meta, path, context, showContext }) => {
   const supersededClears = useRef<Record<string, unknown> | undefined>(
     undefined
   )
+  // Every field the pending saves sent. Their meta deltas may not have
+  // reached `meta` yet when the next save starts, so a field one of them
+  // added and the next save removes would otherwise be missing from its
+  // clear.
+  const pendingSent = useRef<MetaData | undefined>(undefined)
   const [localMeta, setLocalMeta] = useState<MetaData>(meta)
   const [categoryToBaseUnit, setCategoryToBaseUnit] = useState<
     Record<string, string>
@@ -780,7 +788,7 @@ const Meta: React.FC<MetaProps> = ({ meta, path, context, showContext }) => {
   }, [])
 
   // Get current value — imperative read, no subscription to avoid re-renders on every delta.
-  const ctxData = getSignalkData()[context || 'self']
+  const ctxData = getSignalkData()[context || SELF_CONTEXT]
   let currentValue: unknown
   if (ctxData) {
     for (const entry of Object.values(ctxData)) {
@@ -795,9 +803,12 @@ const Meta: React.FC<MetaProps> = ({ meta, path, context, showContext }) => {
   const ctxPrefix = context ? context.replace(/[.:]/g, '-') + '-' : ''
   const idPrefix = `meta-${ctxPrefix}${path.replace(/\./g, '-')}`
 
+  // The metadata PUT writes vessels.self only, so editing another context
+  // would change self's metadata instead.
   const canEditMetadata =
-    !loginStatus.authenticationRequired ||
-    (loginStatus.status === 'loggedIn' && loginStatus.userLevel === 'admin')
+    (context ?? SELF_CONTEXT) === SELF_CONTEXT &&
+    (!loginStatus.authenticationRequired ||
+      (loginStatus.status === 'loggedIn' && loginStatus.userLevel === 'admin'))
 
   // Get category and converted value for preview
   const category = localMeta.displayUnits?.category
@@ -818,9 +829,11 @@ const Meta: React.FC<MetaProps> = ({ meta, path, context, showContext }) => {
 
   const handleSave = () => {
     const saved = normalizeMetaForSave(localMeta)
+    const known = { ...meta, ...pendingSent.current }
     const cleared = Object.fromEntries(
-      Object.entries(meta).filter(([key]) => !(key in saved))
+      Object.entries(known).filter(([key]) => !(key in saved))
     )
+    pendingSent.current = { ...pendingSent.current, ...saved }
     // Editing reopens as soon as the request is sent, so a second save can
     // start while this one is pending. Saves of a path complete in order, and
     // only the newest one may prune the store, or an older callback would
@@ -837,12 +850,9 @@ const Meta: React.FC<MetaProps> = ({ meta, path, context, showContext }) => {
       // once the server has accepted the save, or the two would disagree.
       const toRemove = ok ? cleared : supersededClears.current
       supersededClears.current = undefined
+      pendingSent.current = undefined
       if (toRemove && Object.keys(toRemove).length > 0) {
-        // saveMeta always writes to vessels/self, and signalkMeta is keyed by
-        // the full context, so the local drop has to name the same entry.
-        useStore
-          .getState()
-          .removeMetaKeys(context || 'vessels.self', path, toRemove)
+        useStore.getState().removeMetaKeys(SELF_CONTEXT, path, toRemove)
       }
     })
     setIsEditing(false)
