@@ -104,6 +104,54 @@ describe('update contracts in path metadata', function () {
     ).to.equal('periodic')
   })
 
+  it('keeps a contract set on its own even when it matches the inherited one', async function () {
+    this.timeout(TEST_TIMEOUT_MS)
+    const url =
+      `http://localhost:${port}/signalk/v1/api/vessels/self/` +
+      'navigation/anchor/position/meta/updateContract'
+    const res = await fetch(url, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ value: 'event' })
+    })
+    expect(res.ok, `PUT returned ${res.status}`).to.equal(true)
+
+    expect(savedMeta('navigation.anchor.position')).to.deep.equal({
+      updateContract: 'event'
+    })
+  })
+
+  it('deletes metadata saved for a path the registry does not know', async function () {
+    this.timeout(TEST_TIMEOUT_MS)
+    const editor = (
+      runningServer().app as unknown as {
+        config: {
+          baseDeltaEditor: {
+            setMeta: (context: string, path: string, value: object) => void
+          }
+        }
+      }
+    ).config.baseDeltaEditor
+    editor.setMeta('vessels.self', 'zzzUnregistered.first', {
+      timeout: 5,
+      description: 'x'
+    })
+    editor.setMeta('vessels.self', 'zzzUnregistered.second', { timeout: 5 })
+    const base = `http://localhost:${port}/signalk/v1/api/vessels/self/zzzUnregistered`
+
+    const field = await fetch(`${base}/first/meta/timeout`, {
+      method: 'DELETE'
+    })
+    expect(field.ok, `DELETE returned ${field.status}`).to.equal(true)
+    expect(savedMeta('zzzUnregistered.first')).to.deep.equal({
+      description: 'x'
+    })
+
+    const whole = await fetch(`${base}/second/meta`, { method: 'DELETE' })
+    expect(whole.ok, `DELETE returned ${whole.status}`).to.equal(true)
+    expect(savedMeta('zzzUnregistered.second')).to.equal(undefined)
+  })
+
   it('reports an inherited contract over the REST metadata API', async function () {
     this.timeout(TEST_TIMEOUT_MS)
     await sendDelta(

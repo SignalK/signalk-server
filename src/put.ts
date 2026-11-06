@@ -118,6 +118,16 @@ let putNotificationHandler: (
   value: unknown
 ) => ActionResult
 
+// The registry has no entry for a path a plugin invents when the base delta
+// was saved but its registry update never happened (a failed file write in
+// setDefaultMetadata), so a delete still broadcasts an object.
+function metadataForBroadcast(metaPath: string): Record<string, unknown> {
+  return (
+    (getMetadata('vessels.self.' + metaPath) as
+      Record<string, unknown> | undefined) ?? {}
+  )
+}
+
 // Drop a deleted metadata field from the live self leaf. Metadata is merged
 // onto value-bearing leaves in the full model, so deleting it from the
 // registry alone would leave the field stuck on the tree leaf.
@@ -197,7 +207,10 @@ export function start(app: PutApp): void {
     let metaPath = path
     let metaValue = value as Record<string, unknown>
 
-    if (parts[parts.length - 1] !== 'meta') {
+    // A PUT of one field states that field on purpose; only a PUT of the
+    // whole metadata object can be echoing back what the client was shown.
+    const singleField = parts[parts.length - 1] !== 'meta'
+    if (singleField) {
       const name = parts[parts.length - 1]
       metaPath = parts.slice(0, parts.length - 2).join('.')
 
@@ -250,6 +263,7 @@ export function start(app: PutApp): void {
     // contract the path inherits. Stored, it would become an override that
     // pins the path to today's classification as if the user had chosen it.
     if (
+      !singleField &&
       metaValue.updateContract !== undefined &&
       (previousMeta as { updateContract?: unknown } | null | undefined)
         ?.updateContract === undefined &&
@@ -386,13 +400,10 @@ export function start(app: PutApp): void {
 
       delete metaValue[name]
 
-      delete (
-        getStoredMetadata('vessels.self.' + metaPath) as Record<string, unknown>
-      )[name]
-      full_meta = getMetadata('vessels.self.' + metaPath) as Record<
-        string,
-        unknown
-      >
+      const stored_meta = getStoredMetadata('vessels.self.' + metaPath) as
+        Record<string, unknown> | undefined
+      if (stored_meta) delete stored_meta[name]
+      full_meta = metadataForBroadcast(metaPath)
 
       removeLeafMetaField(app, metaPath, name)
 
@@ -404,9 +415,8 @@ export function start(app: PutApp): void {
     } else {
       metaPath = parts.slice(0, parts.length - 1).join('.')
 
-      const stored_meta = getStoredMetadata(
-        'vessels.self.' + metaPath
-      ) as Record<string, unknown>
+      const stored_meta = getStoredMetadata('vessels.self.' + metaPath) as
+        Record<string, unknown> | undefined
       const metaValue = app.config.baseDeltaEditor.getMeta(context, metaPath)
 
       if (!metaValue) {
@@ -414,13 +424,10 @@ export function start(app: PutApp): void {
       }
 
       Object.keys(metaValue).forEach((key) => {
-        delete stored_meta[key]
+        if (stored_meta) delete stored_meta[key]
         removeLeafMetaField(app, metaPath, key)
       })
-      full_meta = getMetadata('vessels.self.' + metaPath) as Record<
-        string,
-        unknown
-      >
+      full_meta = metadataForBroadcast(metaPath)
 
       app.config.baseDeltaEditor.removeMeta(context, metaPath)
     }
