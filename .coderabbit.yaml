@@ -5,6 +5,12 @@ reviews:
   auto_review:
     enabled: true
     drafts: false
+  pre_merge_checks:
+    # The coverage check wants docstrings on 80% of the non-trivial
+    # functions a PR touches, while AGENTS.md asks for self-documenting
+    # code and a comment only where the reason is not obvious.
+    docstrings:
+      mode: 'off'
   high_level_summary_instructions: |
     Write all summaries in present tense.
     Describe what the code does, not what it did.
@@ -77,6 +83,9 @@ reviews:
         - Callbacks typed as functions that only work in-process — do not
           suggest REST/WebSocket alternatives unless specifically requested.
           The limitation is obvious from the type signature.
+        - Functions without a docstring whose name and types already say what
+          they do — code is self-documenting, and a comment is only needed
+          where the reason for the code is not obvious.
 
         ## Scope
         Focus on files changed since master. Think carefully about how changes
