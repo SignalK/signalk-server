@@ -144,7 +144,13 @@ class SubscriptionManager implements ISubscriptionManager {
       ? this.streambundle.unfilteredBuses
       : this.streambundle.buses
     if (Array.isArray(command.subscribe)) {
+      // A row identical to one this callback already receives gets no
+      // second listener chain, which would only deliver every delta twice
+      // and stay retained for the connection's lifetime. Its cached values
+      // are still replayed: clients use a subscribe as a snapshot.
+      const live = liveRows(unsubscribes, callback)
       const rows: RowSubscription[] = []
+      const duplicates: SubscriptionOptions[] = []
       for (const options of command.subscribe) {
         if (typeof options.path !== 'string') {
           if (options.path !== undefined) {
@@ -153,17 +159,25 @@ class SubscriptionManager implements ISubscriptionManager {
             )
           }
         } else {
-          rows.push({
-            key: rowKey(
-              command.context,
-              options,
-              sourcePolicy,
-              effectiveExcludes
-            ),
+          const key = rowKey(
+            command.context,
             options,
-            unsubscribes: [],
-            closed: false
-          })
+            sourcePolicy,
+            effectiveExcludes
+          )
+          if (live.has(key)) {
+            duplicates.push(options)
+          } else {
+            const row: RowSubscription = {
+              key,
+              callback,
+              options,
+              unsubscribes: [],
+              closed: false
+            }
+            rows.push(row)
+            live.set(key, row)
+          }
         }
       }
       const subscribeRows = (
@@ -190,38 +204,58 @@ class SubscriptionManager implements ISubscriptionManager {
           }
         }
       }
-      // listen to new keys and then use the same logic to check if we
-      // want to subscribe, passing in a map with just that single bus.
-      // No cache bootstrap here: a keys announcement is triggered by the
-      // delta that is mid-dispatch, already ingested into the delta cache
-      // (index.ts ingests before it emits), and its live push follows the
-      // attach within the same dispatch — a cache replay would deliver
-      // that first delta twice.
-      const stopNewPaths = this.streambundle.keys.onValue((path) => {
-        const newBuses: BusesMap = {}
-        newBuses[path] = useUnfiltered
-          ? this.streambundle.getUnfilteredBus(path)
-          : this.streambundle.getBus(path)
-        subscribeRows(newBuses, false)
-      })
-      // Handed to the caller before the cache replay, so a callback that
-      // tears the subscription down from a replayed value reaches all of it.
-      const subscription: CommandSubscription = { rows, stopNewPaths }
-      for (const row of rows) {
-        const teardown = () => endRow(row)
-        rowTeardowns.set(teardown, { row, subscription })
-        unsubscribes.push(teardown)
-      }
-      unsubscribes.push(stopNewPaths)
-      // Over the buses as they are now: a path that first appears during
-      // the replay reaches the rows through the new-path listener.
-      subscribeRows({ ...buses }, true)
-      // A row ended during its replay went on to attach to its remaining
-      // buses.
-      for (const row of rows) {
-        if (row.closed) {
-          endRow(row)
+      if (rows.length > 0) {
+        // listen to new keys and then use the same logic to check if we
+        // want to subscribe, passing in a map with just that single bus.
+        // No cache bootstrap here: a keys announcement is triggered by the
+        // delta that is mid-dispatch, already ingested into the delta cache
+        // (index.ts ingests before it emits), and its live push follows the
+        // attach within the same dispatch — a cache replay would deliver
+        // that first delta twice.
+        const stopNewPaths = this.streambundle.keys.onValue((path) => {
+          const newBuses: BusesMap = {}
+          newBuses[path] = useUnfiltered
+            ? this.streambundle.getUnfilteredBus(path)
+            : this.streambundle.getBus(path)
+          subscribeRows(newBuses, false)
+        })
+        // Handed to the caller before the cache replay, so a callback that
+        // tears the subscription down from a replayed value reaches all of it.
+        const subscription: CommandSubscription = { rows, stopNewPaths }
+        for (const row of rows) {
+          const teardown = () => endRow(row)
+          rowTeardowns.set(teardown, { row, subscription })
+          unsubscribes.push(teardown)
         }
+        unsubscribes.push(stopNewPaths)
+        // Over the buses as they are now: a path that first appears during
+        // the replay reaches the rows through the new-path listener.
+        subscribeRows({ ...buses }, true)
+        // A row ended during its replay went on to attach to its remaining
+        // buses.
+        for (const row of rows) {
+          if (row.closed) {
+            endRow(row)
+          }
+        }
+      }
+      for (const options of duplicates) {
+        handleSubscribeRow(
+          this.app,
+          options,
+          [],
+          buses,
+          contextFilter,
+          guardedCallback,
+          errorCallback,
+          user,
+          sourcePolicy,
+          perSubEngine,
+          this.selfContext,
+          true,
+          trusted,
+          false
+        )
       }
     }
 
@@ -229,6 +263,16 @@ class SubscriptionManager implements ISubscriptionManager {
     // This allows clients with granular subscriptions to discover available paths
     // without subscribing to everything continuously
     if (command.announceNewPaths) {
+      // One listener per callback, context and sources: repeating
+      // announceNewPaths replays the existing paths but adds no listener
+      // that would announce each new path once more.
+      const announcementKey = rowKey(
+        command.context,
+        {},
+        sourcePolicy,
+        effectiveExcludes
+      )
+      const listening = isAnnouncing(unsubscribes, callback, announcementKey)
       const announcedPaths = new Set<string>()
 
       // 1. Announce ALL existing paths matching context (send cached deltas once)
@@ -264,41 +308,58 @@ class SubscriptionManager implements ISubscriptionManager {
       }
 
       // 2. Listen for NEW paths appearing later and announce once
-      unsubscribes.push(
-        this.streambundle.keys.onValue((path: string) => {
-          if (announcedPaths.has(path)) {
-            return // Already announced this path
+      if (!listening) {
+        const announcementUnsubscribes: Unsubscribes = []
+        const announcement: Announcement = {
+          callback,
+          key: announcementKey,
+          stopped: false
+        }
+        const stopAnnouncing = () => {
+          announcement.stopped = true
+          for (const unsubscribe of announcementUnsubscribes) {
+            unsubscribe()
           }
-          announcedPaths.add(path)
+          announcementUnsubscribes.length = 0
+        }
+        announcements.set(stopAnnouncing, announcement)
+        unsubscribes.push(stopAnnouncing)
+        announcementUnsubscribes.push(
+          this.streambundle.keys.onValue((path: string) => {
+            if (announcedPaths.has(path)) {
+              return // Already announced this path
+            }
+            announcedPaths.add(path)
 
-          // Subscribe to the bus to get the first value for this new path
-          // We can't rely on deltaCache here because it might not have
-          // received the value yet (race condition with keys.onValue)
-          const bus = useUnfiltered
-            ? this.streambundle.getUnfilteredBus(path as Path)
-            : this.streambundle.getBus(path as Path)
-          const unsubscribeBus = bus
-            .filter(contextFilter)
-            .take(1) // Only take the first value
-            .map(toDelta)
-            .onValue((delta: any) => {
-              if (perSubEngine) {
-                const filtered = runPerSubEngine(
-                  perSubEngine,
-                  delta,
-                  new Date(),
-                  this.selfContext
-                )
-                if (filtered) guardedCallback(filtered)
-              } else {
-                guardedCallback(delta)
-              }
-            })
+            // Subscribe to the bus to get the first value for this new path
+            // We can't rely on deltaCache here because it might not have
+            // received the value yet (race condition with keys.onValue)
+            const bus = useUnfiltered
+              ? this.streambundle.getUnfilteredBus(path as Path)
+              : this.streambundle.getBus(path as Path)
+            const unsubscribeBus = bus
+              .filter(contextFilter)
+              .take(1) // Only take the first value
+              .map(toDelta)
+              .onValue((delta: any) => {
+                if (perSubEngine) {
+                  const filtered = runPerSubEngine(
+                    perSubEngine,
+                    delta,
+                    new Date(),
+                    this.selfContext
+                  )
+                  if (filtered) guardedCallback(filtered)
+                } else {
+                  guardedCallback(delta)
+                }
+              })
 
-          // Add to unsubscribes so it gets cleaned up
-          unsubscribes.push(unsubscribeBus)
-        })
-      )
+            // Add to unsubscribes so it gets cleaned up
+            announcementUnsubscribes.push(unsubscribeBus)
+          })
+        )
+      }
     }
   }
 
@@ -360,6 +421,7 @@ class SubscriptionManager implements ISubscriptionManager {
 
 interface RowSubscription {
   readonly key: string
+  readonly callback: SubscribeCallback
   readonly options: SubscriptionOptions
   readonly unsubscribes: Unsubscribes
   closed: boolean
@@ -379,6 +441,46 @@ interface RowTeardown {
 // that array stays the only record of which rows are live: a caller that
 // runs and clears it, as plugins do on stop, needs no further bookkeeping.
 const rowTeardowns = new WeakMap<() => void, RowTeardown>()
+
+interface Announcement {
+  readonly callback: SubscribeCallback
+  readonly key: string
+  stopped: boolean
+}
+
+const announcements = new WeakMap<() => void, Announcement>()
+
+// Live rows of one callback by key. Another callback sharing the array,
+// as a plugin's subscribe calls do, gets rows of its own.
+function liveRows(
+  unsubscribes: Unsubscribes,
+  callback: SubscribeCallback
+): Map<string, RowSubscription> {
+  const live = new Map<string, RowSubscription>()
+  for (const teardown of unsubscribes) {
+    const entry = rowTeardowns.get(teardown)
+    if (entry && !entry.row.closed && entry.row.callback === callback) {
+      live.set(entry.row.key, entry.row)
+    }
+  }
+  return live
+}
+
+function isAnnouncing(
+  unsubscribes: Unsubscribes,
+  callback: SubscribeCallback,
+  key: string
+): boolean {
+  return unsubscribes.some((stop) => {
+    const announcement = announcements.get(stop)
+    return (
+      announcement !== undefined &&
+      !announcement.stopped &&
+      announcement.callback === callback &&
+      announcement.key === key
+    )
+  })
+}
 
 function endRow(row: RowSubscription) {
   row.closed = true
@@ -473,7 +575,8 @@ function handleSubscribeRow(
   perSubEngine?: ToPreferredDelta | null,
   selfContext?: string,
   bootstrapFromCache?: boolean,
-  trusted?: boolean
+  trusted?: boolean,
+  attachListeners = true
 ) {
   const matcher = pathMatcher(subscribeRow.path)
   // The set of cached contexts matching filter is invariant across this
@@ -500,114 +603,116 @@ function handleSubscribeRow(
     // delivered twice.
     const flattenRootValues = key === '' && !matcher(key)
     if (matcher(key) || flattenRootValues) {
-      debug.enabled && debug('Subscribing to key ' + key)
-      // Build Bacon stages only for rows that need them. A plain row (no
-      // rate limiting, no root flattening, no per-subscription engine) is
-      // delivered by a single inline sink further down instead, which
-      // retains about a quarter of what filter().map().onValue() does.
-      let filteredBus: Bacon.EventStream<NormalizedDelta> | null = null
-      if (flattenRootValues) {
-        filteredBus = bus
-          .filter(filter)
-          .flatMap(
-            (normalizedDelta: NormalizedDelta) =>
-              Bacon.fromArray(
-                flattenRootDelta(normalizedDelta, matcher)
-              ) as Bacon.EventStream<NormalizedDelta>
-          )
-      }
-      if (subscribeRow.minPeriod) {
-        if (subscribeRow.policy && subscribeRow.policy !== 'instant') {
-          errorCallback(
-            `minPeriod assumes policy 'instant', ignoring policy ${subscribeRow.policy}`
-          )
-        }
-        const minPeriodValue = Number(subscribeRow.minPeriod)
-        debug('minPeriod:' + subscribeRow.minPeriod)
-        if (isNaN(minPeriodValue)) {
-          errorCallback(
-            `invalid minPeriod value '${subscribeRow.minPeriod}', ignoring`
-          )
-        } else if (key !== '') {
-          // Timing policies are not applied on the '' bus (flattened rows
-          // included): the stream carries values for multiple paths, so a
-          // shared debounce would drop values of one path because another
-          // path delivered first. Root identity data also arrives on AIS
-          // static-report cadence, far slower than any practical period.
-          debug('debouncing')
-          filteredBus = (filteredBus ?? bus.filter(filter)).debounceImmediate(
-            minPeriodValue
-          )
-        }
-      } else if (
-        subscribeRow.period ||
-        (subscribeRow.policy && subscribeRow.policy === 'fixed')
-      ) {
-        if (subscribeRow.policy && subscribeRow.policy !== 'fixed') {
-          errorCallback(
-            `period assumes policy 'fixed', ignoring policy ${subscribeRow.policy}`
-          )
-        } else if (key !== '') {
-          // we can not apply period for empty path subscriptions
-          const interval = Number(subscribeRow.period) || 1000
-          filteredBus = (filteredBus ?? bus.filter(filter))
-            .bufferWithTime(interval)
-            .flatMapLatest((bufferedValues: any) => {
-              const uniqueValues = _(bufferedValues)
-                .reverse()
-                .uniqBy(
-                  (value) =>
-                    value.context + ':' + value.$source + ':' + value.path
-                )
-                .value()
-              return Bacon.fromArray(uniqueValues)
-            })
-        }
-      }
-      if (subscribeRow.format && subscribeRow.format !== 'delta') {
-        errorCallback('Only delta format supported, using it')
-      }
-      if (
-        subscribeRow.policy &&
-        !['instant', 'fixed'].some((s) => s === subscribeRow.policy)
-      ) {
-        errorCallback(
-          `Only 'instant' and 'fixed' policies supported, ignoring policy ${subscribeRow.policy}`
-        )
-      }
-      // With a per-subscription priority engine in play, run each
-      // delta through the engine before delivering. The engine carries
-      // the user's saved priority groups/overrides minus the excluded
-      // sources, so the subscriber sees a single priority-resolved
-      // value per path with the cascade respected — the same shape
-      // the global preferred-only bus would deliver, but with the
-      // plugin's own (or otherwise excluded) sources removed from the
-      // candidate set.
-      if (perSubEngine) {
-        const engineStream = (filteredBus ?? bus.filter(filter))
-          .map(toDelta)
-          .flatMap((delta: Delta) => {
-            const filtered = runPerSubEngine(
-              perSubEngine,
-              delta,
-              new Date(),
-              selfContext ?? ''
+      if (attachListeners) {
+        debug.enabled && debug('Subscribing to key ' + key)
+        // Build Bacon stages only for rows that need them. A plain row (no
+        // rate limiting, no root flattening, no per-subscription engine) is
+        // delivered by a single inline sink further down instead, which
+        // retains about a quarter of what filter().map().onValue() does.
+        let filteredBus: Bacon.EventStream<NormalizedDelta> | null = null
+        if (flattenRootValues) {
+          filteredBus = bus
+            .filter(filter)
+            .flatMap(
+              (normalizedDelta: NormalizedDelta) =>
+                Bacon.fromArray(
+                  flattenRootDelta(normalizedDelta, matcher)
+                ) as Bacon.EventStream<NormalizedDelta>
             )
-            return filtered ? Bacon.once(filtered) : Bacon.never()
-          }) as Bacon.EventStream<Delta>
-        unsubscribes.push(engineStream.onValue(callback))
-      } else if (filteredBus) {
-        unsubscribes.push(filteredBus.map(toDelta).onValue(callback))
-      } else {
-        // Plain row: no stages needed. Returning the callback's result keeps
-        // Bacon.noMore working the same as through a filter/map chain.
-        unsubscribes.push(
-          bus.onValue((normalizedDelta: NormalizedDelta) => {
-            if (filter(normalizedDelta)) {
-              return callback(toDelta(normalizedDelta))
-            }
-          })
-        )
+        }
+        if (subscribeRow.minPeriod) {
+          if (subscribeRow.policy && subscribeRow.policy !== 'instant') {
+            errorCallback(
+              `minPeriod assumes policy 'instant', ignoring policy ${subscribeRow.policy}`
+            )
+          }
+          const minPeriodValue = Number(subscribeRow.minPeriod)
+          debug('minPeriod:' + subscribeRow.minPeriod)
+          if (isNaN(minPeriodValue)) {
+            errorCallback(
+              `invalid minPeriod value '${subscribeRow.minPeriod}', ignoring`
+            )
+          } else if (key !== '') {
+            // Timing policies are not applied on the '' bus (flattened rows
+            // included): the stream carries values for multiple paths, so a
+            // shared debounce would drop values of one path because another
+            // path delivered first. Root identity data also arrives on AIS
+            // static-report cadence, far slower than any practical period.
+            debug('debouncing')
+            filteredBus = (filteredBus ?? bus.filter(filter)).debounceImmediate(
+              minPeriodValue
+            )
+          }
+        } else if (
+          subscribeRow.period ||
+          (subscribeRow.policy && subscribeRow.policy === 'fixed')
+        ) {
+          if (subscribeRow.policy && subscribeRow.policy !== 'fixed') {
+            errorCallback(
+              `period assumes policy 'fixed', ignoring policy ${subscribeRow.policy}`
+            )
+          } else if (key !== '') {
+            // we can not apply period for empty path subscriptions
+            const interval = Number(subscribeRow.period) || 1000
+            filteredBus = (filteredBus ?? bus.filter(filter))
+              .bufferWithTime(interval)
+              .flatMapLatest((bufferedValues: any) => {
+                const uniqueValues = _(bufferedValues)
+                  .reverse()
+                  .uniqBy(
+                    (value) =>
+                      value.context + ':' + value.$source + ':' + value.path
+                  )
+                  .value()
+                return Bacon.fromArray(uniqueValues)
+              })
+          }
+        }
+        if (subscribeRow.format && subscribeRow.format !== 'delta') {
+          errorCallback('Only delta format supported, using it')
+        }
+        if (
+          subscribeRow.policy &&
+          !['instant', 'fixed'].some((s) => s === subscribeRow.policy)
+        ) {
+          errorCallback(
+            `Only 'instant' and 'fixed' policies supported, ignoring policy ${subscribeRow.policy}`
+          )
+        }
+        // With a per-subscription priority engine in play, run each
+        // delta through the engine before delivering. The engine carries
+        // the user's saved priority groups/overrides minus the excluded
+        // sources, so the subscriber sees a single priority-resolved
+        // value per path with the cascade respected — the same shape
+        // the global preferred-only bus would deliver, but with the
+        // plugin's own (or otherwise excluded) sources removed from the
+        // candidate set.
+        if (perSubEngine) {
+          const engineStream = (filteredBus ?? bus.filter(filter))
+            .map(toDelta)
+            .flatMap((delta: Delta) => {
+              const filtered = runPerSubEngine(
+                perSubEngine,
+                delta,
+                new Date(),
+                selfContext ?? ''
+              )
+              return filtered ? Bacon.once(filtered) : Bacon.never()
+            }) as Bacon.EventStream<Delta>
+          unsubscribes.push(engineStream.onValue(callback))
+        } else if (filteredBus) {
+          unsubscribes.push(filteredBus.map(toDelta).onValue(callback))
+        } else {
+          // Plain row: no stages needed. Returning the callback's result keeps
+          // Bacon.noMore working the same as through a filter/map chain.
+          unsubscribes.push(
+            bus.onValue((normalizedDelta: NormalizedDelta) => {
+              if (filter(normalizedDelta)) {
+                return callback(toDelta(normalizedDelta))
+              }
+            })
+          )
+        }
       }
 
       // Bootstrap snapshot at subscribe time only: fetch every source's

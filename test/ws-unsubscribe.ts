@@ -30,10 +30,17 @@ function deltaPaths(messages: any[]): string[] {
 // last one has arrived any earlier one that was going to arrive has too.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function waitForDelta(ws: any, path: string) {
+  await waitForDeltas(ws, path, 1)
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function waitForDeltas(ws: any, path: string, count: number) {
   const deadline = Date.now() + DELIVERY_TIMEOUT_MS
-  while (!deltaPaths(ws.parsedMessages()).includes(path)) {
+  const arrived = () =>
+    deltaPaths(ws.parsedMessages()).filter((p) => p === path).length
+  while (arrived() < count) {
     if (Date.now() > deadline) {
-      throw new Error(`no delta for ${path}`)
+      throw new Error(`${arrived()} of ${count} deltas for ${path}`)
     }
     await sleep(POLL_MS)
   }
@@ -96,6 +103,33 @@ describe('WebSocket unsubscribe', () => {
     await waitForDelta(ws, HEADING_PATH)
 
     expect(deltaPaths(ws.parsedMessages())).to.deep.equal([HEADING_PATH])
+    ws.close()
+  })
+
+  it('delivers once to a path subscribed twice', async () => {
+    await server.sendDelta(SOG_PATH, SOG)
+    const ws = connect('none')
+    await ws.nthMessage(1)
+    const subscribe = {
+      context: 'vessels.self',
+      subscribe: [{ path: SOG_PATH }]
+    }
+    await ws.send(subscribe)
+    await ws.send(subscribe)
+    // Each subscribe replays the cached value, so two of them show that
+    // both were handled before the live delta below.
+    await waitForDeltas(ws, SOG_PATH, 2)
+
+    await server.sendDelta(SOG_PATH, SOG)
+    await server.sendDelta(HEADING_PATH, HEADING)
+    await waitForDeltas(ws, SOG_PATH, 3)
+    await settle()
+
+    expect(deltaPaths(ws.parsedMessages())).to.deep.equal([
+      SOG_PATH,
+      SOG_PATH,
+      SOG_PATH
+    ])
     ws.close()
   })
 

@@ -3,6 +3,7 @@ import {
   Delta,
   Path,
   SourceRef,
+  SubscribeMessage,
   SubscriptionOptions,
   Timestamp,
   UnsubscribeMessage
@@ -57,7 +58,8 @@ function mockApp(bundle: StreamBundle, cached: Delta[] = []) {
     selfContext: SELF_CONTEXT,
     deltaCache: {
       getMatchingContexts: () => [],
-      getCachedDeltasForContexts: () => cached
+      getCachedDeltasForContexts: () => cached,
+      getCachedDeltas: () => []
     },
     securityStrategy: {
       filterReadDelta: (_user: unknown, delta: Delta) => delta,
@@ -405,5 +407,142 @@ describe('SubscriptionManager unsubscribe', () => {
     expect(() => manager.unsubscribe(malformed, unsubscribes)).to.throw(
       /unsubscribe must be an array/
     )
+  })
+})
+
+describe('SubscriptionManager repeated subscribe', () => {
+  let bundle: StreamBundle
+  let manager: SubscriptionManager
+  let received: Delta[]
+  let unsubscribes: Array<() => void>
+
+  // A WebSocket or TCP connection hands every subscribe message the same
+  // callback.
+  const deliver = (delta: Delta) => {
+    received.push(delta)
+  }
+
+  const subscribe = (
+    command: Omit<SubscribeMessage, 'context'>,
+    callback = deliver
+  ) =>
+    manager.subscribe(
+      { context: SELF_CONTEXT, ...command },
+      unsubscribes,
+      () => undefined,
+      callback
+    )
+
+  beforeEach(() => {
+    bundle = new StreamBundle(SELF_ID)
+    received = []
+    unsubscribes = []
+    dispatch(bundle, SOG_PATH)
+    manager = new SubscriptionManager(mockApp(bundle))
+  })
+
+  it('delivers once to a row subscribed twice', () => {
+    subscribe({ subscribe: [{ path: SOG_PATH }] })
+    subscribe({ subscribe: [{ path: SOG_PATH }] })
+
+    dispatch(bundle, SOG_PATH)
+
+    expect(received).to.have.lengthOf(1)
+  })
+
+  it('delivers once to a row repeated within one message', () => {
+    subscribe({ subscribe: [{ path: SOG_PATH }, { path: SOG_PATH }] })
+
+    dispatch(bundle, SOG_PATH)
+
+    expect(received).to.have.lengthOf(1)
+  })
+
+  it('still replays the cache to a row subscribed again', () => {
+    manager = new SubscriptionManager(mockApp(bundle, [valueDelta(SOG_PATH)]))
+    subscribe({ subscribe: [{ path: SOG_PATH }] })
+    subscribe({ subscribe: [{ path: SOG_PATH }] })
+    const replayed = received.length
+
+    dispatch(bundle, SOG_PATH)
+
+    expect(replayed).to.equal(2)
+    expect(received).to.have.lengthOf(3)
+  })
+
+  it('ends a row subscribed twice with one unsubscribe', () => {
+    subscribe({ subscribe: [{ path: SOG_PATH }] })
+    subscribe({ subscribe: [{ path: SOG_PATH }] })
+    manager.unsubscribe(
+      { context: SELF_CONTEXT, unsubscribe: [{ path: SOG_PATH }] },
+      unsubscribes
+    )
+
+    dispatch(bundle, SOG_PATH)
+
+    expect(received).to.be.empty
+  })
+
+  it('subscribes a row again once the earlier one has ended', () => {
+    subscribe({ subscribe: [{ path: SOG_PATH }] })
+    manager.unsubscribe(
+      { context: SELF_CONTEXT, unsubscribe: [{ path: SOG_PATH }] },
+      unsubscribes
+    )
+    subscribe({ subscribe: [{ path: SOG_PATH }] })
+
+    dispatch(bundle, SOG_PATH)
+
+    expect(received).to.have.lengthOf(1)
+  })
+
+  it('keeps identical rows of different callbacks apart', () => {
+    subscribe({ subscribe: [{ path: SOG_PATH }] })
+    subscribe({ subscribe: [{ path: SOG_PATH }] }, (delta: Delta) => {
+      received.push(delta)
+    })
+
+    dispatch(bundle, SOG_PATH)
+
+    expect(received).to.have.lengthOf(2)
+  })
+
+  it('adds no new-path listener for a message of repeated rows', () => {
+    let listening = 0
+    const onValue = bundle.keys.onValue.bind(bundle.keys)
+    bundle.keys.onValue = (listener: (path: Path) => void) => {
+      listening++
+      const stop = onValue(listener)
+      return () => {
+        listening--
+        stop()
+      }
+    }
+    const repeats = 5
+    for (let i = 0; i < repeats; i++) {
+      subscribe({ subscribe: [{ path: SOG_PATH }] })
+    }
+
+    expect(listening).to.equal(1)
+  })
+
+  it('announces a new path once however often announceNewPaths is sent', () => {
+    subscribe({ subscribe: [], announceNewPaths: true })
+    subscribe({ subscribe: [], announceNewPaths: true })
+
+    dispatch(bundle, COG_PATH)
+
+    expect(pathsOf(received)).to.deep.equal([COG_PATH])
+  })
+
+  it('subscribes and announces again after the caller ran its unsubscribes', () => {
+    subscribe({ subscribe: [{ path: SOG_PATH }], announceNewPaths: true })
+    unsubscribes.forEach((teardown) => teardown())
+    subscribe({ subscribe: [{ path: SOG_PATH }], announceNewPaths: true })
+
+    dispatch(bundle, SOG_PATH)
+    dispatch(bundle, COG_PATH)
+
+    expect(pathsOf(received)).to.deep.equal([SOG_PATH, COG_PATH])
   })
 })

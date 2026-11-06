@@ -631,6 +631,9 @@ function wsInterface(app: WsApp): WsApi {
           }
 
           const unsubscribes: Array<() => void> = []
+          // One callback for all of the connection's subscribe messages, so
+          // the subscription manager recognises a row subscribed again.
+          const deliverSubscribed = subscriptionDelivery(app, spark)
 
           if (primusOptions.isPlayback) {
             spark.on('data', () => {
@@ -658,7 +661,13 @@ function wsInterface(app: WsApp): WsApi {
                 }
 
                 if (parsedMsg.subscribe) {
-                  processSubscribe(app, unsubscribes, spark, parsedMsg)
+                  processSubscribe(
+                    app,
+                    unsubscribes,
+                    spark,
+                    parsedMsg,
+                    deliverSubscribed
+                  )
                 }
 
                 if (parsedMsg.unsubscribe) {
@@ -1250,11 +1259,23 @@ function sendMetaData(app: WsApp, spark: Spark, delta: Delta): void {
   }
 }
 
+function subscriptionDelivery(app: WsApp, spark: Spark) {
+  return (message: Delta) => {
+    const filtered = app.securityStrategy.filterReadDelta(
+      spark.request.skPrincipal,
+      message
+    )
+    if (!filtered) return
+    spark.backpressureManager!.send(filtered)
+  }
+}
+
 function processSubscribe(
   app: WsApp,
   unsubscribes: Array<() => void>,
   spark: Spark,
-  msg: WsMessage
+  msg: WsMessage,
+  deliver: (message: Delta) => void
 ): void {
   if (
     Array.isArray(msg.subscribe) &&
@@ -1276,9 +1297,9 @@ function processSubscribe(
     }
   } else {
     // Per-message sourcePolicy is honoured: subscriptionmanager.subscribe
-    // attaches its own listener on the chosen bus (filtered or unfiltered)
-    // for each subscribe call, independent of the connection-wide delta
-    // listener attached in handleRealtimeConnection. Falling back to the
+    // attaches its listeners on the chosen bus (filtered or unfiltered),
+    // independent of the connection-wide delta listener attached in
+    // handleRealtimeConnection. Falling back to the
     // spark-level policy keeps the URL-query default working for clients
     // that never send a per-message override.
     //
@@ -1295,14 +1316,7 @@ function processSubscribe(
       msg,
       unsubscribes,
       spark.write.bind(spark),
-      (message: Delta) => {
-        const filtered = app.securityStrategy.filterReadDelta(
-          spark.request.skPrincipal,
-          message
-        )
-        if (!filtered) return
-        spark.backpressureManager!.send(filtered)
-      },
+      deliver,
       spark.request.skPrincipal,
       msg.sourcePolicy ?? spark.sourcePolicy,
       excludeSourcesOf(msg)

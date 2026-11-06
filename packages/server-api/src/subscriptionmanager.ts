@@ -33,7 +33,12 @@ export interface SubscribeMessage {
   context: Context | RelativePositionOrigin
 
   /**
-   * An array of paths to subscribe to, with optional criteria
+   * An array of paths to subscribe to, with optional criteria.
+   *
+   * On a WebSocket or TCP connection, a row identical to one the connection
+   * already receives, by the criteria an {@link UnsubscribeMessage} matches
+   * on, adds no second delivery; its cached values are replayed all the same.
+   * Each plugin subscribe call keeps rows of its own.
    */
   subscribe: SubscriptionOptions[]
 
@@ -42,6 +47,9 @@ export interface SubscribeMessage {
    * filter once (for discovery), plus announce any new paths that appear later.
    * This allows clients using granular subscriptions to discover available paths
    * without subscribing to everything continuously.
+   *
+   * Repeating it on a connection replays the existing paths again but adds
+   * no second listener for new ones. The listener lasts until unsubscribe-all.
    */
   announceNewPaths?: boolean
 

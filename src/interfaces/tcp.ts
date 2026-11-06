@@ -155,6 +155,11 @@ function socketMessageHandler(
   manager: BackpressureManager
 ) {
   let lastUpdateErrorLogged = 0
+  // One callback for all of the socket's subscribe messages, so the
+  // subscription manager recognises a row subscribed again.
+  const deliverSubscribed = (delta: any) => {
+    manager.send(delta)
+  }
   return (msg: any) => {
     if (msg.updates) {
       if (app.securityStrategy.isDummy()) {
@@ -173,9 +178,7 @@ function socketMessageHandler(
         (err: any) => {
           console.error(`Subscribe  failed:${err}`)
         },
-        (delta: any) => {
-          manager.send(delta)
-        }
+        deliverSubscribed
       )
     } else if (msg.unsubscribe) {
       debug.enabled && debug(`unsubscribe:${JSON.stringify(msg)}`)
