@@ -1,5 +1,9 @@
 /**
  * TypeBox Schema Definitions for the Signal K History API
+ *
+ * These describe the JSON on the wire. The provider-facing types in
+ * history.ts keep branded strings (Context, Path, Timestamp) and stay
+ * separate from them.
  */
 
 import { Type, type Static } from '@sinclair/typebox'
@@ -22,7 +26,7 @@ export const AggregateMethodSchema = Type.Union(
       "Aggregation method for historical data. In a path expression (path:method:parameter) the 'sma' (Simple Moving Average) and 'ema' (Exponential Moving Average) methods accept an optional numeric parameter after a second colon: for sma it is the number of samples, for ema it is the alpha value (0-1). For a path whose units are rad (headings, courses, wind angles), average, sma and ema use the circular mean — the angle of the mean sine and cosine — so 359° and 1° average to 0°, not 180°, and the result keeps the path's convention ([0, 2π) or (−π, π]). Samples that cancel — 0° and 180° in equal measure — have no mean direction, and the bucket is null."
   }
 )
-export type AggregateMethodSchemaType = Static<typeof AggregateMethodSchema>
+export type AggregateMethod = Static<typeof AggregateMethodSchema>
 
 export const ValuesResponseSchema = Type.Object(
   {
@@ -77,7 +81,7 @@ export const ValuesResponseSchema = Type.Object(
     description: 'Historical data series with header and data rows'
   }
 )
-export type ValuesResponseSchemaType = Static<typeof ValuesResponseSchema>
+export type ValuesResponse = Static<typeof ValuesResponseSchema>
 
 export const PathSpecSchema = Type.Object(
   {
@@ -100,7 +104,7 @@ export const PathSpecSchema = Type.Object(
       'Specification for a path to query, including the aggregation method and optional parameters'
   }
 )
-export type PathSpecSchemaType = Static<typeof PathSpecSchema>
+export type PathSpec = Static<typeof PathSpecSchema>
 
 export const HistoryProviderInfoSchema = Type.Object(
   {
@@ -110,9 +114,7 @@ export const HistoryProviderInfoSchema = Type.Object(
   },
   { $id: 'HistoryProviderInfo' }
 )
-export type HistoryProviderInfoSchemaType = Static<
-  typeof HistoryProviderInfoSchema
->
+export type HistoryProviderInfo = Static<typeof HistoryProviderInfoSchema>
 
 export const HistoryProvidersResponseSchema = Type.Record(
   Type.String({ description: 'Plugin id of the history provider' }),
@@ -122,6 +124,21 @@ export const HistoryProvidersResponseSchema = Type.Record(
     description: 'Map of registered history providers keyed by plugin id'
   }
 )
-export type HistoryProvidersResponseSchemaType = Static<
+export type HistoryProvidersResponse = Static<
   typeof HistoryProvidersResponseSchema
 >
+
+/** @deprecated Use {@link AggregateMethod} */
+export type AggregateMethodSchemaType = AggregateMethod
+
+/** @deprecated Use {@link ValuesResponse} */
+export type ValuesResponseSchemaType = ValuesResponse
+
+/** @deprecated Use {@link PathSpec} */
+export type PathSpecSchemaType = PathSpec
+
+/** @deprecated Use {@link HistoryProviderInfo} */
+export type HistoryProviderInfoSchemaType = HistoryProviderInfo
+
+/** @deprecated Use {@link HistoryProvidersResponse} */
+export type HistoryProvidersResponseSchemaType = HistoryProvidersResponse
