@@ -252,4 +252,27 @@ describe('getMetadata', () => {
       expect(getMetadata(p)).to.equal(undefined)
     })
   })
+
+  describe('runtime keys treat wildcards in delta paths literally', () => {
+    const MAX_LOOKUP_MS = 50
+
+    it('a meta delta path full of * does not stall later lookups', () => {
+      metadataRegistry.addMetaData('vessels.self', '*a'.repeat(15), {
+        units: 'm'
+      })
+      const started = Date.now()
+      expect(getMetadata(self('a'.repeat(60) + '!'))).to.equal(undefined)
+      expect(Date.now() - started).to.be.below(MAX_LOOKUP_MS)
+    })
+
+    it('a * in a runtime path matches only itself', () => {
+      metadataRegistry.addMetaData('vessels.self', 'plugin.*.path', {
+        units: 'm'
+      })
+      expect(getMetadata(self('plugin.*.path'))).to.deep.include({
+        units: 'm'
+      })
+      expect(getMetadata(self('plugin.other.path'))).to.equal(undefined)
+    })
+  })
 })

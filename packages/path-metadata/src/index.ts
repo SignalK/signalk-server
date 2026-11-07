@@ -95,6 +95,19 @@ function toLookupPath(path: string): string {
   return '/*/' + path.split('.').slice(2).join('/')
 }
 
+const RUNTIME_KEY_PREFIX = '/*/'
+
+// Runtime keys are built from delta paths, which any client allowed to
+// write controls. Only the context segment of the '/*/<tail>' key is a
+// wildcard; the tail is matched literally, so a path full of '*' cannot
+// compile into a pattern that backtracks catastrophically.
+function runtimeKeyPattern(key: string): RegExp {
+  const tail = key
+    .slice(RUNTIME_KEY_PREFIX.length)
+    .replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  return new RegExp(`^/[^/]+/${tail}$`)
+}
+
 function buildRegexArray(
   allEntries: Record<string, PathMetadataEntry>
 ): RegexEntry[] {
@@ -271,13 +284,12 @@ export class MetadataRegistry {
     // silently change every other path that matches the same wildcard.
     const cloned: PathMetadataEntry = structuredClone(result.metadata)
     this.runtimeClones[key] = cloned
-    // Escape special chars first, then replace wildcard. Front of the
-    // array so this per-path clone wins over the generic spec wildcard —
-    // and so a later addMetaData that merges into this same clone (e.g. a
-    // PUT meta displayUnits override) is found ahead of the spec entry.
-    const escaped = key.replace(/[.+?^${}()|[\]\\]/g, '\\$&')
+    // Front of the array so this per-path clone wins over the generic spec
+    // wildcard — and so a later addMetaData that merges into this same
+    // clone (e.g. a PUT meta displayUnits override) is found ahead of the
+    // spec entry.
     this.prependRegexEntry({
-      pattern: new RegExp(`^${escaped.replace(/\*/g, '[^/]+')}$`),
+      pattern: runtimeKeyPattern(key),
       key,
       metadata: cloned
     })
@@ -324,11 +336,10 @@ export class MetadataRegistry {
     Object.assign(entry, meta)
     this.runtimeClones[key] = entry
 
-    // Escape special chars first, then replace wildcard. The entry fronts
-    // the generic spec wildcard for EVERY context, not just one root.
-    const escaped = key.replace(/[.+?^${}()|[\]\\]/g, '\\$&')
+    // The entry fronts the generic spec wildcard for EVERY context, not
+    // just one root.
     this.prependRegexEntry({
-      pattern: new RegExp(`^${escaped.replace(/\*/g, '[^/]+')}$`),
+      pattern: runtimeKeyPattern(key),
       key,
       metadata: entry
     })

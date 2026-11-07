@@ -82,8 +82,16 @@ import {
 import { SERVERROUTESPREFIX } from './constants'
 import { ICallback } from './types'
 import { ServerApp, SignalKMessageHub, WithConfig } from './app'
+import { wildcardMatcher } from './wildcard'
 
 const debug = createDebug('signalk-server:tokensecurity')
+
+// Callers hand over a null path, an undefined source or a source object;
+// stringify them the way RegExp.test always has, so an ACL keeps matching
+// the same requests.
+function aclPatternMatches(pattern: string, value: unknown): boolean {
+  return wildcardMatcher(pattern)(String(value))
+}
 
 const CONFIG_PLUGINID = 'sk-simple-token-security-config'
 const passwordSaltRounds = 10
@@ -1589,12 +1597,7 @@ function tokenSecurityFactory(
     }
 
     const acl = configuration.acls.find((theAcl) => {
-      const pattern = theAcl.context
-        .replace(/[\\^$+?()[\]{}|]/g, '\\$&')
-        .replace(/\./g, '\\.')
-        .replace(/\*/g, '.*')
-      const matcher = new RegExp('^' + pattern + '$')
-      return matcher.test(context)
+      return aclPatternMatches(theAcl.context, context)
     })
 
     if (acl) {
@@ -1603,21 +1606,11 @@ function tokenSecurityFactory(
 
         if (p.paths) {
           perms = p.paths.find((aPath) => {
-            const pattern = aPath
-              .replace(/[\\^$+?()[\]{}|]/g, '\\$&')
-              .replace(/\./g, '\\.')
-              .replace(/\*/g, '.*')
-            const matcher = new RegExp('^' + pattern + '$')
-            return matcher.test(thePath)
+            return aclPatternMatches(aPath, thePath)
           })
         } else if (p.sources) {
           perms = p.sources.find((s) => {
-            const pattern = s
-              .replace(/[\\^$+?()[\]{}|]/g, '\\$&')
-              .replace(/\./g, '\\.')
-              .replace(/\*/g, '.*')
-            const matcher = new RegExp('^' + pattern + '$')
-            return matcher.test(source)
+            return aclPatternMatches(s, source)
           })
         }
 
