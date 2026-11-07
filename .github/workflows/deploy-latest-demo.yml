@@ -1,0 +1,70 @@
+name: Deploy latest.signalk.org
+
+# The asset build takes long, so it runs apart from the release: after each
+# release, and on demand to try demo changes against a released server.
+on:
+  workflow_run:
+    workflows:
+      - Release - build & publish modules and server, build & publish docker containers
+    types:
+      - completed
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Signal K server release to deploy, e.g. v2.36.0'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-latest-demo
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    # a manual release run has a branch, not a release tag
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+      startsWith(github.event.workflow_run.head_branch, 'v'))
+    steps:
+      - name: Pick the server version
+        id: vars
+        env:
+          VERSION: ${{ inputs.version || github.event.workflow_run.head_branch }}
+        run: |
+          if ! [[ "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]]; then
+            echo "::error::'$VERSION' is not a release tag"
+            exit 1
+          fi
+          echo "tag=$VERSION" >> "$GITHUB_OUTPUT"
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          # the release's own demo config; a manual run takes the branch it runs on
+          ref: ${{ github.event.workflow_run.head_sha || github.ref }}
+          persist-credentials: false
+      - name: Setup flyctl
+        uses: superfly/flyctl-actions/setup-flyctl@master
+      - name: Setup Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - name: Test the demo director plugin
+        working-directory: ./fly_io/latest_signalk_org/demo-director
+        run: npm install --no-package-lock --no-audit --no-fund && npm test
+      - name: Build the demo plugin, charts and tidal data
+        working-directory: ./fly_io/latest_signalk_org
+        run: node build-assets.ts "$TAG"
+        env:
+          TAG: ${{ steps.vars.outputs.tag }}
+      - name: Deploy latest.signalk.org at fly.io
+        working-directory: ./fly_io/latest_signalk_org
+        run: flyctl deploy --remote-only --build-arg SK_VERSION="$TAG"
+        env:
+          TAG: ${{ steps.vars.outputs.tag }}
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
