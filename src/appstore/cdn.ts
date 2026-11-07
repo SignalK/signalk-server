@@ -8,9 +8,13 @@
  *     http://www.apache.org/licenses/LICENSE-2.0
  */
 
-const UNPKG_BASE = 'https://unpkg.com'
-const UNPKG_HOST = new URL(UNPKG_BASE).hostname
 const JSDELIVR_BASE = 'https://cdn.jsdelivr.net/npm'
+const UNPKG_BASE = 'https://unpkg.com'
+// In preference order. jsDelivr answers the first request for a file from
+// a large package several times faster than unpkg, which unpacks the
+// whole tarball first; unpkg stays as the fallback when jsDelivr fails.
+const CDN_BASES = [JSDELIVR_BASE, UNPKG_BASE]
+const CDN_HOSTS = new Set(CDN_BASES.map((base) => new URL(base).hostname))
 
 const MAX_CDN_REDIRECTS = 3
 const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308])
@@ -38,30 +42,29 @@ function normalizeRelPath(relPath: string): string {
   return stack.join('/')
 }
 
+export function cdnUrlsFor(
+  pkg: string,
+  version: string,
+  relPath: string
+): string[] {
+  const clean = normalizeRelPath(relPath)
+  return CDN_BASES.map((base) => `${base}/${pkg}@${version}/${clean}`)
+}
+
 export function resolveScreenshotUrl(
   pkg: string,
   version: string,
   relPath: string
 ): string {
-  const clean = normalizeRelPath(relPath)
-  return `${UNPKG_BASE}/${pkg}@${version}/${clean}`
-}
-
-export function resolveScreenshotUrlJsdelivr(
-  pkg: string,
-  version: string,
-  relPath: string
-): string {
-  const clean = normalizeRelPath(relPath)
-  return `${JSDELIVR_BASE}/${pkg}@${version}/${clean}`
+  return cdnUrlsFor(pkg, version, relPath)[0]
 }
 
 export function readmeUrlFor(pkg: string, version: string): string {
-  return `${UNPKG_BASE}/${pkg}@${version}/README.md`
+  return cdnUrlsFor(pkg, version, 'README.md')[0]
 }
 
 export function changelogUrlFor(pkg: string, version: string): string {
-  return `${UNPKG_BASE}/${pkg}@${version}/CHANGELOG.md`
+  return cdnUrlsFor(pkg, version, 'CHANGELOG.md')[0]
 }
 
 export function isAbsoluteUrl(url: string): boolean {
@@ -77,7 +80,7 @@ export function isCdnUrl(url: string): boolean {
   }
   return (
     parsed.protocol === 'https:' &&
-    parsed.hostname === UNPKG_HOST &&
+    CDN_HOSTS.has(parsed.hostname) &&
     parsed.port === '' &&
     parsed.username === '' &&
     parsed.password === ''
@@ -85,10 +88,10 @@ export function isCdnUrl(url: string): boolean {
 }
 
 /**
- * fetch() restricted to the package CDN. Asset URLs derive from plugin
+ * fetch() restricted to the package CDNs. Asset URLs derive from plugin
  * authors' package.json, so the server must not let them steer requests
  * at the vessel network or cloud metadata endpoints. Redirects are
- * followed by hand so every hop is checked against the CDN host; the
+ * followed by hand so every hop is checked against the CDN hosts; the
  * caller's init, including its abort signal, applies to the whole chain.
  */
 export async function fetchFromCdn(
