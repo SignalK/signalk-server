@@ -17,6 +17,7 @@ import { tracksApiRecord } from './tracks/openApi'
 import { radarApiRecord } from './radar/openApi'
 import { sensorsApiRecord } from './sensors/openApi'
 import { bleApiRecord } from './ble/openApi'
+import { communicationsApiRecord } from './communications/openApi'
 import { courseAsyncApiDoc } from './course/asyncApi'
 import { autopilotAsyncApiDoc } from './autopilot/asyncApi'
 import { notificationsAsyncApiDoc } from './notifications/asyncApi'
@@ -51,7 +52,8 @@ const apiDocs = [
   tracksApiRecord,
   radarApiRecord,
   sensorsApiRecord,
-  bleApiRecord
+  bleApiRecord,
+  communicationsApiRecord
 ].reduce<ApiRecords>((acc, apiRecord: OpenApiRecord) => {
   acc[apiRecord.name] = apiRecord
   return acc

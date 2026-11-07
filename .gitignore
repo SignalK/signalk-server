@@ -14,6 +14,8 @@ dist/
 .DS_Store
 .vscode/
 *.db
+*.db-shm
+*.db-wal
 logs/*
 bower_components
 settings/ssl-key.pem
