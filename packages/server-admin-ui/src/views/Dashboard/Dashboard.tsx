@@ -8,6 +8,7 @@ import Table from 'react-bootstrap/Table'
 import { useServerStats, useWsStatus, useStore } from '../../store'
 import type { ProviderStatistics, ProviderStatus } from '../../store/types'
 import '../../fa-pulse.css'
+import WebSocketClients from './WebSocketClients'
 
 export default function Dashboard() {
   const serverStatistics = useServerStats()
@@ -237,6 +238,8 @@ export default function Dashboard() {
               </Row>
             </Card.Body>
           </Card>
+
+          <WebSocketClients clientCount={wsClients} />
 
           <Card>
             <Card.Header>
