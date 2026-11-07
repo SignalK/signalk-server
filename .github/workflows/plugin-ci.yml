@@ -300,7 +300,9 @@ jobs:
           }
           const errors = [];
           const seen = new Set();
-          for (const field of ['dependencies', 'optionalDependencies', 'peerDependencies']) {
+          // npm treats a name in both dependencies and optionalDependencies as
+          // optional, so optionalDependencies is read first.
+          for (const field of ['optionalDependencies', 'dependencies', 'peerDependencies']) {
             for (const [key, range] of Object.entries(pkg[field] || {})) {
               if (typeof range !== 'string' || seen.has(key)) continue;
               if (field === 'peerDependencies' && pkg.peerDependenciesMeta?.[key]?.optional === true) continue;
