@@ -78,7 +78,7 @@
   "dependencies": {
     "@assemblyscript/loader": "^0.28.19",
     "@astronautlabs/mdns": "^1.0.10",
-    "@signalk/course-provider": "^1.4.0",
+    "@signalk/course-provider": "^1.5.1",
     "@signalk/n2k-signalk": "^4.7.0",
     "@signalk/nmea0183-signalk": "^3.20.0",
     "@signalk/path-metadata": "^1.0.3",
