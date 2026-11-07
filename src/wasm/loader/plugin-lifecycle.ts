@@ -17,7 +17,8 @@ import { backwardsCompat } from './plugin-routes'
 import { updateResourceProviderInstance } from '../bindings/resource-provider'
 import { updateWeatherProviderInstance } from '../bindings/weather-provider'
 import { updateRadarProviderInstance } from '../bindings/radar-provider'
-import { socketManager } from '../bindings/socket-manager'
+import { socketManager, tcpSocketManager } from '../bindings/socket-manager'
+import { runStopHandlers } from '../bindings/stop-handlers'
 import { cleanupWasmPutHandlers } from '../bindings/env-imports'
 
 const debug = Debug('signalk:wasm:loader')
@@ -31,6 +32,25 @@ const deltaUnsubscribers: Map<string, () => void> = new Map()
 // Mutex for serializing network-capable plugin starts
 // as-fetch uses global state that gets corrupted with parallel plugin starts
 let networkPluginStartMutex: Promise<void> = Promise.resolve()
+
+/**
+ * Remove everything the plugin registered with the server through host
+ * bindings, so the server no longer calls into the instance. The bindings
+ * register PUT handlers and providers under the package name.
+ */
+function unregisterFromServer(plugin: WasmPlugin): void {
+  runStopHandlers(plugin.packageName)
+  cleanupWasmPutHandlers(plugin.packageName)
+}
+
+/**
+ * Close all UDP and TCP sockets the plugin opened through host bindings,
+ * which track them under the plugin id.
+ */
+function closeSockets(plugin: WasmPlugin): void {
+  socketManager.closeAllForPlugin(plugin.id)
+  tcpSocketManager.closeAllForPlugin(plugin.id)
+}
 
 /**
  * Start a WASM plugin
@@ -70,6 +90,11 @@ export async function startWasmPlugin(
   }
 }
 
+/**
+ * Run the plugin's start() and wire up polling and delta delivery. On
+ * failure, releases whatever start() had already registered or opened and
+ * leaves the plugin in the error state.
+ */
 async function startWasmPluginInternal(
   app: any,
   plugin: WasmPlugin,
@@ -176,6 +201,10 @@ async function startWasmPluginInternal(
 
     debug(`Successfully started WASM plugin: ${pluginId}`)
   } catch (error) {
+    // A failed start is never followed by a stop, so release what start()
+    // got as far as registering or opening
+    unregisterFromServer(plugin)
+    closeSockets(plugin)
     const errorMsg = error instanceof Error ? error.message : String(error)
     setPluginStatus(plugin, 'error')
     plugin.errorMessage = errorMsg
@@ -185,7 +214,9 @@ async function startWasmPluginInternal(
 }
 
 /**
- * Stop a WASM plugin
+ * Stop a WASM plugin: cancel its timers and delta subscription, unregister
+ * its server registrations before calling its stop() so no request reaches
+ * a stopping instance, then close its sockets.
  */
 export async function stopWasmPlugin(pluginId: string): Promise<void> {
   const plugin = wasmPlugins.get(pluginId)
@@ -219,18 +250,19 @@ export async function stopWasmPlugin(pluginId: string): Promise<void> {
       debug(`Stopped delta subscription for ${pluginId}`)
     }
 
-    if (plugin.instance) {
-      // Call plugin stop()
-      const result = plugin.instance.exports.stop()
-      if (result !== 0) {
-        debug(`Plugin stop() returned error code: ${result}`)
+    unregisterFromServer(plugin)
+
+    try {
+      if (plugin.instance) {
+        const result = plugin.instance.exports.stop()
+        if (result !== 0) {
+          debug(`Plugin stop() returned error code: ${result}`)
+        }
       }
+    } finally {
+      // After stop(), which may still be using its sockets
+      closeSockets(plugin)
     }
-
-    cleanupWasmPutHandlers(plugin.packageName)
-
-    // Clean up any sockets opened by this plugin
-    socketManager.closeAllForPlugin(pluginId)
 
     setPluginStatus(plugin, 'stopped')
     plugin.statusMessage = 'Stopped'
