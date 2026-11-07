@@ -1,7 +1,10 @@
 import { expect } from 'chai'
+import { withFetch } from './appstore/fetch-stub'
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const { findModulesWithKeyword } = require('../dist/modules')
+const { findModulesWithKeyword, resetModuleCaches } = require('../dist/modules')
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { findAppStoreModules } = require('../dist/appstore')
 
 interface SearchObject {
   package: { name: string; version: string }
@@ -122,5 +125,33 @@ describe('findModulesWithKeyword', () => {
     const third = await findModulesWithKeyword('test-coalesce')
     expect(third).to.equal(first)
     expect(fetchCalls).to.have.length(1)
+  })
+})
+
+describe('findAppStoreModules', () => {
+  const found: Record<string, string[]> = {
+    'signalk-node-server-plugin': ['a-plugin'],
+    'signalk-embeddable-webapp': ['both-webapp'],
+    'signalk-webapp': ['both-webapp', '@signalk/server-admin-ui']
+  }
+
+  const searchFor = (url: string) => {
+    const names = found[new URL(url).searchParams.get('text')!.split(':')[1]]
+    return Response.json({
+      objects: names.map((name) => ({ package: { name, version: '1.0.0' } })),
+      total: names.length
+    })
+  }
+
+  const names = (modules: SearchObject[]) =>
+    modules.map((module) => module.package.name)
+
+  it('lists the plugins and webapps once each, without the bundled Admin UI', async () => {
+    resetModuleCaches()
+    await withFetch(searchFor, async () => {
+      const { plugins, webapps } = await findAppStoreModules()
+      expect(names(plugins)).to.deep.equal(['a-plugin'])
+      expect(names(webapps)).to.deep.equal(['both-webapp'])
+    })
   })
 })

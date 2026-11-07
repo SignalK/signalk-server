@@ -43,7 +43,6 @@ const {
 } = require('../modules')
 const {
   isTheServerModule,
-  findModulesWithKeyword,
   fetchDistTagsForPackages,
   cachedDistTags,
   getLatestServerVersion,
@@ -77,10 +76,9 @@ const {
   isWasmPackage,
   installedModuleKeywords,
   NODE_PLUGIN_KEYWORD,
+  findAppStoreModules,
   withPublishedVersions
 } = require('../appstore')
-
-const bundledAdminUIs = ['@signalk/server-admin-ui']
 
 const npmServerInstallLocations = [
   '/usr/bin/signalk-server',
@@ -1031,11 +1029,7 @@ module.exports = function (app) {
   }
 
   function findPluginsAndWebapps() {
-    return Promise.all([
-      findModulesWithKeyword(NODE_PLUGIN_KEYWORD),
-      findModulesWithKeyword('signalk-embeddable-webapp'),
-      findModulesWithKeyword('signalk-webapp')
-    ]).then(([npmPlugins, embeddableWebapps, webapps]) => {
+    return findAppStoreModules().then(({ plugins: npmPlugins, webapps }) => {
       // An installed WASM plugin published without the Node plugin keyword
       // is missing from the search, but must stay updatable and removable.
       const listed = new Set(npmPlugins.map((p) => p.package.name))
@@ -1051,16 +1045,7 @@ module.exports = function (app) {
         npmPlugins.concat(notInSearch),
         cachedDistTags()
       )
-      const allWebapps = []
-        .concat(embeddableWebapps)
-        .concat(webapps)
-        .filter((m) => !bundledAdminUIs.includes(m.package.name))
-      return [
-        plugins,
-        _.uniqBy(allWebapps, (plugin) => {
-          return plugin.package.name
-        })
-      ]
+      return [plugins, webapps]
     })
   }
 

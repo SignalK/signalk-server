@@ -70,7 +70,7 @@ interface NpmSearchResponse {
   objects: NpmModuleData[]
 }
 
-interface NpmModuleData {
+export interface NpmModuleData {
   package: NpmPackageData
 }
 
@@ -487,7 +487,7 @@ export function resetModuleCaches() {
   distTagsCache = { time: 0, data: {} }
 }
 
-async function findModulesWithKeyword(
+export async function findModulesWithKeyword(
   keyword: string
 ): Promise<NpmModuleData[]> {
   const generation = cacheGeneration
