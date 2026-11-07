@@ -33,7 +33,12 @@ export interface SubscribeMessage {
   context: Context | RelativePositionOrigin
 
   /**
-   * An array of paths to subscribe to, with optional criteria
+   * An array of paths to subscribe to, with optional criteria.
+   *
+   * On a WebSocket or TCP connection, a row identical to one the connection
+   * already receives, by the criteria an {@link UnsubscribeMessage} matches
+   * on, adds no second delivery; its cached values are replayed all the same.
+   * Each plugin subscribe call keeps rows of its own.
    */
   subscribe: SubscriptionOptions[]
 
@@ -42,6 +47,9 @@ export interface SubscribeMessage {
    * filter once (for discovery), plus announce any new paths that appear later.
    * This allows clients using granular subscriptions to discover available paths
    * without subscribing to everything continuously.
+   *
+   * Repeating it on a connection replays the existing paths again but adds
+   * no second listener for new ones. The listener lasts until unsubscribe-all.
    */
   announceNewPaths?: boolean
 
@@ -135,27 +143,60 @@ export type SubscriptionOptions = (
 }
 
 /**
- * A message to allow a client to unsubscribe from data updates from a signalk server
+ * A message to allow a client to unsubscribe from data updates from a signalk server.
+ *
+ * `{"context": "*", "unsubscribe": [{"path": "*"}]}` ends every subscription.
+ * Any other message ends the subscription rows it echoes: a row ends when
+ * the context, its path, period, minPeriod and policy, and the message's
+ * sourcePolicy and excludeSources are the same as when it was subscribed.
+ * A row that matches nothing is ignored, and a row subscribed with context
+ * `*` and path `*` ends only with every other subscription. For a plugin,
+ * this ends the matching rows of every subscribe call made with the same
+ * `unsubscribes` array.
+ *
+ * Servers without this accept only unsubscribe-all: their WebSocket and
+ * TCP interfaces close the connection on any other unsubscribe, and their
+ * plugin API throws. WebSocket and TCP clients can check for
+ * `granularUnsubscribe` in the `capabilities` of the hello message.
  * @category Server API
  */
 export interface UnsubscribeMessage {
   /**
-   * The root path for all subsequent paths, usually a vessel's path.
-   *
-   * > [!NOTE]
-   * > Currently only `*` is supported for the context.
+   * The context the rows were subscribed with, or `*`.
    */
-  context: '*'
+  context: Context | RelativePositionOrigin | '*'
 
   /**
-   * An array of paths to unsubscribe from.
-
-  * > [!NOTE]
-   * > Currently only one entry is supported, and it must have `"path": "*"`.
+   * The rows to unsubscribe, each as it was subscribed.
    */
-  unsubscribe: [
-    {
-      path: '*'
-    }
-  ]
+  unsubscribe: UnsubscribeOptions[]
+
+  /**
+   * The `sourcePolicy` the rows were subscribed with.
+   */
+  sourcePolicy?: 'preferred' | 'all'
+
+  /**
+   * The `excludeSources` the rows were subscribed with.
+   */
+  excludeSources?: SourceRef[]
+
+  /**
+   * The `excludeSelf` the rows were subscribed with, for plugin subscriptions.
+   */
+  excludeSelf?: boolean
+}
+
+/**
+ * A subscription row to end, with the criteria it was subscribed with.
+ * @inline
+ * @category Server API
+ */
+export type UnsubscribeOptions = (FixedPolicyOptions | InstantPolicyOptions) & {
+  /**
+   * The path pattern the row was subscribed with. A literal path does not
+   * end a row subscribed with a wildcard pattern. An entry without a path
+   * is ignored, as is a subscribe row without one.
+   */
+  path?: Path | '*'
 }

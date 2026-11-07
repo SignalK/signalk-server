@@ -1085,7 +1085,12 @@ module.exports = (theApp: any) => {
         )
       },
       unsubscribe: (msg: UnsubscribeMessage, unsubscribes: Unsubscribes) => {
-        app.subscriptionmanager.unsubscribe(msg, unsubscribes)
+        app.subscriptionmanager.unsubscribe(
+          msg,
+          unsubscribes,
+          msg.sourcePolicy,
+          mergeExcludeSelf(msg.excludeSources, msg.excludeSelf, plugin.id)
+        )
       }
     }
 

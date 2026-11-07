@@ -16,6 +16,14 @@ export interface HelloMessage {
    * drop their own mirrors of paths the new instance may never re-publish.
    */
   serverStartId: string
+  /**
+   * Protocol features clients can check for before relying on them:
+   * - `granularUnsubscribe`: an unsubscribe ends the subscription rows it
+   *   echoes, and a repeated subscribe row adds no second delivery.
+   *   Servers without it accept only unsubscribe-all and close the
+   *   connection on any other unsubscribe.
+   */
+  capabilities: readonly string[]
 }
 
 export type ICallback<T> = (error?: Error | null, result?: T) => void
