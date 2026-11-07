@@ -1,6 +1,6 @@
 {
   "name": "@signalk/resources-provider",
-  "version": "1.5.3",
+  "version": "1.6.0",
   "description": "Resources provider plugin for Signal K server.",
   "main": "dist/index.js",
   "keywords": [
@@ -39,7 +39,7 @@
     "test": "npm run build"
   },
   "dependencies": {
-    "@signalk/server-api": "^2.5.0",
+    "@signalk/server-api": "^2.37.0",
     "geolib": "^3.3.14",
     "ngeohash": "^0.6.3"
   },
