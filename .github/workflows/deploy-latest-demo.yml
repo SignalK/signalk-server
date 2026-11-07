@@ -40,9 +40,10 @@ jobs:
         id: vars
         env:
           VERSION: ${{ inputs.version || github.event.workflow_run.head_branch }}
-          # the first release that honours DISABLE_SECURITY_ACTIVATION, which
-          # keeps visitors from creating an admin on the open demo
-          MIN_VERSION: v2.25.0
+          # the first release with read-only plugin routes, through which
+          # visitors open the radar GUI; it also honours
+          # DISABLE_SECURITY_ACTIVATION, which keeps them from creating an admin
+          MIN_VERSION: v2.31.0
         run: |
           if ! [[ "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]]; then
             echo "::error::'$VERSION' is not a release tag"
@@ -51,7 +52,7 @@ jobs:
           core="${VERSION%%-*}"
           oldest=$(printf '%s\n' "$MIN_VERSION" "$core" | sort -V | head -n 1)
           if [[ "$oldest" != "$MIN_VERSION" || ( "$core" == "$MIN_VERSION" && "$VERSION" != "$core" ) ]]; then
-            echo "::error::$VERSION predates $MIN_VERSION, which the demo needs to keep security activation locked"
+            echo "::error::$VERSION predates $MIN_VERSION, which the demo needs for read-only radar access and a locked security activation"
             exit 1
           fi
           echo "tag=$VERSION" >> "$GITHUB_OUTPUT"
