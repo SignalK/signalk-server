@@ -1,4 +1,5 @@
 import { Transform, TransformCallback } from 'stream'
+import shellescape from 'any-shell-escape'
 import N2kAnalyzer from './n2kAnalyzer'
 import FromJson from './from_json'
 import MultiplexedLog from './multiplexedlog'
@@ -396,14 +397,80 @@ function nmea2000input(
       })
     ]
   } else {
+    // Native (canboat) sources: each command bridges the gateway to canboat
+    // PLAIN/FAST CSV on stdout, which the downstream N2kAnalyzer decodes.
+    // Where toChildProcess is set, the same CSV format is accepted on stdin
+    // for outbound PGNs (encoded by canboatjs in execute.ts).
+    //
+    // Execute runs the command through a shell, so every provider-config
+    // value is validated before interpolation: hosts/devices/interfaces
+    // against the character set their legitimate values need, numbers as
+    // finite. Anything else fails the provider loudly.
+    const safeArg = (value: unknown, what: string): string => {
+      const s = String(value ?? '')
+      if (!/^[A-Za-z0-9_.:/-]+$/.test(s)) {
+        throw new Error(`invalid ${what} for NMEA 2000 connection: '${s}'`)
+      }
+      return s
+    }
+    const safeNum = (value: unknown, what: string): number => {
+      const n = Number(value)
+      if (!Number.isFinite(n)) {
+        throw new Error(
+          `invalid ${what} for NMEA 2000 connection: '${String(value)}'`
+        )
+      }
+      return n
+    }
     let command: string
-    let toChildProcess: string | undefined
+    let toChildProcess: string | false | undefined
     if (subOptions.type === 'ngt-1') {
-      command = `actisense-serial -s ${subOptions.baudrate ?? 115200} ${subOptions.device}`
+      command = `actisense-serial -s ${safeNum(subOptions.baudrate ?? 115200, 'baud rate')} ${safeArg(subOptions.device, 'device')}`
       toChildProcess = 'nmea2000out'
     } else if (subOptions.type === 'canbus') {
-      command = `candump ${subOptions.interface} | candump2analyzer`
-      toChildProcess = undefined
+      // canboat's socketcan-serial rather than candump|candump2analyzer:
+      // same decode path, but bidirectional — it claims an address and
+      // accepts outbound PGNs on stdin, which the candump pipeline cannot.
+      // -u/-m mirror the uniqueNumber/mfgCode settings the canboatjs
+      // SocketCAN option honors.
+      // Absence, not falsiness: 0 is a valid manufacturer code (the
+      // form offers it as "Internal") and a valid unique number.
+      const hasValue = (v: unknown) => v !== undefined && v !== null && v !== ''
+      command =
+        `socketcan-serial` +
+        (hasValue(subOptions.uniqueNumber)
+          ? ` -u ${safeNum(subOptions.uniqueNumber, 'unique number')}`
+          : '') +
+        (hasValue(subOptions.mfgCode)
+          ? ` -m ${safeNum(subOptions.mfgCode, 'manufacturer code')}`
+          : '') +
+        ` ${safeArg(subOptions.interface, 'interface')}`
+      toChildProcess = 'nmea2000out'
+    } else if (subOptions.type === 'ikonvert') {
+      command = `ikonvert-serial -s ${safeNum(subOptions.baudrate ?? 230400, 'baud rate')} ${safeArg(subOptions.device, 'device')}`
+      toChildProcess = 'nmea2000out'
+    } else if (subOptions.type === 'maretron-ipg') {
+      const password = (subOptions as { password?: string }).password
+      command =
+        `maretron-ipg` +
+        (password ? ` --password=${shellescape(password)}` : '') +
+        ` tcp://${safeArg(subOptions.host, 'host')}:${safeNum(subOptions.port ?? 6543, 'port')}`
+      toChildProcess = 'nmea2000out'
+    } else if (subOptions.type === 'ydwg02') {
+      command = `canboat interface --kind ydwg tcp://${safeArg(subOptions.host, 'host')}:${safeNum(subOptions.port ?? 1457, 'port')}`
+      toChildProcess = 'nmea2000out'
+    } else if (subOptions.type === 'ydwg02-udp') {
+      // The YDWG-02's UDP mode is receive-only: `false` disables the
+      // child's stdin wiring outright, so no plugin's outbound PGN can
+      // reach a gateway that cannot transmit.
+      command = `canboat interface --kind ydwg udp://${safeNum(subOptions.port ?? 1457, 'port')}`
+      toChildProcess = false
+    } else if (subOptions.type === 'navlink2') {
+      command = `canboat interface --kind ikonvert tcp://${safeArg(subOptions.host, 'host')}:${safeNum(subOptions.port ?? 6001, 'port')}`
+      toChildProcess = 'nmea2000out'
+    } else if (subOptions.type === 'w2k-1-ascii') {
+      command = `canboat interface --kind w2k-ascii tcp://${safeArg(subOptions.host, 'host')}:${safeNum(subOptions.port ?? 60002, 'port')}`
+      toChildProcess = 'nmea2000out'
     } else {
       throw new Error(`unknown NMEA2000 type ${subOptions.type}`)
     }
