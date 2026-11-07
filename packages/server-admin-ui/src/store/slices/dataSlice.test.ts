@@ -86,6 +86,110 @@ describe('dataSlice', () => {
     })
   })
 
+  describe('removeMetaKeys', () => {
+    it('drops a key a merged delta would otherwise preserve', () => {
+      useStore.getState().updateMeta('vessels.self', 'navigation.state', {
+        description: 'Navigational state',
+        updateContract: 'event'
+      } as Partial<MetaData>)
+
+      useStore.getState().removeMetaKeys('vessels.self', 'navigation.state', {
+        updateContract: 'event'
+      })
+
+      const meta = useStore
+        .getState()
+        .getMeta('vessels.self', 'navigation.state')
+      expect(meta).toEqual({ description: 'Navigational state' })
+    })
+
+    it('leaves the entry alone when the key is not present', () => {
+      useStore
+        .getState()
+        .updateMeta('vessels.self', 'navigation.state', { units: 'm/s' })
+      const before = useStore
+        .getState()
+        .getMeta('vessels.self', 'navigation.state')
+
+      useStore.getState().removeMetaKeys('vessels.self', 'navigation.state', {
+        updateContract: 'event'
+      })
+
+      expect(
+        useStore.getState().getMeta('vessels.self', 'navigation.state')
+      ).toBe(before)
+    })
+
+    it('keeps a key the server has given a newer value', () => {
+      useStore
+        .getState()
+        .updateMeta('vessels.self', 'navigation.anchor.position', {
+          updateContract: 'event'
+        } as Partial<MetaData>)
+
+      useStore
+        .getState()
+        .removeMetaKeys('vessels.self', 'navigation.anchor.position', {
+          updateContract: 'periodic'
+        })
+
+      expect(
+        useStore
+          .getState()
+          .getMeta('vessels.self', 'navigation.anchor.position')
+      ).toEqual({ updateContract: 'event' })
+    })
+
+    it('drops an object field whose keys arrive in another order', () => {
+      useStore
+        .getState()
+        .updateMeta('vessels.self', 'navigation.speedOverGround', {
+          description: 'SOG',
+          displayScale: { upper: 10, lower: 0 }
+        } as Partial<MetaData>)
+
+      useStore
+        .getState()
+        .removeMetaKeys('vessels.self', 'navigation.speedOverGround', {
+          displayScale: { lower: 0, upper: 10 }
+        })
+
+      expect(
+        useStore
+          .getState()
+          .getMeta('vessels.self', 'navigation.speedOverGround')
+      ).toEqual({ description: 'SOG' })
+    })
+
+    it('keeps an object field whose content has changed', () => {
+      useStore
+        .getState()
+        .updateMeta('vessels.self', 'navigation.speedOverGround', {
+          displayScale: { lower: 0, upper: 20 }
+        } as Partial<MetaData>)
+
+      useStore
+        .getState()
+        .removeMetaKeys('vessels.self', 'navigation.speedOverGround', {
+          displayScale: { lower: 0, upper: 10 }
+        })
+
+      expect(
+        useStore
+          .getState()
+          .getMeta('vessels.self', 'navigation.speedOverGround')
+      ).toEqual({ displayScale: { lower: 0, upper: 20 } })
+    })
+
+    it('ignores a path it has no metadata for', () => {
+      expect(() =>
+        useStore
+          .getState()
+          .removeMetaKeys('vessels.self', 'navigation.unknown', { units: 'm' })
+      ).not.toThrow()
+    })
+  })
+
   describe('updateMeta', () => {
     it('should add metadata for a path', () => {
       const metaData: MetaData = {

@@ -64,6 +64,11 @@ export interface DataSliceActions {
     path: string,
     metaData: Partial<MetaData>
   ) => void
+  removeMetaKeys: (
+    context: string,
+    path: string,
+    cleared: Record<string, unknown>
+  ) => void
   getPathData: (context: string, path$SourceKey: string) => PathData | undefined
   getMeta: (context: string, path: string) => MetaData | undefined
   getPath$SourceKeys: (context: string) => string[]
@@ -80,6 +85,33 @@ const initialDataState: DataSliceState = {
   signalkMeta: {},
   dataVersion: 0,
   contextNames: {}
+}
+
+// Metadata values are JSON, and a delta may carry an object's keys in another
+// order than the editor saw them, so objects compare by key regardless of
+// order while arrays keep theirs.
+function sameMetaValue(a: unknown, b: unknown): boolean {
+  if (a === b) return true
+  if (typeof a !== 'object' || typeof b !== 'object' || !a || !b) return false
+  if (Array.isArray(a) || Array.isArray(b)) {
+    return (
+      Array.isArray(a) &&
+      Array.isArray(b) &&
+      a.length === b.length &&
+      a.every((item, i) => sameMetaValue(item, b[i]))
+    )
+  }
+  const aRecord = a as Record<string, unknown>
+  const bRecord = b as Record<string, unknown>
+  const keys = Object.keys(aRecord)
+  return (
+    keys.length === Object.keys(bRecord).length &&
+    keys.every(
+      (key) =>
+        Object.prototype.hasOwnProperty.call(bRecord, key) &&
+        sameMetaValue(aRecord[key], bRecord[key])
+    )
+  )
 }
 
 // Re-resolve one context's entry in the contextNames map after its data
@@ -146,6 +178,35 @@ export const createDataSlice: StateCreator<DataSlice, [], [], DataSlice> = (
         signalkMeta: {
           ...state.signalkMeta,
           [context]: newContextMeta
+        }
+      }
+    })
+  },
+
+  // Meta deltas are merged, because some carry only the field they change
+  // (registerPutHandler sends `{ supportsPut: true }`). A field the user
+  // cleared in the editor therefore survives the save it was removed in, so
+  // the editor drops it here explicitly. `cleared` holds each field's value
+  // before the save; a field the server has since given another value (an
+  // inherited contract, say) is newer than the save and is kept.
+  removeMetaKeys: (context, path, cleared) => {
+    set((state) => {
+      const existing = state.signalkMeta[context]?.[path]
+      if (!existing) return state
+      const remaining = { ...existing }
+      let changed = false
+      for (const [field, before] of Object.entries(cleared)) {
+        const key = field as keyof MetaData
+        if (key in remaining && sameMetaValue(remaining[key], before)) {
+          delete remaining[key]
+          changed = true
+        }
+      }
+      if (!changed) return state
+      return {
+        signalkMeta: {
+          ...state.signalkMeta,
+          [context]: { ...state.signalkMeta[context], [path]: remaining }
         }
       }
     })

@@ -19,14 +19,19 @@ export const sensorsMetadata: Record<string, PathMetadataEntry> = {
     description:
       'The data of the sensor data. FIXME - need to ref the definitions of sensor types'
   },
+  // Antenna offsets are installation geometry: they stay true until someone
+  // moves the antenna, however rarely a source restates them (once at startup
+  // from base data, every ~6 minutes from an AIS static report).
   '/vessels/*/sensors/RegExp/fromBow': {
     description: 'Distance of the sensor along the vessel axis from the bow',
-    units: 'm'
+    units: 'm',
+    updateContract: 'event'
   },
   '/vessels/*/sensors/RegExp/fromCenter': {
     description:
       'Distance of the sensor across the vessel from the centreline, positive towards starboard',
-    units: 'm'
+    units: 'm',
+    updateContract: 'event'
   },
   '/vessels/*/sensors/RegExp/class': {
     description: 'Sensor class — for an AIS transponder, A or B.'

@@ -228,12 +228,21 @@ const ServerSettings: React.FC = () => {
   )
 
   const handleSaveSettings = useCallback(() => {
+    // The page edits only the enforcement switch. The other staleness values
+    // it was sent would overwrite any change made elsewhere since it loaded.
+    const { staleness, ...rest } = settings
+    const body = staleness
+      ? {
+          ...rest,
+          staleness: { enforceDataTimeouts: staleness.enforceDataTimeouts }
+        }
+      : rest
     fetch(`${window.serverRoutesPrefix}/settings`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify(settings),
+      body: JSON.stringify(body),
       credentials: 'include'
     }).then((response) => {
       if (response.ok) {
