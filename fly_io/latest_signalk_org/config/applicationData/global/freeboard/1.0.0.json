@@ -3,18 +3,28 @@
     "speed": "kn"
   },
   "map": {
-    "zoomLevel": 13,
+    "zoomLevel": 14,
     "center": [
       5.33147,
       53.19058
-    ]
+    ],
+    "s57Options": {
+      "otherLayers": [
+        "OBSTRN",
+        "UWTROC",
+        "WRECKS",
+        "DEPCNT",
+        "RIVERS",
+        "LAKARE"
+      ]
+    }
   },
   "ui": {
     "mapMove": true
   },
   "selections": {
     "charts": [
-      "openstreetmap",
+      "wadden-coastline",
       "Waddenzee"
     ],
     "chartOrder": [

@@ -8,7 +8,7 @@
     },
     "receive": {
       "mode": "auto",
-      "radiusNm": 25,
+      "radiusNm": 8,
       "nmea0183out": false
     }
   }
