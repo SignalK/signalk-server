@@ -281,22 +281,30 @@ jobs:
           // repo's .npmrc) although a user's install would add it, so a
           // registry spec that was not installed is resolved on npm instead.
           // Anything else cannot be inspected and fails the check.
+          const NPM_VIEW_TIMEOUT_MS = 60000;
           function publishedManifest(key, range) {
             let spec;
             if (range.startsWith('npm:')) spec = range.slice(4);
             else if (!/^(git\+|git:|github:|file:|link:|workspace:|https?:)/.test(range) && !range.includes('/')) spec = key + '@' + range;
-            if (!spec) return null;
+            if (!spec) return { problem: 'is not a registry spec that npm could look up' };
+            let out;
             try {
-              const out = execFileSync('npm', ['view', '--json', '--', spec, 'name', 'keywords'], { encoding: 'utf8' });
-              // One entry per matching version, newest last; npm prints just
-              // the name when the version has no keywords.
-              const parsed = JSON.parse(out);
-              const latest = Array.isArray(parsed) ? parsed[parsed.length - 1] : parsed;
-              if (typeof latest === 'string') return { name: latest, keywords: [] };
-              return latest && typeof latest.name === 'string' ? latest : null;
-            } catch {
-              return null;
+              out = execFileSync('npm', ['view', '--json', '--', spec, 'name', 'keywords'], { encoding: 'utf8', timeout: NPM_VIEW_TIMEOUT_MS });
+            } catch (err) {
+              const notFound = /"code":\s*"E404"/.test(String(err.stdout || '')) || /E404/.test(String(err.stderr || ''));
+              return {
+                problem: notFound
+                  ? 'has no published version on npm matching it'
+                  : 'could not be looked up because the npm registry did not answer (' + String(err.message).split('\n')[0] + ')'
+              };
             }
+            // One entry per matching version, newest last; npm prints just
+            // the name when the version has no keywords.
+            const parsed = JSON.parse(out);
+            const latest = Array.isArray(parsed) ? parsed[parsed.length - 1] : parsed;
+            if (typeof latest === 'string') return { manifest: { name: latest, keywords: [] } };
+            if (latest && typeof latest.name === 'string') return { manifest: latest };
+            return { problem: 'has no published version on npm matching it' };
           }
           const errors = [];
           const seen = new Set();
@@ -310,10 +318,11 @@ jobs:
               let dep = installedManifest(key);
               if (!dep) {
                 if (field === 'optionalDependencies') continue;
-                dep = publishedManifest(key, range);
+                const published = publishedManifest(key, range);
+                dep = published.manifest;
                 if (!dep) {
                   errors.push(
-                    field + ' lists ' + key + ' (' + range + '), which was not installed and could not be looked up on npm, ' +
+                    field + ' lists ' + key + ' (' + range + '), which was not installed and ' + published.problem + ', ' +
                     'so the bundled-plugin check cannot tell whether it is an App Store plugin or webapp. ' +
                     'Make sure npm installs it (for a peer, do not set legacy-peer-deps) or mark an optional peer in peerDependenciesMeta.'
                   );

@@ -94,7 +94,7 @@ Entries must be published npm package names exactly as they appear in the AppSto
 
 **Don't list companion plugins in `dependencies`, `optionalDependencies` or `peerDependencies`.** npm would install the companion into the user's `~/.signalk` at your range, outside the App Store, and the server loads that copy as a plugin of its own: an old major can run instead of the current release, and uninstalling your plugin can take the companion away. The [plugin CI](./ci.md) fails on such a dependency, and the [plugin registry](https://signalk.org/signalk-plugin-registry/) deducts 30 points. If your code imports from the companion, move the shared code into a library package without the plugin keywords and depend on that.
 
-**Don't use `peerDependencies` for companion plugins either.** Use `signalk.requires` / `signalk.recommends` to express companion-plugin relationships. The AppStore's `requires` mechanism gives the user a clean **Install required plugins** flow without involving npm's resolver, which interacts badly with optional peers under Signal K's plugin tree.
+**Use `signalk.requires` / `signalk.recommends` for companion-plugin relationships.** The AppStore's `requires` mechanism gives the user a clean **Install required plugins** flow without involving npm's resolver, which interacts badly with optional peers under Signal K's plugin tree.
 
 ## Deprecation
 
