@@ -109,17 +109,17 @@ describe('WASM network requests', () => {
     expect(fake.calls).to.deep.equal(['response 7 502 0'])
   })
 
+  const unreadableBody = resolveFailedRequests(
+    async () =>
+      ({
+        status: 200,
+        redirected: false,
+        arrayBuffer: () => Promise.reject(new TypeError('terminated'))
+      }) as unknown as Response
+  )
+
   it('resumes a plugin whose response body cannot be read', async () => {
-    const handler = await createHandler(
-      resolveFailedRequests(
-        async () =>
-          ({
-            status: 200,
-            redirected: false,
-            arrayBuffer: () => Promise.reject(new TypeError('terminated'))
-          }) as unknown as Response
-      )
-    )
+    const handler = await createHandler(unreadableBody)
     const fake = fakeAsyncifyExports()
     let resumed = false
     handler.init(fake.exports, () => {
@@ -129,6 +129,17 @@ describe('WASM network requests', () => {
     handler.imports['as-fetch']._fetchGETSync('http://example.invalid', 1, [])
 
     await waitFor(() => resumed)
+  })
+
+  it('answers an unreadable asynchronous response with an empty body', async () => {
+    const handler = await createHandler(unreadableBody)
+    const fake = fakeAsyncifyExports()
+    handler.init(fake.exports, () => {})
+
+    handler.imports['as-fetch']._fetchGET('http://example.invalid', 1, [], 5)
+
+    await waitFor(() => fake.calls.length > 0)
+    expect(fake.calls).to.deep.equal(['response 5 200 0'])
   })
 
   it('passes a successful response through', async () => {
