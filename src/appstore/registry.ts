@@ -363,6 +363,25 @@ export function createRegistryClient(
   }
 }
 
+function pushPluginChecks(checks: IndicatorCheck[], set: Set<string>): void {
+  checks.push({
+    id: 'loads',
+    status: set.has('loads') ? 'ok' : set.has('compatible') ? 'fail' : 'warn',
+    title: 'Loads',
+    subtitle: set.has('loads')
+      ? 'Plugin constructor returns a valid object'
+      : 'Plugin constructor did not return a valid object'
+  })
+  checks.push({
+    id: 'activates',
+    status: set.has('activates') ? 'ok' : set.has('loads') ? 'fail' : 'warn',
+    title: 'Activates',
+    subtitle: set.has('activates')
+      ? 'start() completes with schema defaults'
+      : 'start() did not complete with schema defaults'
+  })
+}
+
 export function badgesToIndicators(
   badges: RegistryBadge[] | undefined,
   composite: number | undefined
@@ -381,22 +400,17 @@ export function badgesToIndicators(
       ? 'npm install --ignore-scripts succeeded'
       : 'Plugin failed to install'
   })
-  checks.push({
-    id: 'loads',
-    status: set.has('loads') ? 'ok' : set.has('compatible') ? 'fail' : 'warn',
-    title: 'Loads',
-    subtitle: set.has('loads')
-      ? 'Plugin constructor returns a valid object'
-      : 'Plugin constructor did not return a valid object'
-  })
-  checks.push({
-    id: 'activates',
-    status: set.has('activates') ? 'ok' : set.has('loads') ? 'fail' : 'warn',
-    title: 'Activates',
-    subtitle: set.has('activates')
-      ? 'start() completes with schema defaults'
-      : 'start() did not complete with schema defaults'
-  })
+  if (set.has('webapp')) {
+    checks.push({
+      id: 'webapp',
+      status: 'ok',
+      title: 'Webapp',
+      subtitle:
+        'No server plugin to load or activate, so those checks do not apply'
+    })
+  } else {
+    pushPluginChecks(checks, set)
+  }
 
   if (set.has('tested')) {
     checks.push({
