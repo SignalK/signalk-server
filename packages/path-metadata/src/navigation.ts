@@ -106,7 +106,7 @@ export const navigationMetadata: Record<string, PathMetadataEntry> = {
   },
   '/vessels/*/navigation/course/calcValues/crossTrackError': {
     description:
-      "The distance from the vessel's present position to the closest point on a line (track) between previousPoint and nextPoint. A negative number indicates that the vessel is currently to the left of this line (and thus must steer right to compensate), a positive number means the vessel is to the right of the line (steer left to compensate).",
+      "The distance from the vessel's present position to the closest point on a line (track) between previousPoint and nextPoint. A negative number indicates that the vessel is currently to the left of this line (and thus must steer right to compensate), a positive number means the vessel is to the right of the line (steer left to compensate). Commonly abbreviated XTE.",
     type: 'number',
     units: 'm'
   },
@@ -123,17 +123,18 @@ export const navigationMetadata: Record<string, PathMetadataEntry> = {
     units: 'rad'
   },
   '/vessels/*/navigation/course/calcValues/estimatedTimeOfArrival': {
-    description: 'The estimated time of arrival at the nextPoint position'
+    description:
+      'The estimated time of arrival at the nextPoint position. Commonly abbreviated ETA.'
   },
   '/vessels/*/navigation/course/calcValues/distance': {
     description:
-      'The distance between the current vessel position and nextPoint position',
+      'The distance between the current vessel position and nextPoint position. Commonly abbreviated DTW (distance to waypoint).',
     type: 'number',
     units: 'm'
   },
   '/vessels/*/navigation/course/calcValues/bearingTrue': {
     description:
-      'The bearing of a line between the current vessel position and nextPoint, relative to true north',
+      'The bearing of a line between the current vessel position and nextPoint, relative to true north. Commonly abbreviated BRG.',
     type: 'number',
     units: 'rad'
   },
@@ -150,7 +151,7 @@ export const navigationMetadata: Record<string, PathMetadataEntry> = {
   },
   '/vessels/*/navigation/course/calcValues/timeToGo': {
     description:
-      'Time to reach nextPoint perpendicular with current speed and direction',
+      'Time to reach nextPoint perpendicular with current speed and direction. Commonly abbreviated TTG.',
     type: 'number',
     units: 's'
   },
@@ -192,11 +193,12 @@ export const navigationMetadata: Record<string, PathMetadataEntry> = {
     }
   },
   '/vessels/*/navigation/courseOverGroundMagnetic': {
-    description: 'Course over ground (magnetic)',
+    description:
+      'Course over ground (magnetic). Commonly abbreviated COG (magnetic).',
     units: 'rad'
   },
   '/vessels/*/navigation/courseOverGroundTrue': {
-    description: 'Course over ground (true)',
+    description: 'Course over ground (true). Commonly abbreviated COG.',
     units: 'rad'
   },
   '/vessels/*/navigation/courseRhumbline': {
@@ -422,11 +424,12 @@ export const navigationMetadata: Record<string, PathMetadataEntry> = {
     }
   },
   '/vessels/*/navigation/racing/distanceStartline': {
-    description: 'The current distance to the start line',
+    description:
+      'The current distance to the start line. Also called distance to the line, before a race start.',
     units: 'm'
   },
   '/vessels/*/navigation/racing/timeToStart': {
-    description: 'Time left before start',
+    description: 'Time left before start. The race start countdown.',
     units: 's'
   },
   '/vessels/*/navigation/racing/timePortDown': {
@@ -471,7 +474,7 @@ export const navigationMetadata: Record<string, PathMetadataEntry> = {
   },
   '/vessels/*/navigation/magneticVariation': {
     description:
-      'The magnetic variation (declination) at the current position that must be added to the magnetic heading to derive the true heading. Easterly variations are positive and Westerly variations are negative (in Radians).',
+      'The magnetic variation (declination) at the current position that must be added to the magnetic heading to derive the true heading. Easterly variations are positive and Westerly variations are negative (in Radians). Also called declination.',
     units: 'rad'
   },
   '/vessels/*/navigation/magneticVariationAgeOfService': {
@@ -499,20 +502,23 @@ export const navigationMetadata: Record<string, PathMetadataEntry> = {
     description: 'Fix type'
   },
   '/vessels/*/navigation/gnss/methodQuality': {
-    description: 'Quality of the satellite fix'
+    description:
+      'Quality of the satellite fix. Tells whether the GNSS (GPS) receiver has a fix, and of which kind.'
   },
   '/vessels/*/navigation/gnss/integrity': {
     description: 'Integrity of the satellite fix'
   },
   '/vessels/*/navigation/gnss/satellites': {
-    description: 'Number of satellites'
+    description:
+      'Number of satellites. Satellites used by the GNSS (GPS) receiver.'
   },
   '/vessels/*/navigation/gnss/antennaAltitude': {
     description: 'Altitude of antenna',
     units: 'm'
   },
   '/vessels/*/navigation/gnss/horizontalDilution': {
-    description: 'Horizontal Dilution of Precision'
+    description:
+      'Horizontal Dilution of Precision. Commonly abbreviated HDOP; lower values mean better satellite geometry, which usually gives a more accurate position.'
   },
   '/vessels/*/navigation/gnss/positionDilution': {
     description: 'Positional Dilution of Precision'
@@ -529,7 +535,7 @@ export const navigationMetadata: Record<string, PathMetadataEntry> = {
   },
   '/vessels/*/navigation/headingMagnetic': {
     description:
-      "Current magnetic heading of the vessel, equals 'headingCompass adjusted for magneticDeviation'",
+      "Current magnetic heading of the vessel, equals 'headingCompass adjusted for magneticDeviation'. The direction the bow points by the compass; commonly abbreviated HDG (magnetic).",
     units: 'rad'
   },
   '/vessels/*/navigation/magneticDeviation': {
@@ -544,12 +550,12 @@ export const navigationMetadata: Record<string, PathMetadataEntry> = {
   },
   '/vessels/*/navigation/headingTrue': {
     description:
-      "The current true north heading of the vessel, equals 'headingMagnetic adjusted for magneticVariation'",
+      "The current true north heading of the vessel, equals 'headingMagnetic adjusted for magneticVariation'. The direction the bow points; commonly abbreviated HDG.",
     units: 'rad'
   },
   '/vessels/*/navigation/position': {
     description:
-      'The position of the vessel in 2 or 3 dimensions (WGS84 datum)',
+      'The position of the vessel in 2 or 3 dimensions (WGS84 datum). Latitude, longitude and, when available, altitude, usually from the GNSS (GPS) receiver.',
     properties: {
       longitude: {
         type: 'number',
@@ -571,7 +577,8 @@ export const navigationMetadata: Record<string, PathMetadataEntry> = {
     }
   },
   '/vessels/*/navigation/attitude': {
-    description: 'Vessel attitude: roll, pitch and yaw',
+    description:
+      'Vessel attitude: roll, pitch and yaw. Roll is commonly called heel.',
     properties: {
       roll: {
         type: 'number',
@@ -596,16 +603,17 @@ export const navigationMetadata: Record<string, PathMetadataEntry> = {
   },
   '/vessels/*/navigation/rateOfTurn': {
     description:
-      'Rate of turn (+ve is change to starboard). If the value is AIS RIGHT or LEFT, set to +-0.0206 rads and add warning in notifications',
+      'Rate of turn (+ve is change to starboard). If the value is AIS RIGHT or LEFT, set to +-0.0206 rads and add warning in notifications. Commonly abbreviated ROT.',
     units: 'rad/s'
   },
   '/vessels/*/navigation/speedOverGround': {
     description:
-      "Vessel speed over ground. If converting from AIS 'HIGH' value, set to 102.2 (Ais max value) and add warning in notifications",
+      "Vessel speed over ground. If converting from AIS 'HIGH' value, set to 102.2 (Ais max value) and add warning in notifications. Commonly abbreviated SOG.",
     units: 'm/s'
   },
   '/vessels/*/navigation/speedThroughWater': {
-    description: 'Vessel speed through the water',
+    description:
+      'Vessel speed through the water. Commonly abbreviated STW; also called boat speed, measured by the log.',
     units: 'm/s'
   },
   '/vessels/*/navigation/speedThroughWaterTransverse': {
@@ -622,37 +630,41 @@ export const navigationMetadata: Record<string, PathMetadataEntry> = {
     units: 'rad'
   },
   '/vessels/*/navigation/log': {
-    description: 'Total distance traveled',
+    description:
+      'Total distance traveled. Also called the total log, as opposed to the trip log.',
     units: 'm'
   },
   '/vessels/*/navigation/trip': {
     description: 'Trip data'
   },
   '/vessels/*/navigation/trip/log': {
-    description: 'Total distance traveled on this trip / since trip reset',
+    description:
+      'Total distance traveled on this trip / since trip reset. Also called the trip log or daily distance.',
     units: 'm'
   },
   '/vessels/*/navigation/trip/lastReset': {
     description: 'Trip log reset time'
   },
   '/vessels/*/navigation/state': {
-    description: 'Current navigational state of the vessel'
+    description:
+      'Current navigational state of the vessel. For example sailing, motoring, anchored or moored.'
   },
   '/vessels/*/navigation/anchor': {
     description: 'The anchor data, for anchor watch etc'
   },
   '/vessels/*/navigation/anchor/maxRadius': {
     description:
-      'Radius of anchor alarm boundary. The distance from anchor to the center of the boat',
+      'Radius of anchor alarm boundary. The distance from anchor to the center of the boat. Also called the anchor alarm radius or swing circle.',
     units: 'm'
   },
   '/vessels/*/navigation/anchor/currentRadius': {
-    description: 'Current distance to anchor',
+    description:
+      'Current distance to anchor. Also called the distance from the anchor.',
     units: 'm'
   },
   '/vessels/*/navigation/anchor/position': {
     description:
-      'The actual anchor position of the vessel in 3 dimensions, probably an estimate at best',
+      'The actual anchor position of the vessel in 3 dimensions, probably an estimate at best. Where the anchor was dropped.',
     properties: {
       longitude: {
         type: 'number',

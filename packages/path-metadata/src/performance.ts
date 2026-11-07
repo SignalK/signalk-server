@@ -42,63 +42,73 @@ export const performanceMetadata: Record<string, PathMetadataEntry> = {
     description: '[missing]'
   },
   '/vessels/*/performance/polarSpeed': {
-    description: 'Data should be of type number.',
+    description:
+      'Boat speed predicted by the polar for the current true wind speed and angle.',
     units: 'm/s'
   },
   '/vessels/*/performance/polarSpeedRatio': {
-    description: 'Data should be of type number.',
+    description:
+      'Ratio of the current speed through the water to the polar speed; also called polar performance or polar percentage.',
     units: 'ratio'
   },
   '/vessels/*/performance/velocityMadeGood': {
-    description: 'Data should be of type number.',
+    description:
+      "VMG (velocity made good) relative to the wind: the vessel's speed toward the true wind direction, positive upwind and negative downwind.",
     units: 'm/s'
   },
   '/vessels/*/performance/velocityMadeGoodToWaypoint': {
-    description: 'Data should be of type number.',
+    description:
+      "Velocity made good toward the next waypoint: the part of the vessel's speed in the direction of the waypoint.",
     units: 'm/s'
   },
   '/vessels/*/performance/beatAngle': {
-    description: 'Data should be of type number.',
+    description:
+      'Optimal true wind angle for sailing upwind (beating) at the current true wind speed, from the polar.',
     units: 'rad'
   },
   '/vessels/*/performance/beatAngleVelocityMadeGood': {
-    description: 'Data should be of type number.',
+    description: 'Upwind VMG expected when sailing at the beat angle.',
     units: 'm/s'
   },
   '/vessels/*/performance/beatAngleTargetSpeed': {
-    description: 'Data should be of type number.',
+    description: 'Target boat speed when sailing at the beat angle.',
     units: 'm/s'
   },
   '/vessels/*/performance/gybeAngle': {
-    description: 'Data should be of type number.',
+    description:
+      'Optimal true wind angle for sailing downwind (running) at the current true wind speed, from the polar.',
     units: 'rad'
   },
   '/vessels/*/performance/gybeAngleVelocityMadeGood': {
-    description: 'Data should be of type number.',
+    description: 'Downwind VMG expected when sailing at the gybe angle.',
     units: 'm/s'
   },
   '/vessels/*/performance/gybeAngleTargetSpeed': {
-    description: 'Data should be of type number.',
+    description: 'Target boat speed when sailing at the gybe angle.',
     units: 'm/s'
   },
   '/vessels/*/performance/targetAngle': {
-    description: 'Data should be of type number.',
+    description:
+      'Target true wind angle for the best VMG on the current point of sail: the beat angle upwind or the gybe angle downwind.',
     units: 'rad'
   },
   '/vessels/*/performance/targetSpeed': {
-    description: 'Data should be of type number.',
+    description:
+      'Target boat speed for the best VMG on the current point of sail.',
     units: 'm/s'
   },
   '/vessels/*/performance/leeway': {
-    description: 'Data should be of type number.',
+    description:
+      "Leeway: the angle between the vessel's heading and its course through the water, caused by the wind.",
     units: 'rad'
   },
   '/vessels/*/performance/tackMagnetic': {
-    description: 'Data should be of type number.',
+    description:
+      'Magnetic heading the vessel would steer after tacking or gybing.',
     units: 'rad'
   },
   '/vessels/*/performance/tackTrue': {
-    description: 'Data should be of type number.',
+    description: 'True heading the vessel would steer after tacking or gybing.',
     units: 'rad'
   }
 }
