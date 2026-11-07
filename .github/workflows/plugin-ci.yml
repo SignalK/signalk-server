@@ -1750,7 +1750,11 @@ jobs:
           }
 
           if (nativeModules.length === 0) {
-            console.log('No native addons found — App Store install is safe');
+            console.log(
+              prebuiltModules.size > 0
+                ? 'Every native addon ships prebuilt binaries — App Store install is safe'
+                : 'No native addons found — App Store install is safe'
+            );
             process.exit(0);
           }
 
