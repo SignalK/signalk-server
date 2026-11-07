@@ -14,7 +14,13 @@ RUN groupadd -r docker -g 991 \
   python3 python3-venv python3-pip build-essential \
   sysstat procps nano curl libcap2-bin sudo bluez tini gpiod \
   && usermod -a -G dialout,i2c,spi,docker node \
-  && chmod u+s /usr/bin/date
+  # set-system-time probes with `sudo -n date`, then runs
+  # `sudo date -u -s "YYYY-MM-DD HH:MM:SS"`. The argument is pinned because
+  # GNU date run as root opens any file named by TZ= in the date string.
+  && echo 'node ALL=(root) NOPASSWD: /usr/bin/date "", /usr/bin/date ^-u -s [0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}$' \
+    > /etc/sudoers.d/set-system-time \
+  && chmod 0440 /etc/sudoers.d/set-system-time \
+  && visudo -cf /etc/sudoers.d/set-system-time
 
 RUN curl -fsSL https://deb.nodesource.com/setup_$NODE | bash - \
   && apt-get -y install --no-install-recommends nodejs \
