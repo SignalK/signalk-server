@@ -38,4 +38,32 @@ describe('TimestampThrottle', () => {
     throttle.write({ timestamp: String(now) })
     throttle.write({ timestamp: String(now + 50) })
   })
+
+  it('does not let invalid timestamps alter later replay scheduling', () => {
+    const originalNow = Date.now
+    const originalSetTimeout = global.setTimeout
+    const delays: number[] = []
+    Date.now = () => 10000
+    global.setTimeout = ((callback: () => void, delay?: number) => {
+      delays.push(delay ?? 0)
+      callback()
+      return undefined as unknown as NodeJS.Timeout
+    }) as typeof setTimeout
+
+    try {
+      const throttle = new TimestampThrottle({
+        getMilliseconds: (msg) => Number(msg.timestamp)
+      })
+      throttle.on('data', () => {})
+
+      for (const timestamp of ['100', 'invalid', '50', '75']) {
+        throttle.write({ timestamp })
+      }
+
+      expect(delays).to.deep.equal([25])
+    } finally {
+      Date.now = originalNow
+      global.setTimeout = originalSetTimeout
+    }
+  })
 })
