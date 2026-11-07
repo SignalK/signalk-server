@@ -82,6 +82,14 @@ export declare function readConfig(): string;
  */
 export declare function saveConfig(configJson: string): number;
 /**
+ * assembly/api/sseSend
+ * @param channel `~lib/string/String`
+ * @param event `~lib/string/String`
+ * @param data `~lib/string/String`
+ * @returns `i32`
+ */
+export declare function sseSend(channel: string, event: string, data: string): number;
+/**
  * assembly/network/hasNetworkCapability
  * @returns `bool`
  */

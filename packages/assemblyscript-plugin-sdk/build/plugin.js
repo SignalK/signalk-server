@@ -53,6 +53,16 @@ async function instantiate(module, imports = {}) {
         configLen = configLen >>> 0;
         return sk_save_config(configPtr, configLen);
       },
+      sk_sse_send(channelPtr, channelLen, eventPtr, eventLen, dataPtr, dataLen) {
+        // assembly/api/sk_sse_send_ffi(usize, usize, usize, usize, usize, usize) => i32
+        channelPtr = channelPtr >>> 0;
+        channelLen = channelLen >>> 0;
+        eventPtr = eventPtr >>> 0;
+        eventLen = eventLen >>> 0;
+        dataPtr = dataPtr >>> 0;
+        dataLen = dataLen >>> 0;
+        return sk_sse_send(channelPtr, channelLen, eventPtr, eventLen, dataPtr, dataLen);
+      },
       sk_has_capability(capPtr, capLen) {
         // assembly/network/sk_has_capability_ffi(usize, usize) => i32
         capPtr = capPtr >>> 0;
@@ -134,6 +144,18 @@ async function instantiate(module, imports = {}) {
       // assembly/api/saveConfig(~lib/string/String) => i32
       configJson = __lowerString(configJson) || __notnull();
       return exports.saveConfig(configJson);
+    },
+    sseSend(channel, event, data) {
+      // assembly/api/sseSend(~lib/string/String, ~lib/string/String, ~lib/string/String) => i32
+      channel = __retain(__lowerString(channel) || __notnull());
+      event = __retain(__lowerString(event) || __notnull());
+      data = __lowerString(data) || __notnull();
+      try {
+        return exports.sseSend(channel, event, data);
+      } finally {
+        __release(channel);
+        __release(event);
+      }
     },
     hasNetworkCapability() {
       // assembly/network/hasNetworkCapability() => bool
@@ -219,6 +241,7 @@ export const {
   getPath,
   readConfig,
   saveConfig,
+  sseSend,
   hasNetworkCapability,
   registerResourceProvider,
   hasResourceProviderCapability,
