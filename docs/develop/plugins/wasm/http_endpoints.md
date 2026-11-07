@@ -100,6 +100,18 @@ export function handle_post_update(
 }
 ```
 
+## Access Levels
+
+When security is enabled, plugin endpoints are restricted to admin users unless an endpoint definition declares an optional `access` level:
+
+| `access`    | Who can call the endpoint                                                 |
+| ----------- | ------------------------------------------------------------------------- |
+| _(omitted)_ | Admin users only                                                          |
+| `readonly`  | Any authenticated user, and anonymous clients when read-only access is on |
+| `readwrite` | Users with read/write or admin permission                                 |
+
+These are the same levels Node.js plugins set with `router.access()`, enforced by the same security gate. An unrecognised value is ignored and the endpoint stays admin-only. Use `readonly` for endpoints that serve data to displays and other clients; the [AssemblyScript example plugin](https://github.com/SignalK/signalk-server/tree/master/examples/wasm-plugins/example-hello-assemblyscript) declares one.
+
 ## Request Context Format
 
 The request context is a JSON object with:

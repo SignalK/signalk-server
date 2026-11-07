@@ -14,7 +14,9 @@ import { IRouter, Request, Response } from 'express'
 import { spawn } from 'child_process'
 import * as readline from 'readline'
 import Debug from 'debug'
-import { WasmPlugin } from './types'
+import { RouteAccessLevel, RoutePermission } from '@signalk/server-api'
+import { WasmHttpEndpoint, WasmPlugin } from './types'
+import { PluginRoutePermission, WithSecurityStrategy } from '../../security'
 import { WasmPluginInstance } from '../wasm-runtime'
 import { getWasmRuntime } from '../wasm-runtime'
 import {
@@ -162,18 +164,74 @@ export async function handleLogViewerRequest(
   }
 }
 
+const ROUTE_ACCESS_LEVELS: ReadonlySet<string> = new Set<RouteAccessLevel>([
+  'readonly',
+  'readwrite'
+])
+
+/**
+ * The access level one WASM endpoint declares, mirroring `router.access()`
+ * for Node plugins. Endpoints without a recognised level stay admin-only.
+ */
+function toRoutePermission(endpoint: WasmHttpEndpoint): PluginRoutePermission {
+  const method = endpoint.method.toUpperCase() as RoutePermission['method']
+  const { access, path } = endpoint
+  if (access !== undefined && ROUTE_ACCESS_LEVELS.has(access)) {
+    return { method, path, permission: access }
+  }
+  if (access !== undefined) {
+    debug(
+      `Ignoring unknown access level "${access}" for ${endpoint.method} ${path}, route stays admin-only`
+    )
+  }
+  return { method, path, permission: 'admin' }
+}
+
+interface EndpointRoutes {
+  router: IRouter
+  // Every endpoint in registration order: the access gate takes the first
+  // entry matching a request, which must be the route that handles it
+  permissions: PluginRoutePermission[]
+}
+
+/**
+ * Serve the endpoints of the loaded binary and replace the access levels
+ * recorded for the previous one, so a level the new binary drops or
+ * changes no longer applies
+ */
+function installEndpointRoutes(
+  app: WithSecurityStrategy,
+  plugin: WasmPlugin,
+  routes: EndpointRoutes | undefined
+): void {
+  // Absent when security is disabled, where every route is reachable anyway
+  app.securityStrategy.replacePluginRoutePermissions?.(
+    plugin.id,
+    routes?.permissions ?? []
+  )
+  plugin.endpointRouter = routes?.router
+}
+
 /**
  * (Re)build the router for the HTTP endpoints the loaded binary declares,
- * replacing the endpoints of any previously loaded binary
+ * replacing the endpoints of any previously loaded binary, and record each
+ * endpoint's declared access level with the security strategy
  */
-export function setupPluginSpecificRoutes(plugin: WasmPlugin): void {
-  plugin.endpointRouter = undefined
+export function setupPluginSpecificRoutes(
+  app: WithSecurityStrategy,
+  plugin: WasmPlugin
+): void {
+  installEndpointRoutes(app, plugin, undefined)
   if (!plugin.instance) {
     debug(`No instance for ${plugin.id}`)
     return
   }
   try {
-    plugin.endpointRouter = buildEndpointRouter(plugin, plugin.instance)
+    installEndpointRoutes(
+      app,
+      plugin,
+      buildEndpointRoutes(plugin, plugin.instance)
+    )
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error)
     debug(`Failed to register HTTP endpoints: ${errorMsg}`)
@@ -181,14 +239,15 @@ export function setupPluginSpecificRoutes(plugin: WasmPlugin): void {
 }
 
 /**
- * Build the router for the HTTP endpoints `instance` declares. Throws if the
- * declaration cannot be read. Handlers call into `plugin.instance` at
- * request time, so the router belongs with the instance it was built from.
+ * Build the router and access levels for the HTTP endpoints `instance`
+ * declares. Throws if the declaration cannot be read. Handlers call into
+ * `plugin.instance` at request time, so the router belongs with the
+ * instance it was built from.
  */
-function buildEndpointRouter(
+function buildEndpointRoutes(
   plugin: WasmPlugin,
   instance: WasmPluginInstance
-): IRouter | undefined {
+): EndpointRoutes | undefined {
   // Check for http_endpoints in either AssemblyScript loader or raw WASM exports
   const hasAsEndpoints =
     instance.asLoader &&
@@ -246,8 +305,9 @@ function buildEndpointRouter(
     }
   }
 
-  const endpoints = JSON.parse(endpointsJson)
+  const endpoints: WasmHttpEndpoint[] = JSON.parse(endpointsJson)
   debug(`Registering ${endpoints.length} HTTP endpoints for ${plugin.id}`)
+  const permissions: PluginRoutePermission[] = []
 
   for (const endpoint of endpoints) {
     const { method, path: endpointPath, handler } = endpoint
@@ -260,6 +320,7 @@ function buildEndpointRouter(
     }
 
     debug(`Registering ${method} ${endpointPath} -> ${handler}`)
+    permissions.push(toRoutePermission(endpoint))
 
     router[routeMethod](endpointPath, async (req: Request, res: Response) => {
       // Set a timeout to catch hangs (declare outside try so catch can access it)
@@ -486,7 +547,7 @@ function buildEndpointRouter(
   }
 
   debug(`Added plugin-specific routes for ${plugin.id}`)
-  return router
+  return { router, permissions }
 }
 
 /**
@@ -600,12 +661,12 @@ export function setupWasmPluginRoutes(
 
           let pluginName: string
           let schema: object
-          let endpointRouter: IRouter | undefined
+          let endpointRoutes: EndpointRoutes | undefined
           try {
             pluginName = instance.exports.name()
             const schemaJson = instance.exports.schema()
             schema = schemaJson ? JSON.parse(schemaJson) : {}
-            endpointRouter = buildEndpointRouter(plugin, instance)
+            endpointRoutes = buildEndpointRoutes(plugin, instance)
           } catch (error) {
             // loadPlugin already pointed the live providers at the
             // replacement, so hand them back to the instance still in use
@@ -633,7 +694,7 @@ export function setupWasmPluginRoutes(
 
           plugin.name = pluginName
           plugin.schema = schema
-          plugin.endpointRouter = endpointRouter
+          installEndpointRoutes(app, plugin, endpointRoutes)
 
           debug(`Successfully loaded WASM binary for ${plugin.id}`)
 
@@ -686,10 +747,13 @@ export function setupWasmPluginRoutes(
   plugin.router = router
 
   // Delegate per request, so endpoints follow the currently loaded binary
+  // A disabled plugin keeps its instance, but must not answer requests
   router.use((req, res, next) =>
-    plugin.endpointRouter ? plugin.endpointRouter(req, res, next) : next()
+    plugin.enabled && plugin.endpointRouter
+      ? plugin.endpointRouter(req, res, next)
+      : next()
   )
-  setupPluginSpecificRoutes(plugin)
+  setupPluginSpecificRoutes(app, plugin)
 
   debug(`Set up REST API routes for WASM plugin: ${plugin.id}`)
 }
