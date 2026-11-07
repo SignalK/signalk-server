@@ -25,11 +25,12 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    # a manual release run has a branch, not a release tag
+    # A manual release run has a branch, not a release tag. The release's
+    # conclusion is not checked: a later job, such as the demo.signalk.org
+    # deploy, can fail after the server image was published.
     if: >-
       github.event_name == 'workflow_dispatch' ||
-      (github.event.workflow_run.conclusion == 'success' &&
-      startsWith(github.event.workflow_run.head_branch, 'v'))
+      startsWith(github.event.workflow_run.head_branch, 'v')
     steps:
       - name: Pick the server version
         id: vars
@@ -41,6 +42,14 @@ jobs:
             exit 1
           fi
           echo "tag=$VERSION" >> "$GITHUB_OUTPUT"
+      - name: Check the server image is published
+        env:
+          TAG: ${{ steps.vars.outputs.tag }}
+        run: |
+          if ! docker manifest inspect "signalk/signalk-server:$TAG" > /dev/null; then
+            echo "::error::signalk/signalk-server:$TAG is not on Docker Hub"
+            exit 1
+          fi
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
