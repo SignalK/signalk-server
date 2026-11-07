@@ -1,6 +1,13 @@
-import { Delta, PathValue, Timestamp, Update } from '@signalk/server-api'
+import {
+  Delta,
+  NormalizedDelta,
+  PathValue,
+  Timestamp,
+  Update
+} from '@signalk/server-api'
 import { expect } from 'chai'
 
+import DeltaCache from '../src/deltacache'
 import { STALENESS_PLUGIN_ID, StalenessEnforcer } from '../src/staleness'
 
 interface CapturedMessage {
@@ -647,5 +654,92 @@ describe('StalenessEnforcer', () => {
       runTick(enforcer)
       expect(app.captured).to.have.lengthOf(0)
     })
+  })
+})
+
+describe('StalenessEnforcer fed by the delta cache', () => {
+  const PATH = 'navigation.speedOverGround'
+  const SOURCE = 'gps.backup'
+
+  // A source the priority engine filters out reaches the delta cache only
+  // through ingestDelta: the preferred stream that drives onValue never
+  // carries its values.
+  const makeCacheWithEnforcer = () => {
+    const app = makeMockApp({ defaultTimeout: 60 })
+    const cacheApp = {
+      selfContext: SELF_CONTEXT,
+      signalk: { sources: {}, sourceMeta: {} },
+      config: {},
+      on: () => undefined,
+      emit: () => undefined,
+      stalenessEnforcer: undefined as StalenessEnforcer | undefined
+    }
+    const streambundle = { keys: { onValue: () => undefined } }
+    type CacheCtor = new (app: unknown, streambundle: unknown) => DeltaCache
+    const NewCache = DeltaCache as unknown as CacheCtor
+    const deltaCache = new NewCache(cacheApp, streambundle)
+    app.deltaCache = deltaCache
+    const enforcer = makeEnforcer(app)
+    cacheApp.stalenessEnforcer = enforcer
+    return { app, deltaCache, enforcer }
+  }
+
+  const sourceDelta = (
+    timestamp: string,
+    value: number | null,
+    state?: PathValue['state']
+  ) => ({
+    context: SELF_CONTEXT,
+    updates: [
+      { $source: SOURCE, timestamp, values: [{ path: PATH, value, state }] }
+    ]
+  })
+
+  it('times out a filtered-out source again after it recovered', () => {
+    const { app, deltaCache, enforcer } = makeCacheWithEnforcer()
+
+    deltaCache.ingestDelta(sourceDelta(isoSecondsAgo(120), 5.5))
+    runTick(enforcer)
+    expect(app.captured).to.have.lengthOf(1)
+
+    deltaCache.ingestDelta(sourceDelta(isoSecondsAgo(0), 6.0))
+    seedLeaf(app, SELF_CONTEXT, PATH, SOURCE, isoSecondsAgo(120), 6.0)
+    runTick(enforcer)
+    expect(app.captured).to.have.lengthOf(2)
+  })
+
+  it('does not take its own timeout looping back as a recovery', () => {
+    const { app, deltaCache, enforcer } = makeCacheWithEnforcer()
+
+    deltaCache.ingestDelta(sourceDelta(isoSecondsAgo(120), 5.5))
+    runTick(enforcer)
+    deltaCache.ingestDelta(
+      sourceDelta(isoSecondsAgo(0), null, { timedOut: true })
+    )
+    seedLeaf(app, SELF_CONTEXT, PATH, SOURCE, isoSecondsAgo(120), 5.5)
+    runTick(enforcer)
+    expect(app.captured).to.have.lengthOf(1)
+  })
+
+  it('notifies the enforcer once for a value that reaches the preferred stream', () => {
+    const { deltaCache, enforcer } = makeCacheWithEnforcer()
+    let notifications = 0
+    const onIncoming = enforcer.onIncoming.bind(enforcer)
+    enforcer.onIncoming = (context, path, sourceRef) => {
+      notifications++
+      onIncoming(context, path, sourceRef)
+    }
+    const timestamp = isoSecondsAgo(0)
+
+    deltaCache.ingestDelta(sourceDelta(timestamp, 6.0))
+    deltaCache.onValue({
+      context: SELF_CONTEXT,
+      path: PATH,
+      $source: SOURCE,
+      timestamp,
+      value: 6.0,
+      isMeta: false
+    } as NormalizedDelta)
+    expect(notifications).to.equal(1)
   })
 })
