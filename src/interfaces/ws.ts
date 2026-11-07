@@ -38,6 +38,7 @@ import {
   UpdateOptions
 } from '../requestResponse'
 import { putPath, deletePath } from '../put'
+import { type DeviceTracker, userAgentOf } from '../deviceTracker'
 import { createDebug } from '../debug'
 import { JsonWebTokenError, TokenExpiredError } from 'jsonwebtoken'
 import { startEvents, startServerEvents } from '../events'
@@ -106,6 +107,7 @@ interface Spark {
   sentMetaData: Record<string, boolean>
   backpressureManager?: BackpressureManager
   skPendingAccessRequest?: boolean
+  skTrackedDeviceId?: string
   logUnsubscribe?: () => void
   onDisconnects: Array<() => void>
   hasServerEvents?: boolean
@@ -263,6 +265,7 @@ interface WsApp {
   setProviderError: (provider: string, message: string) => void
   get: (setting: 'trust proxy fn') => TrustProxyFn
   getHello: () => Record<string, unknown>
+  deviceTracker?: DeviceTracker
 }
 
 interface WsApi {
@@ -545,8 +548,10 @@ function wsInterface(app: WsApp): WsApi {
           }
 
           debugConnection(
-            `${spark.id} connected ${JSON.stringify(spark.query)} ${spark.request._resolvedIp}:${principalId} (ip connections: ${ipConnectionCounts.get(spark.request._resolvedIp) ?? '?'})`
+            `${spark.id} connected ${JSON.stringify(spark.query)} ${spark.request._resolvedIp}:${principalId} (ip connections: ${ipConnectionCounts.get(spark.request._resolvedIp) ?? '?'}) user-agent: ${JSON.stringify(userAgentOf(spark.request.headers))}`
           )
+
+          trackDeviceConnect(app, spark)
 
           spark.sendMetaDeltas = spark.query.sendMeta === 'all'
           // An editor needs to tell a path-specific display unit override
@@ -695,6 +700,10 @@ function wsInterface(app: WsApp): WsApi {
               `${spark.id} end ${JSON.stringify(spark.query)} ${spark.request._resolvedIp}:${principalId}`
             )
 
+            if (spark.skTrackedDeviceId && app.deviceTracker) {
+              app.deviceTracker.onDisconnect(spark.skTrackedDeviceId)
+            }
+
             unsubscribes.forEach((unsubscribe) => unsubscribe())
 
             Object.keys(pathSources).forEach((path) => {
@@ -832,7 +841,7 @@ function wsInterface(app: WsApp): WsApi {
       const clientIp = spark.request._resolvedIp
       requestAccess(
         app as unknown as WithSecurityStrategy & WithConfig,
-        msg,
+        { ...msg, userAgent: userAgentOf(spark.request.headers) },
         clientIp,
         (res: Reply) => {
           if (res.state === 'COMPLETED') {
@@ -844,6 +853,7 @@ function wsInterface(app: WsApp): WsApi {
               spark.request.source =
                 'ws.' +
                 spark.request.skPrincipal!.identifier.replace(/\./g, '_')
+              trackDeviceConnect(app, spark)
             }
           }
           spark.write(res)
@@ -896,6 +906,7 @@ function wsInterface(app: WsApp): WsApi {
         if (reply.token) {
           spark.request.token = reply.token
           app.securityStrategy.authorizeWS(spark.request)
+          trackDeviceConnect(app, spark)
         }
         spark.write({
           requestId: msg.requestId,
@@ -1339,6 +1350,34 @@ function processUnsubscribe(
 
 const isSelfSubscription = (query: Spark['query']): boolean =>
   !query.subscribe || query.subscribe === 'self'
+
+// A connection may authenticate after the upgrade (login or access-request
+// messages), so device tracking keys on the spark, not on the principal
+// captured at connect time. Only device principals are tracked: a later
+// authentication on the same socket re-keys the tracked device, or stops
+// tracking when the socket no longer belongs to a device.
+function trackDeviceConnect(app: WsApp, spark: Spark): void {
+  if (!app.deviceTracker) {
+    return
+  }
+  const principal = spark.request.skPrincipal
+  const deviceId =
+    principal?.principalType === 'device' ? principal.identifier : undefined
+  if (spark.skTrackedDeviceId === deviceId) {
+    return
+  }
+  if (spark.skTrackedDeviceId) {
+    app.deviceTracker.onDisconnect(spark.skTrackedDeviceId)
+  }
+  spark.skTrackedDeviceId = deviceId
+  if (deviceId) {
+    app.deviceTracker.onConnect(
+      deviceId,
+      spark.request._resolvedIp,
+      userAgentOf(spark.request.headers)
+    )
+  }
+}
 
 function handleVerifyWSError(spark: Spark, error: Error): void {
   if (!spark.skPendingAccessRequest) {

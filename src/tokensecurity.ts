@@ -36,6 +36,10 @@ import { createHash, randomBytes } from 'crypto'
 const pathToRegexp: (path: string) => RegExp = require('path-to-regexp')
 import { createDebug } from './debug'
 import {
+  type DeviceTracker as DeviceTrackerType,
+  userAgentOf
+} from './deviceTracker'
+import {
   createLoginRateLimiter,
   LOGIN_RATE_LIMIT_MESSAGE
 } from './login-rate-limiter'
@@ -44,6 +48,7 @@ import {
   SecurityConfig,
   User,
   Device,
+  DeviceDashboard,
   UserData,
   UserDataUpdate,
   DeviceDataUpdate,
@@ -55,7 +60,9 @@ import {
   SkPrincipal,
   LoginResponse as SecurityLoginResponse,
   WSConnection as SecurityWSConnection,
-  isOIDCUserIdentifier
+  isOIDCUserIdentifier,
+  parseDeviceInfo,
+  INVALID_DEVICE_INFO_MESSAGE
 } from './security'
 // requestResponse is still CommonJS
 /* eslint-disable @typescript-eslint/no-require-imports */
@@ -152,6 +159,7 @@ interface AuthenticatedRequest {
 interface JWTPayload {
   id?: string
   device?: string
+  ver?: number
   exp?: number
   iat?: number
   rememberMe?: boolean
@@ -198,8 +206,10 @@ interface AccessRequest {
       password?: string
       description?: string
       permissions?: string
+      device?: unknown
     }
     requestedPermissions?: boolean
+    userAgent?: string
   }
   ip: string
   token?: string
@@ -1029,6 +1039,21 @@ function tokenSecurityFactory(
     if (skReq.skIsAuthenticated && skReq.skPrincipal) {
       result.userLevel = skReq.skPrincipal.permissions
       result.username = skReq.skPrincipal.identifier
+
+      const device =
+        skReq.skPrincipal.principalType === 'device'
+          ? options.devices?.find(
+              (d) => d.clientId === skReq.skPrincipal!.identifier
+            )
+          : undefined
+      if (device) {
+        result.principalType = 'device'
+        result.deviceId = device.clientId
+        result.deviceName = device.displayName || device.description
+        if (device.dashboard) {
+          result.deviceDashboard = device.dashboard
+        }
+      }
     }
     if (configuration.users.length === 0) {
       result.noUsers = true
@@ -1272,6 +1297,72 @@ function tokenSecurityFactory(
     callback(null, theConfig)
   }
 
+  strategy.createDevice = (
+    theConfig: SecurityConfig,
+    device: {
+      displayName: string
+      permissions: string
+      expiration?: string
+      dashboard?: DeviceDashboard
+    },
+    cb: (
+      err: Error | null,
+      config?: SecurityConfig,
+      result?: { clientId: string; token: string }
+    ) => void
+  ): void => {
+    assertConfigImmutability()
+    const clientId = crypto.randomUUID()
+    const payload: JWTPayload = { device: clientId }
+    const jwtOptions: SignOptions = {}
+
+    const expiresIn = device.expiration || theConfig.expiration
+    if (!isNever(expiresIn)) {
+      jwtOptions.expiresIn = expiresIn as StringValue
+    }
+
+    const token = jwt.sign(payload, theConfig.secretKey, jwtOptions)
+    const decoded = jwt.decode(token) as JWTPayload
+
+    if (!theConfig.devices) {
+      theConfig.devices = []
+    }
+
+    theConfig.devices.push({
+      clientId,
+      permissions: device.permissions,
+      config: {},
+      description: device.displayName,
+      displayName: device.displayName,
+      requestedPermissions: '',
+      tokenExpiry: decoded?.exp,
+      createdAt: new Date().toISOString(),
+      dashboard: device.dashboard
+    })
+
+    options = theConfig as TokenSecurityOptions
+    cb(null, theConfig, { clientId, token })
+  }
+
+  strategy.generateDeviceToken = (
+    theConfig: SecurityConfig,
+    clientId: string
+  ): string | null => {
+    assertConfigImmutability()
+    const device = theConfig.devices?.find((d) => d.clientId === clientId)
+    if (!device) return null
+    const jwtOptions: SignOptions = {}
+    if (device.tokenExpiry) {
+      const remaining = device.tokenExpiry - Math.floor(Date.now() / 1000)
+      if (remaining <= 0) return null
+      jwtOptions.expiresIn = remaining
+    }
+    device.tokenVersion = (device.tokenVersion ?? 0) + 1
+    const payload: JWTPayload = { device: clientId, ver: device.tokenVersion }
+    options = theConfig as TokenSecurityOptions
+    return jwt.sign(payload, theConfig.secretKey, jwtOptions)
+  }
+
   strategy.updateDevice = (
     theConfig: SecurityConfig,
     clientId: string,
@@ -1292,6 +1383,18 @@ function tokenSecurityFactory(
 
     if (updates.description) {
       device.description = updates.description
+    }
+
+    if (updates.displayName !== undefined) {
+      device.displayName = updates.displayName
+    }
+
+    if (updates.dashboard !== undefined) {
+      device.dashboard = updates.dashboard || undefined
+    }
+
+    if (updates.deviceInfo !== undefined) {
+      device.deviceInfo = updates.deviceInfo
     }
 
     callback(null, theConfig)
@@ -1676,17 +1779,19 @@ function tokenSecurityFactory(
       if (user) {
         principal = {
           identifier: user.username,
-          permissions: user.type
+          permissions: user.type,
+          principalType: 'user'
         }
       }
     } else if (payload.device && options.devices) {
       const device = options.devices.find(
         (aDevice) => aDevice.clientId === payload.device
       )
-      if (device) {
+      if (device && (payload.ver ?? 0) === (device.tokenVersion ?? 0)) {
         principal = {
           identifier: device.clientId,
-          permissions: device.permissions
+          permissions: device.permissions,
+          principalType: 'device'
         }
       }
     }
@@ -1735,6 +1840,10 @@ function tokenSecurityFactory(
         token = getAuthorizationFromHeaders(req)
       }
 
+      if (!token && req.query?.token) {
+        token = req.query.token as string
+      }
+
       if (token) {
         jwt.verify(
           token,
@@ -1742,7 +1851,8 @@ function tokenSecurityFactory(
           function (err: Error | null, decoded: unknown) {
             debug('verify')
             if (!err) {
-              const principal = getPrincipal(decoded as JWTPayload)
+              const jwtData = decoded as JWTPayload
+              const principal = getPrincipal(jwtData)
               if (principal) {
                 debug('authorized')
                 skReq.skPrincipal = principal
@@ -1765,6 +1875,19 @@ function tokenSecurityFactory(
                     rememberMe: jwtPayload.rememberMe
                   })
                   debug('token refreshed for %s', jwtPayload.id)
+                }
+                if (
+                  jwtData.device &&
+                  (app as unknown as { deviceTracker?: DeviceTrackerType })
+                    .deviceTracker
+                ) {
+                  ;(
+                    app as unknown as { deviceTracker: DeviceTrackerType }
+                  ).deviceTracker.onActivity(
+                    principal.identifier,
+                    req.ip,
+                    userAgentOf(req.headers)
+                  )
                 }
                 next()
                 return
@@ -1891,6 +2014,10 @@ function tokenSecurityFactory(
           (d) => d.clientId !== identifier
         )
 
+        const accessReq = request.clientRequest.accessRequest as Record<
+          string,
+          unknown
+        >
         theConfig.devices.push({
           clientId: request.accessIdentifier,
           permissions: !request.clientRequest.requestedPermissions
@@ -1901,7 +2028,17 @@ function tokenSecurityFactory(
           requestedPermissions: request.clientRequest.requestedPermissions
             ? 'true'
             : '',
-          tokenExpiry: decoded?.exp
+          tokenExpiry: decoded?.exp,
+          createdAt: new Date().toISOString(),
+          registrationInfo: {
+            sourceIp: request.ip,
+            deviceId:
+              typeof accessReq.deviceId === 'string'
+                ? accessReq.deviceId
+                : undefined,
+            userAgent: request.clientRequest.userAgent
+          },
+          deviceInfo: parseDeviceInfo(accessReq.device)
         })
         request.token = token
       } else {
@@ -1962,8 +2099,10 @@ function tokenSecurityFactory(
         password?: string
         description?: string
         permissions?: string
+        device?: unknown
       }
       requestedPermissions?: boolean
+      userAgent?: string
     },
     sourceIp: string,
     updateCb?: (reply: unknown) => void
@@ -2033,6 +2172,19 @@ function tokenSecurityFactory(
           if (accessRequest.clientId) {
             if (!options.allowDeviceAccessRequests) {
               updateRequest(request.requestId, 'COMPLETED', { statusCode: 403 })
+                .then(resolve)
+                .catch(reject)
+              return
+            }
+
+            if (
+              accessRequest.device !== undefined &&
+              !parseDeviceInfo(accessRequest.device)
+            ) {
+              updateRequest(request.requestId, 'COMPLETED', {
+                statusCode: 400,
+                message: INVALID_DEVICE_INFO_MESSAGE
+              })
                 .then(resolve)
                 .catch(reject)
               return
