@@ -18,9 +18,11 @@ on:
 permissions:
   contents: read
 
+# A run waits for the one before it, so a manual run of a version that turns
+# out to be unpublished cannot cancel a release's deploy.
 concurrency:
   group: deploy-latest-demo
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   deploy:
