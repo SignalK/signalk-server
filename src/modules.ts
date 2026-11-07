@@ -565,8 +565,10 @@ async function searchByKeyword(keyword: string): Promise<NpmModuleData[]> {
       { signal: AbortSignal.timeout(NPM_SEARCH_TIMEOUT_MS) }
     )
     if (!res.ok) {
-      npmDebug(`npm search failed with status ${res.status}: ${res.statusText}`)
-      break
+      await res.body?.cancel()
+      throw new Error(
+        `npm search failed with status ${res.status}: ${res.statusText}`
+      )
     }
     const parsed = (await res.json()) as NpmSearchResponse
 

@@ -85,6 +85,14 @@ describe('findModulesWithKeyword', () => {
     )
   })
 
+  it('rejects when npm answers with an error', async () => {
+    stubFetch(() => new Response('unavailable', { status: 503 }))
+    const error = await findModulesWithKeyword('test-http-error').catch(
+      (err: Error) => err
+    )
+    expect(error).to.be.instanceOf(Error)
+  })
+
   it('drops entries with invalid or missing versions', async () => {
     stubFetch(() =>
       searchPage(
