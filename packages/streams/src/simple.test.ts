@@ -96,32 +96,49 @@ describe('Simple: filters before decoding', () => {
     return decoder.fromPgn.options.excludePgns
   }
 
+  // canboatjs with or without parseExcludePgns, whichever is installed.
+  function withCanboatjs<T>(supports: boolean, run: () => T): T {
+    const real = require.cache[canboatjsPath]!
+    const exports = {
+      ...real.exports,
+      parseExcludePgns: supports ? () => [] : undefined
+    }
+    require.cache[canboatjsPath] = { ...real, exports } as NodeModule
+    try {
+      return run()
+    } finally {
+      require.cache[canboatjsPath] = real
+    }
+  }
+
   it('hands the PGN-only filter rows to canboatjs when the switch is on', () => {
-    const simple = build({ filtersBeforeDecoding: true })
+    const simple = withCanboatjs(true, () =>
+      build({ filtersBeforeDecoding: true })
+    )
     expect(decoderExcludePgns(simple)).to.deep.equal(['127250'])
     simple.end()
   })
 
   it('leaves them to n2k-signalk when the switch is off', () => {
-    const simple = build({ filtersBeforeDecoding: false })
+    const simple = withCanboatjs(true, () =>
+      build({ filtersBeforeDecoding: false })
+    )
     expect(decoderExcludePgns(simple)).to.equal(undefined)
     simple.end()
   })
 
   it('says so when the installed canboatjs cannot drop them', () => {
-    const real = require.cache[canboatjsPath]!
-    const exports = { ...real.exports, parseExcludePgns: undefined }
-    require.cache[canboatjsPath] = { ...real, exports } as NodeModule
     const warn = console.warn
     const warnings: string[] = []
     console.warn = (message: string) => warnings.push(message)
     try {
-      const simple = build({ filtersBeforeDecoding: true })
+      const simple = withCanboatjs(false, () =>
+        build({ filtersBeforeDecoding: true })
+      )
       expect(decoderExcludePgns(simple)).to.equal(undefined)
       simple.end()
     } finally {
       console.warn = warn
-      require.cache[canboatjsPath] = real
     }
     expect(warnings).to.deep.equal([
       "n2k-file: this canboatjs can't drop filtered PGNs before decoding; they are filtered after decoding"
