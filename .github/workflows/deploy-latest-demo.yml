@@ -18,11 +18,13 @@ on:
 permissions:
   contents: read
 
-# A run waits for the one before it, so a manual run of a version that turns
-# out to be unpublished cannot cancel a release's deploy.
+# A run waits for the ones before it, so a manual run of a version that turns
+# out to be unpublished cannot cancel a release's deploy, and queue: max keeps
+# every waiting run instead of only the newest.
 concurrency:
   group: deploy-latest-demo
   cancel-in-progress: false
+  queue: max
 
 jobs:
   deploy:
