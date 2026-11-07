@@ -4,11 +4,12 @@
     "showNightModeButton": true,
     "showFullscreenButton": false,
     "showExitButton": false,
+    "tourDismissed": true,
     "apps": [
       {
         "enabled": true,
         "autostart": true,
-        "url": "/@signalk/freeboard-sk/?zoom=13&movemap=1",
+        "url": "/@signalk/freeboard-sk/?zoom=14&movemap=1",
         "label": "Freeboard-SK",
         "icon": "/@signalk/freeboard-sk/assets/icons/icon-72x72.png",
         "color": ""
