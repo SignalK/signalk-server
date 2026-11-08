@@ -22,6 +22,85 @@
             "value": { "id": 36, "name": "Sailing" }
           }
         ]
+      },
+      {
+        "values": [
+          { "path": "tanks.freshWater.0.name", "value": "Fresh water" },
+          { "path": "tanks.freshWater.0.capacity", "value": 0.3 },
+          { "path": "tanks.freshWater.0.currentLevel", "value": 0.18 },
+          { "path": "tanks.fuel.0.name", "value": "Diesel" },
+          { "path": "tanks.fuel.0.capacity", "value": 0.15 },
+          { "path": "tanks.fuel.0.currentLevel", "value": 0.48 },
+          { "path": "electrical.batteries.house.name", "value": "House" }
+        ],
+        "meta": [
+          {
+            "path": "tanks.freshWater.0.currentLevel",
+            "value": {
+              "units": "ratio",
+              "warnMethod": [],
+              "emergencyMethod": [],
+              "zones": [
+                {
+                  "lower": 0,
+                  "upper": 0.2,
+                  "state": "emergency",
+                  "message": "Fresh water below 20 %"
+                },
+                {
+                  "lower": 0.2,
+                  "upper": 0.5,
+                  "state": "warn",
+                  "message": "Fresh water below 50 %"
+                }
+              ]
+            }
+          },
+          {
+            "path": "tanks.fuel.0.currentLevel",
+            "value": {
+              "units": "ratio",
+              "warnMethod": [],
+              "emergencyMethod": [],
+              "zones": [
+                {
+                  "lower": 0,
+                  "upper": 0.2,
+                  "state": "emergency",
+                  "message": "Diesel below 20 %"
+                },
+                {
+                  "lower": 0.2,
+                  "upper": 0.5,
+                  "state": "warn",
+                  "message": "Diesel below 50 %"
+                }
+              ]
+            }
+          },
+          {
+            "path": "electrical.batteries.house.capacity.stateOfCharge",
+            "value": {
+              "units": "ratio",
+              "warnMethod": [],
+              "emergencyMethod": [],
+              "zones": [
+                {
+                  "lower": 0,
+                  "upper": 0.2,
+                  "state": "emergency",
+                  "message": "House battery below 20 %"
+                },
+                {
+                  "lower": 0.2,
+                  "upper": 0.5,
+                  "state": "warn",
+                  "message": "House battery below 50 %"
+                }
+              ]
+            }
+          }
+        ]
       }
     ]
   }
