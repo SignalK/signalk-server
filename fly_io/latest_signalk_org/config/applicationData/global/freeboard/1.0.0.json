@@ -37,6 +37,10 @@
       "Waddenzee"
     ]
   },
+  "vessels": {
+    "aisShowTrack": true,
+    "aisTrackLength": 24
+  },
   "plotterExtensions": {
     "widgets": [
       {
