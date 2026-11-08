@@ -109,3 +109,32 @@ export function noopDebug(): DebugLogger {
 export function createDebugStub(): CreateDebug {
   return () => noopDebug()
 }
+
+/**
+ * Run with the installed @canboat/canboatjs's exports overridden, such as a
+ * function a newer canboatjs has or an older one lacks; restored after.
+ */
+export function withCanboatjsExports<T>(
+  overrides: Record<string, unknown>,
+  run: () => T
+): T {
+  const canboatjsPath = require.resolve('@canboat/canboatjs')
+  require(canboatjsPath)
+  const real = require.cache[canboatjsPath]!
+  const exports = { ...real.exports, ...overrides }
+  require.cache[canboatjsPath] = { ...real, exports } as NodeModule
+  try {
+    return run()
+  } finally {
+    require.cache[canboatjsPath] = real
+  }
+}
+
+/** The options a Simple pipeline's canboatjs decoder was made with. */
+export function decoderOptions(simple: object): Record<string, unknown> {
+  const pipeline = (simple as { pipeline: object[] }).pipeline
+  const decoder = pipeline.find((e) => 'fromPgn' in e) as {
+    fromPgn: { options: Record<string, unknown> }
+  }
+  return decoder.fromPgn.options
+}

@@ -7,7 +7,12 @@ import {
 } from './n2k-manufacturers'
 import N2kToSignalK from './n2k-signalk'
 import Simple from './simple'
-import { createMockApp, createDebugStub } from './test-helpers'
+import {
+  createMockApp,
+  createDebugStub,
+  decoderOptions,
+  withCanboatjsExports
+} from './test-helpers'
 
 // A Maretron NAME: manufacturer code 137.
 const MARETRON_NAME = 'cfa0aad31135b495'
@@ -21,21 +26,12 @@ const codesOf = (names: string[]) =>
       ] ?? -1
   )
 
-// canboatjs with parseManufacturers, whichever is installed.
-const canboatjsPath = require.resolve('@canboat/canboatjs')
-function withCanboatjs<T>(supports: boolean, run: () => T): T {
-  const real = require.cache[canboatjsPath]!
-  const exports = {
-    ...real.exports,
-    parseManufacturers: supports ? codesOf : undefined
-  }
-  require.cache[canboatjsPath] = { ...real, exports } as NodeModule
-  try {
-    return run()
-  } finally {
-    require.cache[canboatjsPath] = real
-  }
-}
+// canboatjs with or without parseManufacturers, whichever is installed.
+const withCanboatjs = <T>(supports: boolean, run: () => T): T =>
+  withCanboatjsExports(
+    { parseManufacturers: supports ? codesOf : undefined },
+    run
+  )
 
 describe('manufacturerFilterOption', () => {
   it('gives the allow or deny list', () => {
@@ -225,15 +221,6 @@ describe('Simple: the manufacturer filter', () => {
         ...extra
       }
     } as unknown as ConstructorParameters<typeof Simple>[0])
-  }
-
-  // The options the decoder was made with.
-  function decoderOptions(simple: Simple): Record<string, unknown> {
-    const pipeline = (simple as unknown as { pipeline: object[] }).pipeline
-    const decoder = pipeline.find((e) => 'fromPgn' in e) as {
-      fromPgn: { options: Record<string, unknown> }
-    }
-    return decoder.fromPgn.options
   }
 
   it('hands the list to canboatjs', () => {

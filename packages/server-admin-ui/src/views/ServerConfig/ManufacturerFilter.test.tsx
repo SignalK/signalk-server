@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import ManufacturerFilter from './ManufacturerFilter'
 
 const KNOWN = [
@@ -36,6 +36,19 @@ describe('ManufacturerFilter', () => {
     expect(screen.queryByRole('combobox', { name: 'Manufacturer' })).toBeNull()
   })
 
+  it('saves All manufacturers as an empty mode, replacing a saved one', () => {
+    const onChange = renderFilter({
+      manufacturerFilter: 'deny',
+      manufacturers: ['Garmin']
+    })
+    fireEvent.change(screen.getByRole('combobox', { name: 'Manufacturers' }), {
+      target: { value: '' }
+    })
+    expect(onChange).toHaveBeenCalledWith(
+      changed('options.manufacturerFilter', '')
+    )
+  })
+
   it('sets the mode', () => {
     const onChange = renderFilter()
     fireEvent.change(screen.getByRole('combobox', { name: 'Manufacturers' }), {
@@ -44,6 +57,16 @@ describe('ManufacturerFilter', () => {
     expect(onChange).toHaveBeenCalledWith(
       changed('options.manufacturerFilter', 'allow')
     )
+  })
+
+  it('says the filter is off while no manufacturer is listed', () => {
+    renderFilter({ manufacturerFilter: 'allow', manufacturers: [] })
+    expect(screen.getByText(/the filter is off/)).toBeTruthy()
+  })
+
+  it('does not say the filter is off once a manufacturer is listed', () => {
+    renderFilter({ manufacturerFilter: 'allow', manufacturers: ['Garmin'] })
+    expect(screen.queryByText(/the filter is off/)).toBeNull()
   })
 
   it('adds a listed manufacturer, spelled as the list spells it', () => {
@@ -86,5 +109,57 @@ describe('ManufacturerFilter', () => {
     expect(
       screen.getByRole('combobox', { name: 'Manufacturers' })
     ).toHaveProperty('disabled', true)
+  })
+
+  it('adds names only once the list has loaded from the server', async () => {
+    window.serverRoutesPrefix = '/skServer'
+    let answer: (value: unknown) => void = () => {}
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        () =>
+          new Promise((resolve) => {
+            answer = resolve
+          })
+      )
+    )
+    render(
+      <ManufacturerFilter
+        options={{ filtersEnabled: true, manufacturerFilter: 'allow' }}
+        onChange={vi.fn()}
+      />
+    )
+    expect(screen.getByText(/Loading the manufacturer names/)).toBeTruthy()
+    expect(
+      screen.getByRole('combobox', { name: 'Manufacturer' })
+    ).toHaveProperty('disabled', true)
+    answer({ ok: true, json: () => Promise.resolve(KNOWN) })
+    await waitFor(() =>
+      expect(
+        screen.getByRole('combobox', { name: 'Manufacturer' })
+      ).toHaveProperty('disabled', false)
+    )
+    vi.unstubAllGlobals()
+  })
+
+  it('says so, and adds nothing, when the list fails to load', async () => {
+    window.serverRoutesPrefix = '/skServer'
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => Promise.resolve({ ok: false, status: 500 }))
+    )
+    render(
+      <ManufacturerFilter
+        options={{ filtersEnabled: true, manufacturerFilter: 'allow' }}
+        onChange={vi.fn()}
+      />
+    )
+    await waitFor(() =>
+      expect(screen.getByText(/could not be loaded/)).toBeTruthy()
+    )
+    expect(
+      screen.getByRole('combobox', { name: 'Manufacturer' })
+    ).toHaveProperty('disabled', true)
+    vi.unstubAllGlobals()
   })
 })

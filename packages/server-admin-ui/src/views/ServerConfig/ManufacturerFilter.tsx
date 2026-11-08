@@ -35,7 +35,10 @@ export default function ManufacturerFilter({
   onChange,
   known
 }: ManufacturerFilterProps) {
-  const [fetched, setFetched] = useState<Manufacturer[] | undefined>(undefined)
+  // The list from the server; null when it could not be loaded.
+  const [fetched, setFetched] = useState<Manufacturer[] | null | undefined>(
+    undefined
+  )
   const [entry, setEntry] = useState('')
 
   useEffect(() => {
@@ -45,12 +48,29 @@ export default function ManufacturerFilter({
     fetch(`${window.serverRoutesPrefix}/n2kManufacturers`, {
       credentials: 'include'
     })
-      .then((response) => (response.ok ? response.json() : []))
-      .then((list: Manufacturer[]) => setFetched(list))
-      .catch(() => setFetched([]))
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`${response.status}`)
+        }
+        return response.json()
+      })
+      .then((list: Manufacturer[]) =>
+        setFetched(Array.isArray(list) && list.length > 0 ? list : null)
+      )
+      .catch(() => setFetched(null))
   }, [known])
 
+  // Only names from the list can be added: canboatjs refuses a name it
+  // doesn't know, and the connection would not start.
   const manufacturers = known ?? fetched ?? []
+  const listState =
+    known !== undefined
+      ? 'loaded'
+      : fetched === undefined
+        ? 'loading'
+        : fetched === null
+          ? 'failed'
+          : 'loaded'
   const mode = options.manufacturerFilter ?? ''
   const chosen = Array.isArray(options.manufacturers)
     ? options.manufacturers
@@ -62,10 +82,11 @@ export default function ManufacturerFilter({
     manufacturers.find(
       (m) => m.name.toLowerCase() === name.trim().toLowerCase()
     )
+  const match = listed(entry)
   const canAdd =
-    entry.trim() !== '' &&
-    !chosen.includes(listed(entry)?.name ?? entry.trim()) &&
-    (manufacturers.length === 0 || listed(entry) !== undefined)
+    listState === 'loaded' &&
+    match !== undefined &&
+    !chosen.includes(match.name)
 
   const setChosen = (value: string[]) =>
     onChange({ target: { name: 'options.manufacturers', value } })
@@ -74,7 +95,7 @@ export default function ManufacturerFilter({
     if (!canAdd) {
       return
     }
-    setChosen([...chosen, listed(entry)?.name ?? entry.trim()])
+    setChosen([...chosen, match!.name])
     setEntry('')
   }
 
@@ -92,7 +113,9 @@ export default function ManufacturerFilter({
           onChange({
             target: {
               name: 'options.manufacturerFilter',
-              value: e.target.value === '' ? undefined : e.target.value
+              // '' rather than undefined, so that saving replaces a mode
+              // saved before.
+              value: e.target.value
             }
           })
         }
@@ -123,6 +146,12 @@ export default function ManufacturerFilter({
                 {name} <FontAwesomeIcon icon={faXmark} />
               </Button>
             ))}
+            {chosen.length === 0 && (
+              <Form.Text className="d-block text-warning">
+                No manufacturers are listed, so the filter is off and every
+                device&apos;s data is used.
+              </Form.Text>
+            )}
           </div>
           <InputGroup size="sm" style={{ maxWidth: '30em' }}>
             <Form.Control
@@ -131,7 +160,7 @@ export default function ManufacturerFilter({
               aria-label="Manufacturer"
               placeholder="Manufacturer"
               value={entry}
-              disabled={disabled}
+              disabled={disabled || listState !== 'loaded'}
               onChange={(e) => setEntry(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
@@ -148,6 +177,17 @@ export default function ManufacturerFilter({
               <FontAwesomeIcon icon={faCirclePlus} /> Add manufacturer
             </Button>
           </InputGroup>
+          {listState === 'loading' && (
+            <Form.Text muted className="d-block">
+              Loading the manufacturer names…
+            </Form.Text>
+          )}
+          {listState === 'failed' && (
+            <Form.Text className="d-block text-danger">
+              The manufacturer names could not be loaded, so none can be added.
+              Reload the page to try again.
+            </Form.Text>
+          )}
           <datalist id="n2kManufacturerNames">
             {manufacturers.map((m) => (
               <option key={m.name} value={m.name} />
