@@ -96,6 +96,18 @@ describe('demo director', () => {
     assert.ok(typeof current === 'number' && current > 0)
   })
 
+  it('publishes a Pi health reading in Signal K units', async () => {
+    const { app, messages } = fakeApp(
+      { pointIndex: 3, pointTotal: 5, reverse: false },
+      NEAR_FINAL
+    )
+    await runFirstTick(app)
+    const [kelvin] = published(messages, 'environment.rpi.cpu.temperature')
+    assert.ok(typeof kelvin === 'number' && kelvin > 320 && kelvin < 335)
+    const [cpu] = published(messages, 'environment.rpi.cpu.utilisation')
+    assert.ok(typeof cpu === 'number' && cpu > 0 && cpu < 1)
+  })
+
   it('keeps the route while the boat is short of the final waypoint', async () => {
     const { app, activated } = fakeApp(
       { pointIndex: 4, pointTotal: 5, reverse: false },
