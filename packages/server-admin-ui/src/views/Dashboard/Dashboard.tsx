@@ -8,6 +8,7 @@ import Table from 'react-bootstrap/Table'
 import { useServerStats, useWsStatus, useStore } from '../../store'
 import type { ProviderStatistics, ProviderStatus } from '../../store/types'
 import '../../fa-pulse.css'
+import UsageStatisticsPrompt from './UsageStatisticsPrompt'
 
 export default function Dashboard() {
   const serverStatistics = useServerStats()
@@ -157,6 +158,7 @@ export default function Dashboard() {
 
   return (
     <div className="animated fadeIn">
+      <UsageStatisticsPrompt />
       {websocketStatus === 'open' && (
         <div>
           <Card>
