@@ -36,6 +36,10 @@ export const environmentMetadata: Record<string, PathMetadataEntry> = {
     description: 'DEPRECATED: use relativeHumidity',
     units: 'ratio'
   },
+  '/vessels/*/environment/outside/precipitationVolume': {
+    description: 'Current outside precipitation volume.',
+    units: 'm3'
+  },
   '/vessels/*/environment/outside/relativeHumidity': {
     description: 'Current outside air relative humidity',
     units: 'ratio'
@@ -130,6 +134,30 @@ export const environmentMetadata: Record<string, PathMetadataEntry> = {
   '/vessels/*/environment/water/salinity': {
     description: 'Water salinity',
     units: 'ratio'
+  },
+  '/vessels/*/environment/water/swell/directionTrue': {
+    description: 'Swell direction',
+    units: 'rad'
+  },
+  '/vessels/*/environment/water/swell/height': {
+    description: 'Swell height',
+    units: 'm'
+  },
+  '/vessels/*/environment/water/swell/period': {
+    description: 'Swell period',
+    units: 's'
+  },
+  '/vessels/*/environment/water/waves/directionTrue': {
+    description: 'Wave direction',
+    units: 'rad'
+  },
+  '/vessels/*/environment/water/waves/period': {
+    description: 'Wave period',
+    units: 's'
+  },
+  '/vessels/*/environment/water/waves/significantHeight': {
+    description: 'Wave significant height',
+    units: 'm'
   },
   '/vessels/*/environment/depth': {
     description: 'Depth related data'
