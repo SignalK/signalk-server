@@ -1,6 +1,7 @@
 {
   "enabled": true,
   "configuration": {
+    "iframeMode": "keep-alive",
     "showNightModeButton": true,
     "showFullscreenButton": false,
     "showExitButton": false,
