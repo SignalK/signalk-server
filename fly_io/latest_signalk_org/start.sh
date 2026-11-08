@@ -1,7 +1,7 @@
 #!/bin/sh
 # The radar is mayara's emulator, following the simulated boat and showing
-# its AIS traffic and the ENC's land. --parent stops it with the server,
-# which takes over this shell's process.
+# its AIS traffic and the ENC's land, buoys and beacons. --parent stops it
+# with the server, which takes over this shell's process.
 SERVER_PID=$$
 
 # Visitors may only watch, so they cannot change the range: open the radar
@@ -25,6 +25,7 @@ set_radar_range() {
 (
   while kill -0 "$SERVER_PID" 2>/dev/null; do
     mayara-server --emulator --emulator-land /home/node/.signalk/mayara/land.geojson \
+      --emulator-marks /home/node/.signalk/mayara/marks.geojson \
       --no-mdns -n ws:127.0.0.1:3000 --parent "$SERVER_PID" &
     MAYARA_PID=$!
     if ! set_radar_range "$MAYARA_PID"; then

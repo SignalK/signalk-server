@@ -1,7 +1,7 @@
 // Builds what the demo image needs and git does not keep: the demo-director
 // plugin's JavaScript, and the large demo assets: the Waddenzee ENC
 // as vector MBTiles plus its raw S-57 cells, a coastline clipped to the
-// area, the land of the ENC cells for the radar emulator, and the Netherlands
+// area, the land, buoys and beacons of the ENC cells for the radar emulator, and the Netherlands
 // tidal current dataset. They land in ./assets, laid out like the server's
 // config directory, for the Dockerfile to copy.
 //
@@ -315,12 +315,18 @@ function containerRuntime(): string {
   throw new BuildFailure('neither docker nor podman is installed')
 }
 
-// The radar emulator paints the coast from the land areas (LNDARE) of the
-// same ENC cells the chart shows, so its picture matches the chart.
-function extractLand(): void {
-  const runtime = containerRuntime()
+interface Feature {
+  properties: Record<string, unknown>
+}
+
+// Reads one S-57 object class from every ENC cell as GeoJSON features
+function encFeatures(
+  runtime: string,
+  layer: string,
+  args: string[]
+): Feature[] {
   const cells = join(ASSETS, 'enc-cells')
-  const features: unknown[] = []
+  const features: Feature[] = []
   for (const cell of readdirSync(cells)) {
     const file = readdirSync(join(cells, cell)).find((f) => f.endsWith('.000'))
     if (!file) continue
@@ -340,11 +346,8 @@ function extractLand(): void {
           'GeoJSON',
           '/vsistdout/',
           `/cells/${cell}/${file}`,
-          'LNDARE',
-          '-nlt',
-          'PROMOTE_TO_MULTI',
-          '-select',
-          'OBJNAM'
+          layer,
+          ...args
         ],
         {
           encoding: 'utf8',
@@ -353,19 +356,61 @@ function extractLand(): void {
         }
       )
     } catch (err) {
-      // A cell of open water has no LNDARE layer at all
+      // A cell without such objects has no layer for them at all
       const stderr = String((err as { stderr?: unknown }).stderr ?? '')
       if (stderr.includes("Couldn't fetch requested layer")) continue
       throw err
     }
-    features.push(...(JSON.parse(geojson) as { features: unknown[] }).features)
+    features.push(...(JSON.parse(geojson) as { features: Feature[] }).features)
   }
-  if (features.length === 0) throw new BuildFailure('the ENC holds no land')
+  return features
+}
+
+function writeMayaraAsset(name: string, features: Feature[]): void {
   mkdirSync(join(ASSETS, 'mayara'), { recursive: true })
   writeFileSync(
-    join(ASSETS, 'mayara', 'land.geojson'),
+    join(ASSETS, 'mayara', name),
     JSON.stringify({ type: 'FeatureCollection', features })
   )
+}
+
+// The radar emulator paints the coast from the land areas (LNDARE) of the
+// same ENC cells the chart shows, so its picture matches the chart.
+function extractLand(runtime: string): void {
+  const features = encFeatures(runtime, 'LNDARE', [
+    '-nlt',
+    'PROMOTE_TO_MULTI',
+    '-select',
+    'OBJNAM'
+  ])
+  if (features.length === 0) throw new BuildFailure('the ENC holds no land')
+  writeMayaraAsset('land.geojson', features)
+}
+
+const BUOYS = ['BOYLAT', 'BOYCAR', 'BOYSPP', 'BOYISD', 'BOYSAW']
+const BEACONS = ['BCNLAT', 'BCNCAR', 'BCNSPP', 'BCNISD', 'BCNSAW']
+// S-57 BCNSHP: a stake or pole, and a withy, return little of the radar
+const SLENDER_BEACON_SHAPES = new Set([1, 2])
+
+// The emulator echoes the buoys and beacons of the ENC cells; a buoy or a
+// solid beacon returns strongly, a stake or withy weakly.
+function extractMarks(runtime: string): void {
+  const features: Feature[] = []
+  for (const layer of BUOYS) {
+    for (const buoy of encFeatures(runtime, layer, ['-select', 'OBJNAM'])) {
+      features.push({ ...buoy, properties: {} })
+    }
+  }
+  for (const layer of BEACONS) {
+    for (const beacon of encFeatures(runtime, layer, ['-select', 'BCNSHP'])) {
+      const slender = SLENDER_BEACON_SHAPES.has(
+        Number(beacon.properties.BCNSHP)
+      )
+      features.push({ ...beacon, properties: slender ? { echo: 'weak' } : {} })
+    }
+  }
+  if (features.length === 0) throw new BuildFailure('the ENC holds no marks')
+  writeMayaraAsset('marks.geojson', features)
 }
 
 interface DownloadJob {
@@ -452,6 +497,8 @@ try {
 // Runs synchronously for minutes, blocking the event loop, so it runs once
 // the server has stopped: a blocked loop misses the server closing an idle
 // keep-alive socket, and the next request would fail on it
-extractLand()
+const runtime = containerRuntime()
+extractLand(runtime)
+extractMarks(runtime)
 rmSync(BUILD, { recursive: true, force: true })
 console.log(`assets ready in ${ASSETS}`)
