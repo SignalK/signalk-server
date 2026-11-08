@@ -46,6 +46,14 @@
         "anchor": "tr",
         "col": 2,
         "row": 1
+      },
+      {
+        "instanceId": "demo-system-health",
+        "extension": "signalk-history-widgets",
+        "widget": "system-health",
+        "anchor": "tr",
+        "col": 1,
+        "row": 1
       }
     ]
   }

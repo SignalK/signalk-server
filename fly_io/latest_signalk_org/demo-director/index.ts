@@ -15,6 +15,17 @@ const BATTERY_CHARGE_PER_HOUR = 0.005
 const BATTERY_CURRENT_A = 4.2
 const BATTERY_VOLTAGE_V = 13.3
 const MS_PER_HOUR = 3600 * 1000
+// The demo runs on Fly, not on a Raspberry Pi, so the system health tile is
+// fed what a Pi on a boat typically reads; values wander slowly so it looks
+// alive. Paths follow signalk-rpi-stats.
+const KELVIN_OFFSET = 273.15
+const PI_READINGS = {
+  'environment.rpi.cpu.temperature': { base: 54 + KELVIN_OFFSET, swing: 4 },
+  'environment.rpi.cpu.utilisation': { base: 0.25, swing: 0.1 },
+  'environment.rpi.memory.utilisation': { base: 0.45, swing: 0.03 },
+  'environment.rpi.storage.utilisation': { base: 0.38, swing: 0 }
+}
+const PI_WANDER_PERIOD_MS = 10 * 60 * 1000
 
 interface Position {
   latitude: number
@@ -94,6 +105,25 @@ export default function (app: ServerAPI): Plugin {
     })
   }
 
+  function publishPiHealth() {
+    const elapsed = Date.now() - startedAt
+    app.handleMessage(PLUGIN_ID, {
+      updates: [
+        {
+          values: Object.entries(PI_READINGS).map(
+            ([path, { base, swing }], i) => ({
+              path: path as Path,
+              value:
+                base +
+                swing *
+                  Math.sin((2 * Math.PI * elapsed) / PI_WANDER_PERIOD_MS + i)
+            })
+          )
+        }
+      ]
+    })
+  }
+
   async function turnRoundAtEnd() {
     if (turning) return
     turning = true
@@ -124,6 +154,7 @@ export default function (app: ServerAPI): Plugin {
     if (ticksSinceVariation >= VARIATION_EVERY_TICKS) publishVariation()
     ticksSinceVariation++
     publishBattery()
+    publishPiHealth()
     void turnRoundAtEnd()
   }
 
@@ -131,7 +162,7 @@ export default function (app: ServerAPI): Plugin {
     id: PLUGIN_ID,
     name: 'Demo director',
     description:
-      'Keeps the demo boat under way: publishes magnetic variation and a charging house battery, and turns the active route round at its end',
+      'Keeps the demo boat under way: publishes magnetic variation, a charging house battery and the computer health, and turns the active route round at its end',
     schema: () => ({ type: 'object', properties: {} }),
     start: () => {
       ticksSinceVariation = VARIATION_EVERY_TICKS
