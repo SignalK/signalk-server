@@ -11,8 +11,6 @@
         "environment.wind.speedThroughWater",
         "environment.wind.averageSpeed",
         "environment.wind.gust",
-        "environment.water.waves.period",
-        "environment.water.swell.period",
         "navigation.speedOverGround",
         "navigation.speedThroughWater",
         "navigation.speedThroughWaterTransverse",
@@ -259,7 +257,9 @@
         "navigation.racing.timeToStart",
         "navigation.racing.timePortDown",
         "navigation.racing.timeStbdDown",
-        "navigation.closestApproach.timeTo"
+        "navigation.closestApproach.timeTo",
+        "environment.water.waves.period",
+        "environment.water.swell.period"
       ]
     }
   }
