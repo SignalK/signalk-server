@@ -70,6 +70,7 @@ import {
   WithSecurityStrategy
 } from './security'
 import { listAllSerialPorts } from './serialports'
+import { USAGE_STATISTICS_FILE } from './usage-statistics'
 import { StreamBundle } from './streambundle'
 import { WithWrappedEmitter } from './events'
 import { getAISShipTypeName, metadataRegistry } from '@signalk/path-metadata'
@@ -2518,7 +2519,8 @@ module.exports = function (
                 req.query.includePlugins === 'true')) &&
             !file.endsWith('.log') &&
             file !== 'signalk-server' &&
-            file !== '.npmrc'
+            file !== '.npmrc' &&
+            file !== USAGE_STATISTICS_FILE
           )
         })
         .map((name) => {

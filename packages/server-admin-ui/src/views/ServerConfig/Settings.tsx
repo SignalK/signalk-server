@@ -14,6 +14,7 @@ import VesselConfiguration from './VesselConfiguration'
 import Logging from './Logging'
 import { useStore, useLoginStatus } from '../../store'
 import BLESettings from './BLESettings'
+import UsageStatistics from './UsageStatistics'
 
 interface ServerSettingsData {
   hasData?: boolean
@@ -660,6 +661,7 @@ const Settings: React.FC = () => {
       <VesselConfiguration />
       <ServerSettings />
       <BLESettings />
+      <UsageStatistics />
       <Logging />
     </div>
   )
