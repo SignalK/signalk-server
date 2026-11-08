@@ -42,14 +42,6 @@
       {
         "enabled": true,
         "autostart": false,
-        "url": "/signalk-tides/",
-        "label": "Tides",
-        "icon": "/signalk-tides/icon.svg",
-        "color": ""
-      },
-      {
-        "enabled": true,
-        "autostart": false,
         "url": "/admin/",
         "label": "Settings",
         "icon": "/@signalk/app-dock/icon-settings.svg",
