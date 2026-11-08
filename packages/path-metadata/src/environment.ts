@@ -145,7 +145,7 @@ export const environmentMetadata: Record<string, PathMetadataEntry> = {
   },
   '/vessels/*/environment/water/swell/period': {
     description: 'Swell period',
-    units: 's'
+    units: 'ms'
   },
   '/vessels/*/environment/water/waves/directionTrue': {
     description: 'Wave direction',
@@ -153,7 +153,7 @@ export const environmentMetadata: Record<string, PathMetadataEntry> = {
   },
   '/vessels/*/environment/water/waves/period': {
     description: 'Wave period',
-    units: 's'
+    units: 'ms'
   },
   '/vessels/*/environment/water/waves/significantHeight': {
     description: 'Wave significant height',
@@ -270,6 +270,16 @@ export const environmentMetadata: Record<string, PathMetadataEntry> = {
   '/vessels/*/environment/wind/speedTrue': {
     description:
       "Wind speed over water (as calculated from speedApparent and vessel's speed through water)",
+    units: 'm/s'
+  },
+  '/vessels/*/environment/wind/averageSpeed': {
+    description:
+      "Average wind speed over ground",
+    units: 'm/s'
+  },
+  '/vessels/*/environment/wind/gust': {
+    description:
+      "Speed of wind gust",
     units: 'm/s'
   },
   '/vessels/*/environment/wind/speedOverGround': {

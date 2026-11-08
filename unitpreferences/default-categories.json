@@ -11,6 +11,8 @@
         "environment.wind.speedThroughWater",
         "environment.wind.averageSpeed",
         "environment.wind.gust",
+        "environment.water.waves.period",
+        "environment.water.swell.period",
         "navigation.speedOverGround",
         "navigation.speedThroughWater",
         "navigation.speedThroughWaterTransverse",
@@ -231,7 +233,6 @@
       "siUnit": "ratio",
       "paths": [
         "environment.outside.relativeHumidity",
-        "environment.outside.absoluteHumidity",
         "environment.outside.cloudCover",
         "environment.inside.relativeHumidity",
         "environment.inside.engineRoom.relativeHumidity",
@@ -258,9 +259,7 @@
         "navigation.racing.timeToStart",
         "navigation.racing.timePortDown",
         "navigation.racing.timeStbdDown",
-        "navigation.closestApproach.timeTo",
-        "environment.water.waves.period",
-        "environment.water.swell.period"
+        "navigation.closestApproach.timeTo"
       ]
     }
   }
