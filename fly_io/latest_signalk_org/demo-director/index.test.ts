@@ -61,29 +61,39 @@ describe('demo director', () => {
     })
   }
 
+  function published(messages: unknown[], path: string) {
+    const values = messages.flatMap(
+      (m) =>
+        (m as { updates: { values: { path: string; value: unknown }[] }[] })
+          .updates[0].values
+    )
+    return values.filter((v) => v.path === path).map((v) => v.value)
+  }
+
   it('publishes the magnetic variation at the boat on the first tick', async () => {
     const { app, messages } = fakeApp(
       { pointIndex: 3, pointTotal: 5, reverse: false },
       NEAR_FINAL
     )
     await runFirstTick(app)
-    assert.deepEqual(messages, [
-      {
-        updates: [
-          {
-            values: [
-              {
-                path: 'navigation.magneticVariation',
-                value:
-                  (magvar(NEAR_FINAL.latitude, NEAR_FINAL.longitude) *
-                    Math.PI) /
-                  180
-              }
-            ]
-          }
-        ]
-      }
+    assert.deepEqual(published(messages, 'navigation.magneticVariation'), [
+      (magvar(NEAR_FINAL.latitude, NEAR_FINAL.longitude) * Math.PI) / 180
     ])
+  })
+
+  it('publishes a charging house battery', async () => {
+    const { app, messages } = fakeApp(
+      { pointIndex: 3, pointTotal: 5, reverse: false },
+      NEAR_FINAL
+    )
+    await runFirstTick(app)
+    const [charge] = published(
+      messages,
+      'electrical.batteries.house.capacity.stateOfCharge'
+    )
+    assert.ok(typeof charge === 'number' && charge >= 0.83 && charge < 0.84)
+    const [current] = published(messages, 'electrical.batteries.house.current')
+    assert.ok(typeof current === 'number' && current > 0)
   })
 
   it('keeps the route while the boat is short of the final waypoint', async () => {

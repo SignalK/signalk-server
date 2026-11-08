@@ -7,6 +7,14 @@ const VARIATION_EVERY_TICKS = 60
 // Turn round a little before the final waypoint so the boat never reaches the
 // harbour wall, and the autopilot's own arrival handling never ends the route.
 const TURN_ROUND_DISTANCE_M = 250
+// The house bank charges gently from the solar panel, so the battery widget
+// shows a charging bank without ever reaching full
+const BATTERY_START_CHARGE = 0.83
+const BATTERY_FULLEST_CHARGE = 0.95
+const BATTERY_CHARGE_PER_HOUR = 0.005
+const BATTERY_CURRENT_A = 4.2
+const BATTERY_VOLTAGE_V = 13.3
+const MS_PER_HOUR = 3600 * 1000
 
 interface Position {
   latitude: number
@@ -34,6 +42,7 @@ export default function (app: ServerAPI): Plugin {
   let timer: ReturnType<typeof setInterval> | undefined
   let ticksSinceVariation = VARIATION_EVERY_TICKS
   let turning = false
+  let startedAt = Date.now()
 
   function selfPosition() {
     return app.getSelfPath('navigation.position.value') as Position | undefined
@@ -50,6 +59,34 @@ export default function (app: ServerAPI): Plugin {
             {
               path: 'navigation.magneticVariation' as Path,
               value: degToRad(magvar(position.latitude, position.longitude))
+            }
+          ]
+        }
+      ]
+    })
+  }
+
+  function publishBattery() {
+    const hours = (Date.now() - startedAt) / MS_PER_HOUR
+    const charge = Math.min(
+      BATTERY_FULLEST_CHARGE,
+      BATTERY_START_CHARGE + hours * BATTERY_CHARGE_PER_HOUR
+    )
+    app.handleMessage(PLUGIN_ID, {
+      updates: [
+        {
+          values: [
+            {
+              path: 'electrical.batteries.house.capacity.stateOfCharge' as Path,
+              value: charge
+            },
+            {
+              path: 'electrical.batteries.house.current' as Path,
+              value: BATTERY_CURRENT_A
+            },
+            {
+              path: 'electrical.batteries.house.voltage' as Path,
+              value: BATTERY_VOLTAGE_V
             }
           ]
         }
@@ -86,6 +123,7 @@ export default function (app: ServerAPI): Plugin {
   function tick() {
     if (ticksSinceVariation >= VARIATION_EVERY_TICKS) publishVariation()
     ticksSinceVariation++
+    publishBattery()
     void turnRoundAtEnd()
   }
 
@@ -93,10 +131,11 @@ export default function (app: ServerAPI): Plugin {
     id: PLUGIN_ID,
     name: 'Demo director',
     description:
-      'Keeps the demo boat under way: publishes magnetic variation and turns the active route round at its end',
+      'Keeps the demo boat under way: publishes magnetic variation and a charging house battery, and turns the active route round at its end',
     schema: () => ({ type: 'object', properties: {} }),
     start: () => {
       ticksSinceVariation = VARIATION_EVERY_TICKS
+      startedAt = Date.now()
       tick()
       timer = setInterval(tick, TICK_MS)
       app.setPluginStatus('Directing the demo boat')
