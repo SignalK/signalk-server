@@ -43,8 +43,8 @@
         "instanceId": "demo-tides",
         "extension": "signalk-tides",
         "widget": "tides",
-        "anchor": "bl",
-        "col": 0,
+        "anchor": "tr",
+        "col": 2,
         "row": 1
       }
     ]
