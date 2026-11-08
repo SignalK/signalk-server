@@ -84,6 +84,7 @@ import {
 import { Type } from '@sinclair/typebox'
 import { Value } from '@sinclair/typebox/value'
 import { HullTypeSchema, type HullType } from '@signalk/server-api/typebox'
+import { ManufacturerCodeValues } from '@canboat/ts-pgns'
 
 const readdir = util.promisify(fs.readdir)
 const debug = createDebug('signalk-server:serverroutes')
@@ -1827,6 +1828,19 @@ module.exports = function (
       listAllSerialPorts()
         .then((ports) => res.json(ports))
         .catch(next)
+    }
+  )
+
+  // The NMEA 2000 manufacturer names and codes, for a connection's
+  // manufacturer filter (canboat/canboatjs#588).
+  app.get(
+    `${SERVERROUTESPREFIX}/n2kManufacturers`,
+    (_req: Request, res: Response) => {
+      res.json(
+        Object.entries(ManufacturerCodeValues as Record<string, number>)
+          .map(([name, code]) => ({ name, code }))
+          .sort((a, b) => a.name.localeCompare(b.name))
+      )
     }
   )
 

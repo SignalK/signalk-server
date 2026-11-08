@@ -6,6 +6,7 @@ import Table from 'react-bootstrap/Table'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faTrash } from '@fortawesome/free-solid-svg-icons/faTrash'
 import { faCirclePlus } from '@fortawesome/free-solid-svg-icons/faCirclePlus'
+import ManufacturerFilter, { Manufacturer } from './ManufacturerFilter'
 
 interface N2KFilter {
   source: string
@@ -44,6 +45,8 @@ interface ProviderOptions {
   filtersBeforeDecoding?: boolean
   filters?: N2KFilter[]
   useCanName?: boolean
+  manufacturerFilter?: string
+  manufacturers?: string[]
   [key: string]: unknown
 }
 
@@ -61,6 +64,8 @@ interface N2KFiltersProps {
   canDropBeforeDecoding?: boolean
   /** canboatjs drops them in the kernel (SocketCAN, canbus-canboatjs). */
   dropsInKernel?: boolean
+  /** The manufacturer names to pick from (tests); fetched otherwise. */
+  manufacturers?: Manufacturer[]
   onChange: (
     event:
       | ChangeEvent<HTMLInputElement>
@@ -79,7 +84,8 @@ export default function N2KFilters({
   value,
   onChange,
   canDropBeforeDecoding,
-  dropsInKernel
+  dropsInKernel,
+  manufacturers
 }: N2KFiltersProps) {
   const rawFilters = value.options.filters ?? EMPTY_FILTERS
   const filters = useMemo(() => rawFilters.map(ensureKey), [rawFilters])
@@ -262,6 +268,13 @@ export default function N2KFilters({
           <Button size="sm" variant="primary" onClick={() => handleAddFilter()}>
             <FontAwesomeIcon icon={faCirclePlus} /> Add
           </Button>
+          {canDropBeforeDecoding && (
+            <ManufacturerFilter
+              options={value.options}
+              onChange={onChange}
+              known={manufacturers}
+            />
+          )}
         </Card.Body>
       </Card>
     </div>

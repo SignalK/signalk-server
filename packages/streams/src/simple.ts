@@ -21,6 +21,10 @@ import {
   canboatjsSupportsExcludePgns,
   excludePgnsFromFilters
 } from './n2k-exclude-pgns'
+import {
+  canboatjsSupportsManufacturerFilter,
+  manufacturerFilterOption
+} from './n2k-manufacturers'
 import type { CreateDebug, DeltaCache } from './types'
 
 // canboat exports are old-style constructor functions, not classes.
@@ -113,6 +117,10 @@ interface SubOptions {
   filtersEnabled?: boolean
   filtersBeforeDecoding?: boolean
   excludePgns?: Array<number | string> | string | number
+  manufacturerFilter?: string
+  manufacturers?: string[]
+  allowManufacturers?: string[]
+  denyManufacturers?: string[]
   useCanName?: boolean
   tcp?: boolean
   [key: string]: unknown
@@ -633,6 +641,19 @@ export default class Simple extends Transform {
         } else if (opts.subOptions.filtersBeforeDecoding) {
           console.warn(
             `${options.providerId}: this canboatjs can't drop filtered PGNs before decoding; they are filtered after decoding`
+          )
+        }
+      }
+
+      // Keep or drop devices by manufacturer: canboatjs does it before
+      // decoding. An older canboatjs can't, so say the filter is off.
+      const byManufacturer = manufacturerFilterOption(opts.subOptions)
+      if (byManufacturer !== undefined) {
+        if (canboatjsSupportsManufacturerFilter()) {
+          Object.assign(opts.subOptions, byManufacturer)
+        } else {
+          console.warn(
+            `${options.providerId}: this canboatjs can't filter devices by manufacturer; the manufacturer filter is off`
           )
         }
       }
