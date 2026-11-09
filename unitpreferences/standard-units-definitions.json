@@ -397,6 +397,12 @@
   "V": {
     "longName": "volt",
     "conversions": {
+      "mV": {
+        "formula": "value * 1000",
+        "inverseFormula": "value * 0.001",
+        "symbol": "mV",
+        "longName": "millivolt"
+      },
       "V": {
         "formula": "value * 1",
         "inverseFormula": "value * 1",
