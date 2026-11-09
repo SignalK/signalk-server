@@ -140,7 +140,7 @@ function buildRegexArray(
     const pattern = matchKey
       .replace(/\*/g, '[^/]+')
       .replace(/RegExp/g, '[^/]+')
-      .replace(/\(([^)]+)\)/g, '($1)') // preserve regex groups like (single)|([A-C])
+      .replace(/\(([^)]+)\)/g, '($1)') // preserve regex groups like (single|[A-C])
     try {
       result.push({
         pattern: new RegExp(`^${pattern}$`),

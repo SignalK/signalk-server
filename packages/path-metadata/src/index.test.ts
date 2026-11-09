@@ -51,6 +51,35 @@ describe('getMetadata', () => {
     })
   })
 
+  describe('AC phase entries', () => {
+    it('resolve each phase name under the groups that define them', () => {
+      for (const path of [
+        'electrical.ac.0.phase.single.current',
+        'electrical.ac.0.phase.A.current',
+        'electrical.generators.0.phase.B.current',
+        'electrical.inverters.0.ac.phase.C.current'
+      ]) {
+        expect(getMetadata(self(path))?.units, path).to.equal('A')
+      }
+    })
+
+    it('do not match paths outside those groups', () => {
+      for (const path of [
+        'made.up.path.A.current',
+        'electrical.chargers.0.phase.A.realPower',
+        'electrical.ac.0.phase.D.current'
+      ]) {
+        expect(getMetadata(self(path)), path).to.equal(undefined)
+      }
+    })
+
+    it('do not give a container description to an unknown leaf', () => {
+      expect(
+        getMetadata(self('electrical.ac.0.phase.single.nonsense'))
+      ).to.equal(undefined)
+    })
+  })
+
   describe('runtime-added plugin meta survives later lookups', () => {
     // Plugins publish their own metadata via `update.meta`. FullSignalK.addMeta
     // forwards that into metadataRegistry.addMetaData(context, path, value),
