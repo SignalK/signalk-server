@@ -132,7 +132,21 @@ export default function WebSocketClients({
 
   return (
     <Card>
-      <Card.Header onClick={onToggle} style={{ cursor: 'pointer' }}>
+      <Card.Header
+        role="button"
+        tabIndex={0}
+        aria-expanded={open}
+        onClick={onToggle}
+        onKeyDown={(event) => {
+          // Keys pressed on the refresh button inside belong to that button.
+          if (event.target !== event.currentTarget) return
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault()
+            onToggle()
+          }
+        }}
+        style={{ cursor: 'pointer' }}
+      >
         WebSocket Clients
         <span className="float-end">
           {open && (
