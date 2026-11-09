@@ -5,8 +5,8 @@
 SERVER_PID=$$
 
 # Visitors may only watch, so they cannot change the range: open the radar
-# at 6 nm, so the coast and the AIS traffic around the boat both show.
-RADAR_RANGE_METERS=11112
+# at 3 nm, close enough to see the boat and the traffic around it.
+RADAR_RANGE_METERS=5556
 RESTART_DELAY_SECONDS=5
 
 set_radar_range() {
