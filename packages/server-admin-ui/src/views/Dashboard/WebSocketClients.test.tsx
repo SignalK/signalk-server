@@ -86,15 +86,17 @@ describe('WebSocketClients', () => {
   })
 
   it('reloads the list when the client count changes', async () => {
-    const fetchMock = mockFetch(listResponse([spark]))
+    mockFetch(listResponse([spark]))
     const { rerender } = renderClients()
     await screen.findByText('ESP32 Websocket Client')
 
-    mockFetch(listResponse([{ ...spark, id: 'spark-2', userAgent: 'KIP' }]))
+    const reloadMock = mockFetch(
+      listResponse([{ ...spark, id: 'spark-2', userAgent: 'KIP' }])
+    )
     rerender({ clientCount: 2 })
 
     expect(await screen.findByText('KIP')).toBeDefined()
-    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(reloadMock).toHaveBeenCalledTimes(1)
   })
 
   it('reloads the list from the refresh button', async () => {
@@ -107,7 +109,7 @@ describe('WebSocketClients', () => {
     await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2))
   })
 
-  it('drops an older request once a newer one is sent', async () => {
+  it('keeps the pending request and reloads once it answers', async () => {
     const requests: {
       signal: AbortSignal
       answer: (response: Partial<Response>) => void
@@ -116,10 +118,7 @@ describe('WebSocketClients', () => {
       'fetch',
       vi.fn(
         (_url: string, init: RequestInit) =>
-          new Promise<Partial<Response>>((resolve, reject) => {
-            init.signal?.addEventListener('abort', () =>
-              reject(new DOMException('Aborted', 'AbortError'))
-            )
+          new Promise<Partial<Response>>((resolve) => {
             requests.push({
               signal: init.signal as AbortSignal,
               answer: resolve
@@ -129,11 +128,46 @@ describe('WebSocketClients', () => {
     )
     const { rerender } = renderClients()
     rerender({ clientCount: 2 })
+    rerender({ clientCount: 3 })
+
+    expect(requests).toHaveLength(1)
+    expect(requests[0].signal.aborted).toBe(false)
+    await act(async () => requests[0].answer(listResponse([spark])))
+    expect(screen.getByText('ESP32 Websocket Client')).toBeDefined()
 
     expect(requests).toHaveLength(2)
-    expect(requests[0].signal.aborted).toBe(true)
-    await act(async () => requests[1].answer(listResponse([spark])))
-    expect(screen.getByText('ESP32 Websocket Client')).toBeDefined()
+    await act(async () =>
+      requests[1].answer(listResponse([{ ...spark, userAgent: 'KIP' }]))
+    )
+    expect(screen.getByText('KIP')).toBeDefined()
+  })
+
+  it('gives up on a request that never answers', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    try {
+      const fetchMock = vi
+        .fn()
+        .mockImplementationOnce(
+          (_url: string, init: RequestInit) =>
+            new Promise((_resolve, reject) => {
+              init.signal?.addEventListener('abort', () =>
+                reject(new DOMException('Aborted', 'AbortError'))
+              )
+            })
+        )
+        .mockResolvedValue(listResponse([spark]))
+      vi.stubGlobal('fetch', fetchMock)
+      const { rerender } = renderClients()
+      rerender({ clientCount: 2 })
+
+      await act(() => vi.advanceTimersByTimeAsync(59000))
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+      await act(() => vi.advanceTimersByTimeAsync(1000))
+      expect(fetchMock).toHaveBeenCalledTimes(2)
+      expect(await screen.findByText('ESP32 Websocket Client')).toBeDefined()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('says so when the server refuses the list', async () => {
@@ -154,6 +188,28 @@ describe('WebSocketClients', () => {
     mockFetch({ ok: true, json: async () => ({ error: 'portal' }) })
     renderClients()
 
+    expect(
+      await screen.findByText('The client list is not available.')
+    ).toBeDefined()
+  })
+
+  it('treats a list with malformed entries as unavailable', async () => {
+    mockFetch(listResponse([spark]))
+    const { rerender } = renderClients()
+    await screen.findByText('ESP32 Websocket Client')
+
+    mockFetch(listResponse([spark, null as unknown as object]))
+    rerender({ clientCount: 2 })
+    expect(
+      await screen.findByText('The client list is not available.')
+    ).toBeDefined()
+
+    mockFetch(listResponse([spark]))
+    rerender({ clientCount: 3 })
+    await screen.findByText('ESP32 Websocket Client')
+
+    mockFetch(listResponse([{ ...spark, userAgent: { name: 'x' } }]))
+    rerender({ clientCount: 4 })
     expect(
       await screen.findByText('The client list is not available.')
     ).toBeDefined()
