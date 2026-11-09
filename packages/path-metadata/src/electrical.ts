@@ -337,7 +337,8 @@ export const electricalMetadata: Record<string, PathMetadataEntry> = {
     units: 'A'
   },
   '/vessels/*/electrical/inverters/RegExp/ac/waveform': {
-    description: 'Waveform of the AC output, such as sine wave'
+    description: 'Waveform of the AC output',
+    enum: ['Sine wave', 'Modified sine wave']
   },
   '/vessels/*/electrical/inverters/RegExp/inverterMode': {
     description: 'Mode of inverter'
@@ -760,7 +761,8 @@ export const electricalMetadata: Record<string, PathMetadataEntry> = {
   },
   [`/vessels/*/electrical/inverters/RegExp/ac/phase/${AC_PHASE_NAME}/waveform`]:
     {
-      description: 'Waveform of the AC output, such as sine wave'
+      description: 'Waveform of the AC output',
+      enum: ['Sine wave', 'Modified sine wave']
     },
   '/vessels/*/electrical/displays': {
     description:
