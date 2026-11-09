@@ -6,6 +6,8 @@ title: Sensor Targets
 
 AIS, radar ARPA and camera detection each see some of the same boats. AIS vessels are `vessels.*` contexts. Objects that other sensors track are contexts under `targets.*`, so they are ordinary Signal K data: REST, WebSocket subscriptions, history and every plugin see them with no extra API.
 
+This convention covers sensors that report a position for what they track, such as radar ARPA or a camera that estimates range. A sensor that measures only a bearing has no agreed paths here.
+
 Three kinds of plugin take part:
 
 - **Sensor plugins** publish what their sensor tracks under `targets.*`.
