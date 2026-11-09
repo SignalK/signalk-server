@@ -72,12 +72,16 @@ describe('WebSocketClients', () => {
     mockFetch(listResponse([spark]))
     const onToggle = vi.fn()
     render(<WebSocketClients clientCount={1} open={true} onToggle={onToggle} />)
-    const toggle = screen.getByTitle('Hide')
+    const toggle = screen.getByRole('button', {
+      name: 'Hide WebSocket Clients'
+    })
     expect(toggle.tagName).toBe('BUTTON')
     expect(toggle.getAttribute('aria-expanded')).toBe('true')
 
     fireEvent.click(toggle)
-    fireEvent.click(screen.getByTitle('Refresh'))
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Refresh WebSocket Clients' })
+    )
     expect(onToggle).toHaveBeenCalledTimes(1)
   })
 
@@ -117,7 +121,9 @@ describe('WebSocketClients', () => {
     renderClients()
     await screen.findByText('ESP32 Websocket Client')
 
-    fireEvent.click(screen.getByTitle('Refresh'))
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Refresh WebSocket Clients' })
+    )
 
     await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2))
   })

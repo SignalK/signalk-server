@@ -140,7 +140,7 @@ export default function WebSocketClients({
               variant="link"
               size="sm"
               className="p-0 me-3"
-              title="Refresh"
+              title="Refresh WebSocket Clients"
               onClick={(event) => {
                 event.stopPropagation()
                 loadRef.current?.()
@@ -153,7 +153,7 @@ export default function WebSocketClients({
             variant="link"
             size="sm"
             className="p-0"
-            title={open ? 'Hide' : 'Show'}
+            title={open ? 'Hide WebSocket Clients' : 'Show WebSocket Clients'}
             aria-expanded={open}
             onClick={(event) => {
               event.stopPropagation()
