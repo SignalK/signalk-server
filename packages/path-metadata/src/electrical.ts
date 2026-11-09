@@ -1,5 +1,60 @@
 import type { PathMetadataEntry } from './types'
 
+// One pattern covers the single-phase and the three-phase names, so it needs
+// its own group: an unbracketed | would split the whole key in two.
+const AC_PHASE_NAME = '(single|[A-C])'
+
+function acPhaseMetadata(parent: string): Record<string, PathMetadataEntry> {
+  const phases = `${parent}/phase`
+  const phase = `${phases}/${AC_PHASE_NAME}`
+  return {
+    [phases]: {
+      description: 'Single or A,B or C in 3 Phase systems '
+    },
+    [phase]: {
+      description: 'AC equipment common qualities'
+    },
+    [`${phase}/associatedBus`]: {
+      description: 'Name of BUS device is associated with'
+    },
+    [`${phase}/lineNeutralVoltage`]: {
+      description: 'Data should be of type number.',
+      units: 'V'
+    },
+    [`${phase}/lineLineVoltage`]: {
+      description: 'Data should be of type number.',
+      units: 'V'
+    },
+    [`${phase}/current`]: {
+      description: 'Data should be of type number.',
+      units: 'A'
+    },
+    [`${phase}/frequency`]: {
+      description: 'Data should be of type number.',
+      units: 'Hz'
+    },
+    [`${phase}/reactivePower`]: {
+      description: 'Reactive power, in volt-amperes reactive.',
+      units: 'VAR'
+    },
+    [`${phase}/powerFactor`]: {
+      description: 'Data should be of type number.'
+    },
+    [`${phase}/powerFactorLagging`]: {
+      description: 'Lead/lag status.',
+      enum: ['leading', 'lagging', 'error', 'not available']
+    },
+    [`${phase}/realPower`]: {
+      description: 'Data should be of type number.',
+      units: 'W'
+    },
+    [`${phase}/apparentPower`]: {
+      description: 'Apparent power (|V| × |I|), in volt-amperes.',
+      units: 'VA'
+    }
+  }
+}
+
 export const electricalMetadata: Record<string, PathMetadataEntry> = {
   '/vessels/*/electrical': {
     description:
@@ -587,48 +642,7 @@ export const electricalMetadata: Record<string, PathMetadataEntry> = {
   '/vessels/*/electrical/ac/RegExp/manufacturer/URL': {
     description: 'Web reference / URL'
   },
-  '/vessels/*/electrical/ac/RegExp/phase': {
-    description: 'Single or A,B or C in 3 Phase systems '
-  },
-  '/vessels/*/electrical/ac/RegExp/phase/(single)|([A-C])': {
-    description: 'AC equipment common qualities'
-  },
-  '/vessels/*/electrical/ac/RegExp/phase/(single)|([A-C])/associatedBus': {
-    description: 'Name of BUS device is associated with'
-  },
-  '/vessels/*/electrical/ac/RegExp/phase/(single)|([A-C])/lineNeutralVoltage': {
-    description: 'Data should be of type number.',
-    units: 'V'
-  },
-  '/vessels/*/electrical/ac/RegExp/phase/(single)|([A-C])/lineLineVoltage': {
-    description: 'Data should be of type number.',
-    units: 'V'
-  },
-  '/vessels/*/electrical/ac/RegExp/phase/(single)|([A-C])/current': {
-    description: 'Data should be of type number.',
-    units: 'A'
-  },
-  '/vessels/*/electrical/ac/RegExp/phase/(single)|([A-C])/frequency': {
-    description: 'Data should be of type number.',
-    units: 'Hz'
-  },
-  '/vessels/*/electrical/ac/RegExp/phase/(single)|([A-C])/reactivePower': {
-    description: 'Reactive power, in volt-amperes reactive.',
-    units: 'VAR'
-  },
-  '/vessels/*/electrical/ac/RegExp/phase/(single)|([A-C])/powerFactor': {
-    description: 'Data should be of type number.'
-  },
-  '/vessels/*/electrical/ac/RegExp/phase/(single)|([A-C])/powerFactorLagging': {
-    description: 'Lead/lag status.',
-    enum: ['leading', 'lagging', 'error', 'not available']
-  },
-  '/vessels/*/electrical/ac/RegExp/phase/(single)|([A-C])/realPower': {
-    description: 'Data should be of type number.',
-    units: 'W'
-  },
-  '/vessels/*/electrical/ac/RegExp/phase/(single)|([A-C])/apparentPower': {
-    description: 'Apparent power (|V| × |I|), in volt-amperes.',
-    units: 'VA'
-  }
+  ...acPhaseMetadata('/vessels/*/electrical/ac/RegExp'),
+  ...acPhaseMetadata('/vessels/*/electrical/generators/RegExp'),
+  ...acPhaseMetadata('/vessels/*/electrical/inverters/RegExp/ac')
 }
