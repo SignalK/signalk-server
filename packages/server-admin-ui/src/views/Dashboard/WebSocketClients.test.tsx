@@ -68,17 +68,17 @@ describe('WebSocketClients', () => {
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
-  it('opens and closes from the keyboard', () => {
+  it('toggles from its own button, apart from the refresh button', () => {
     mockFetch(listResponse([spark]))
     const onToggle = vi.fn()
     render(<WebSocketClients clientCount={1} open={true} onToggle={onToggle} />)
-    const header = screen.getByRole('button', { name: /WebSocket Clients/ })
-    expect(header.getAttribute('aria-expanded')).toBe('true')
+    const toggle = screen.getByTitle('Hide')
+    expect(toggle.tagName).toBe('BUTTON')
+    expect(toggle.getAttribute('aria-expanded')).toBe('true')
 
-    fireEvent.keyDown(header, { key: 'Enter' })
-    fireEvent.keyDown(header, { key: ' ' })
-    fireEvent.keyDown(screen.getByTitle('Refresh'), { key: 'Enter' })
-    expect(onToggle).toHaveBeenCalledTimes(2)
+    fireEvent.click(toggle)
+    fireEvent.click(screen.getByTitle('Refresh'))
+    expect(onToggle).toHaveBeenCalledTimes(1)
   })
 
   it('lists each client with its User-Agent once opened', async () => {
