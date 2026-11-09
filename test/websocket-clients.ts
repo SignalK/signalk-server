@@ -17,12 +17,17 @@ interface WebSocketClient {
   userAgent?: string
   principal?: string
   connectedAt?: string
+  serverEvents: boolean
 }
 
-function openStream(url: string, headers: Record<string, string>) {
+function openStream(
+  url: string,
+  headers: Record<string, string>,
+  query = 'subscribe=none'
+) {
   return new Promise<WebSocket>((resolve, reject) => {
     const ws = new WebSocket(
-      `${url.replace('http', 'ws')}/signalk/v1/stream?subscribe=none`,
+      `${url.replace('http', 'ws')}/signalk/v1/stream?${query}`,
       { headers }
     )
     ws.once('message', () => resolve(ws))
@@ -61,6 +66,23 @@ describe('WebSocket clients', function () {
         expect(client?.ip).to.be.a('string')
         expect(client?.principal).to.be.undefined
         expect(Date.parse(client?.connectedAt ?? '')).to.not.be.NaN
+        expect(client?.serverEvents).to.equal(false)
+      } finally {
+        ws.close()
+      }
+    })
+
+    it('flags clients that receive server events', async function () {
+      const ws = await openStream(
+        url,
+        { 'User-Agent': 'Admin UI test' },
+        'serverevents=all&subscribe=none'
+      )
+      try {
+        const res = await fetch(`${url}/skServer/websocketClients`)
+        const clients: WebSocketClient[] = await res.json()
+        const client = clients.find((c) => c.userAgent === 'Admin UI test')
+        expect(client?.serverEvents).to.equal(true)
       } finally {
         ws.close()
       }
