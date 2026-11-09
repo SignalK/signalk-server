@@ -132,21 +132,7 @@ export default function WebSocketClients({
 
   return (
     <Card>
-      <Card.Header
-        role="button"
-        tabIndex={0}
-        aria-expanded={open}
-        onClick={onToggle}
-        onKeyDown={(event) => {
-          // Keys pressed on the refresh button inside belong to that button.
-          if (event.target !== event.currentTarget) return
-          if (event.key === 'Enter' || event.key === ' ') {
-            event.preventDefault()
-            onToggle()
-          }
-        }}
-        style={{ cursor: 'pointer' }}
-      >
+      <Card.Header onClick={onToggle} style={{ cursor: 'pointer' }}>
         WebSocket Clients
         <span className="float-end">
           {open && (
@@ -163,7 +149,19 @@ export default function WebSocketClients({
               <FontAwesomeIcon icon={faRotateRight} />
             </Button>
           )}
-          <FontAwesomeIcon icon={open ? faChevronUp : faChevronDown} />
+          <Button
+            variant="link"
+            size="sm"
+            className="p-0"
+            title={open ? 'Hide' : 'Show'}
+            aria-expanded={open}
+            onClick={(event) => {
+              event.stopPropagation()
+              onToggle()
+            }}
+          >
+            <FontAwesomeIcon icon={open ? faChevronUp : faChevronDown} />
+          </Button>
         </span>
       </Card.Header>
       <Collapse in={open}>
