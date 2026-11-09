@@ -498,7 +498,7 @@ _Notification: after successful `acknowledge` request_
 NMEA2000 alarm PGNs are processed by `n2k-signalk` which generates Signal K notification deltas as follows:
 
 - Path value starting with `notifications.nmea.*`
-- PGN fields mapped to the `state`, `method`, `message` and `location` attributes (`location` needs `@signalk/n2k-signalk` 4.7.0 or later)
+- PGN fields mapped to the `state`, `method`, `message` and `location` attributes
 - Additional attributes capturing PGN field values added to the notification payload.
 
 The **Notification API** uses these additional PGN attributes to populate the notification `status` to align the available actions and any action taken.
