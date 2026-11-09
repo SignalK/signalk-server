@@ -505,7 +505,11 @@ export const navigationMetadata: Record<string, PathMetadataEntry> = {
     description: 'Integrity of the satellite fix'
   },
   '/vessels/*/navigation/gnss/satellites': {
-    description: 'Number of satellites'
+    description: 'Number of satellites used in the position fix'
+  },
+  '/vessels/*/navigation/gnss/satellitesInView': {
+    description:
+      'Satellites in view of the GNSS receiver: their count, and for each its id, elevation and azimuth in radians, and SNR in dB'
   },
   '/vessels/*/navigation/gnss/antennaAltitude': {
     description: 'Altitude of antenna',
@@ -607,6 +611,21 @@ export const navigationMetadata: Record<string, PathMetadataEntry> = {
   '/vessels/*/navigation/speedThroughWater': {
     description: 'Vessel speed through the water',
     units: 'm/s'
+  },
+  '/vessels/*/navigation/speedThroughWaterReferenceType': {
+    description: 'Type of sensor that measures the speed through the water',
+    enum: [
+      'Paddle wheel',
+      'Pitot tube',
+      'Doppler',
+      'Correlation (ultra sound)',
+      'Electro Magnetic'
+    ]
+  },
+  '/vessels/*/navigation/specialManeuver': {
+    description:
+      'Whether the vessel is engaged in a special maneuver, such as in an inland waterway (AIS regional application)',
+    enum: ['not available', 'not engaged', 'engaged', 'reserved']
   },
   '/vessels/*/navigation/speedThroughWaterTransverse': {
     description: 'Transverse speed through the water (Leeway)',

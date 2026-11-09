@@ -51,6 +51,10 @@ function acPhaseMetadata(parent: string): Record<string, PathMetadataEntry> {
     [`${phase}/apparentPower`]: {
       description: 'Apparent power (|V| × |I|), in volt-amperes.',
       units: 'VA'
+    },
+    [`${phase}/breakerSize`]: {
+      description: 'Rated current of the breaker',
+      units: 'A'
     }
   }
 }
@@ -146,6 +150,29 @@ export const electricalMetadata: Record<string, PathMetadataEntry> = {
   },
   '/vessels/*/electrical/batteries/RegExp/chemistry': {
     description: 'Type of battery FLA, LiFePO4, etc.'
+  },
+  '/vessels/*/electrical/batteries/RegExp/batteryType': {
+    description: 'Construction of a lead-acid battery',
+    enum: ['flooded', 'gel', 'agm']
+  },
+  '/vessels/*/electrical/batteries/RegExp/nominalVoltage': {
+    description: 'Nominal voltage of the battery',
+    units: 'V'
+  },
+  '/vessels/*/electrical/batteries/RegExp/supportsEqualization': {
+    description: 'Whether the battery may be equalized'
+  },
+  '/vessels/*/electrical/batteries/RegExp/temperatureCoefficient': {
+    description:
+      'Change of the battery capacity per kelvin, as a ratio of its nominal capacity',
+    units: 'ratio'
+  },
+  '/vessels/*/electrical/batteries/RegExp/peukertExponent': {
+    description: 'Peukert exponent of the battery'
+  },
+  '/vessels/*/electrical/batteries/RegExp/chargeEfficiencyFactor': {
+    description: 'Charge stored as a ratio of the charge put into the battery',
+    units: 'ratio'
   },
   '/vessels/*/electrical/batteries/RegExp/capacity': {
     description: "Data about the battery's capacity"
@@ -305,8 +332,34 @@ export const electricalMetadata: Record<string, PathMetadataEntry> = {
     description: 'Apparent power (|V| × |I|), in volt-amperes.',
     units: 'VA'
   },
+  '/vessels/*/electrical/inverters/RegExp/ac/breakerSize': {
+    description: 'Rated current of the AC output breaker',
+    units: 'A'
+  },
+  '/vessels/*/electrical/inverters/RegExp/ac/waveform': {
+    description: 'Waveform of the AC output, such as sine wave'
+  },
   '/vessels/*/electrical/inverters/RegExp/inverterMode': {
     description: 'Mode of inverter'
+  },
+  '/vessels/*/electrical/inverters/RegExp/operatingState': {
+    description: 'Operating state of the inverter',
+    enum: ['invert', 'ac passthru', 'load sense', 'fault', 'disabled']
+  },
+  '/vessels/*/electrical/inverters/RegExp/enabled': {
+    description: 'Whether the inverter is enabled'
+  },
+  '/vessels/*/electrical/inverters/RegExp/loadSenseEnabled': {
+    description:
+      'Whether the inverter only starts when it senses a load on its output'
+  },
+  '/vessels/*/electrical/inverters/RegExp/loadSensePowerThreshold': {
+    description: 'Load above which a load-sensing inverter starts',
+    units: 'W'
+  },
+  '/vessels/*/electrical/inverters/RegExp/loadSenseInterval': {
+    description: 'Interval at which a load-sensing inverter checks for a load',
+    units: 's'
   },
   '/vessels/*/electrical/chargers': {
     description: 'Data about AC sourced battery charger'
@@ -381,10 +434,65 @@ export const electricalMetadata: Record<string, PathMetadataEntry> = {
   },
   '/vessels/*/electrical/chargers/RegExp/chargerRole': {
     description:
-      'How is charging source configured?  Standalone, or in sync with another charger?'
+      'How is charging source configured?  Standalone, or in sync with another charger?',
+    enum: [
+      'standalone',
+      'primary',
+      'secondary',
+      'echo',
+      'master',
+      'slave',
+      'standby'
+    ]
   },
   '/vessels/*/electrical/chargers/RegExp/chargingMode': {
-    description: 'Charging mode i.e. float, overcharge, etc.'
+    description: 'Charging mode i.e. float, overcharge, etc.',
+    enum: [
+      'not charging',
+      'bulk',
+      'absorption',
+      'acceptance',
+      'overcharge',
+      'equalise',
+      'equalize',
+      'float',
+      'no float',
+      'constant vi',
+      'disabled',
+      'fault',
+      'unknown',
+      'other'
+    ]
+  },
+  '/vessels/*/electrical/chargers/RegExp/enabled': {
+    description: 'Whether the charger is enabled'
+  },
+  '/vessels/*/electrical/chargers/RegExp/equalizationPending': {
+    description: 'Whether an equalization is pending'
+  },
+  '/vessels/*/electrical/chargers/RegExp/equalizationTimeRemaining': {
+    description: 'Time remaining in the current equalization',
+    units: 's'
+  },
+  '/vessels/*/electrical/chargers/RegExp/chargeCurrentLimit': {
+    description:
+      "Limit on the charge current, as a ratio of the charger's maximum output current",
+    units: 'ratio'
+  },
+  '/vessels/*/electrical/chargers/RegExp/estimatedTemperature': {
+    description:
+      'Battery temperature the charger assumes when it has no temperature sensor',
+    enum: ['cold', 'warm', 'hot']
+  },
+  '/vessels/*/electrical/chargers/RegExp/equalizeOneTimeEnabled': {
+    description: 'Whether a one-time equalization is enabled'
+  },
+  '/vessels/*/electrical/chargers/RegExp/overChargeEnabled': {
+    description: 'Whether the overcharge stage is enabled'
+  },
+  '/vessels/*/electrical/chargers/RegExp/equalizeTime': {
+    description: 'Duration of an equalization',
+    units: 's'
   },
   '/vessels/*/electrical/chargers/RegExp/setpointVoltage': {
     description: 'Data should be of type number.',
@@ -644,5 +752,33 @@ export const electricalMetadata: Record<string, PathMetadataEntry> = {
   },
   ...acPhaseMetadata('/vessels/*/electrical/ac/RegExp'),
   ...acPhaseMetadata('/vessels/*/electrical/generators/RegExp'),
-  ...acPhaseMetadata('/vessels/*/electrical/inverters/RegExp/ac')
+  ...acPhaseMetadata('/vessels/*/electrical/inverters/RegExp/ac'),
+  [`/vessels/*/electrical/ac/RegExp/phase/${AC_PHASE_NAME}/acceptability`]: {
+    description:
+      'Whether the AC input is acceptable, or why not, such as bad level or bad frequency',
+    enum: ['Bad level', 'Bad frequency', 'Being qualified', 'Good']
+  },
+  [`/vessels/*/electrical/inverters/RegExp/ac/phase/${AC_PHASE_NAME}/waveform`]:
+    {
+      description: 'Waveform of the AC output, such as sine wave'
+    },
+  '/vessels/*/electrical/displays': {
+    description:
+      'Display settings of instrument and chart displays, by maker and display group'
+  },
+  '/vessels/*/electrical/displays/RegExp/RegExp/brightness': {
+    description: 'Backlight brightness of the display group',
+    units: 'ratio'
+  },
+  '/vessels/*/electrical/displays/RegExp/RegExp/color': {
+    description: 'Color scheme of the display group',
+    enum: ['day1', 'day2', 'redBlack', 'inverse']
+  },
+  '/vessels/*/electrical/displays/RegExp/RegExp/nightMode/state': {
+    description: 'Night mode of the display group: 1 at night, 0 by day'
+  },
+  '/vessels/*/electrical/displays/RegExp/RegExp/nightModeColor': {
+    description: 'Color of the display group in night mode',
+    enum: ['red', 'green', 'blue', 'white', 'magenta', 'unknown']
+  }
 }
