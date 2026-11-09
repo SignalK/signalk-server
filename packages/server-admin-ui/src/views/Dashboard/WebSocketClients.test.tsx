@@ -150,6 +150,15 @@ describe('WebSocketClients', () => {
     expect(screen.queryByText('ESP32 Websocket Client')).toBeNull()
   })
 
+  it('treats an answer that is not a list as unavailable', async () => {
+    mockFetch({ ok: true, json: async () => ({ error: 'portal' }) })
+    renderClients()
+
+    expect(
+      await screen.findByText('The client list is not available.')
+    ).toBeDefined()
+  })
+
   it('is not shown to users who are not admins', () => {
     const fetchMock = mockFetch(listResponse([spark]))
     login.current = { ...adminLogin, userLevel: 'readonly' }

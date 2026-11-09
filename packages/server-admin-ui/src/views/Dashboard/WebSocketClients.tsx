@@ -59,8 +59,12 @@ export default function WebSocketClients({
       signal: request.signal
     })
       .then((response) => (response.ok ? response.json() : null))
-      .then((clients: WebSocketClient[] | null) =>
-        setLoaded({ identity, clients })
+      // A proxy or portal in between can answer 200 with something else.
+      .then((data: unknown) =>
+        setLoaded({
+          identity,
+          clients: Array.isArray(data) ? (data as WebSocketClient[]) : null
+        })
       )
       .catch(() => {
         if (!request.signal.aborted) setLoaded({ identity, clients: null })
