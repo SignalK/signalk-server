@@ -294,7 +294,7 @@ export interface WebSocketClient {
   userAgent?: string
   principal?: string
   connectedAt?: string
-  // The admin UI connects with serverevents=all.
+  // Whether the client subscribed to server events (serverevents=all).
   serverEvents: boolean
 }
 
