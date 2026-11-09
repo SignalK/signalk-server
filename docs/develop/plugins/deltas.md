@@ -326,36 +326,29 @@ plugin.start = async (options) => {
 }
 ```
 
+Metadata that does not change is set once this way, rather than repeated in a `meta` entry on every delta, which only adds traffic.
+
 The method is **idempotent**: on subsequent server starts, fields already persisted from a previous call will not be overwritten. It returns `true` if any new fields were applied, `false` if all fields already existed.
 
 The `displayUnits.category` is validated against the path's SI unit. If the category doesn't match, the method returns `false` and logs a debug message.
 
 ### Declaring stale data behaviour
 
-The same method is how a plugin tells [Stale Data Detection](../../setup/staleness.md) how its paths behave. Declare it once at plugin start. A numeric `timeout` in a meta delta can also affect timeout resolution when the user has not set one, but repeating metadata on every delta adds traffic.
-
-The server does not await `plugin.start()`, so the plugin handles a failed declaration itself. Settling them together keeps one failure from skipping the rest:
+The same method is how a plugin tells [Stale Data Detection](../../setup/staleness.md) how its paths behave. Declare it once at plugin start, before the plugin starts its real work:
 
 ```javascript
-plugin.start = (options) => {
-  Promise.allSettled([
-    // Republished every 10 minutes, so the 60s default would flag it as stale.
-    app.setDefaultMetadata('navigation.state', { timeout: 900 }),
-    // Updates every few seconds; let the server derive the timeout.
-    app.setDefaultMetadata('environment.inside.temperature', {
-      timeout: 'auto'
-    }),
-    // Emitted only when the value changes; silence means unchanged.
-    app.setDefaultMetadata('propulsion.port.state', {
-      updateContract: 'event'
-    })
-  ]).then((results) => {
-    for (const result of results) {
-      if (result.status === 'rejected') {
-        app.error(`Could not declare stale data behaviour: ${result.reason}`)
-      }
-    }
+plugin.start = async (options) => {
+  // Republished every 10 minutes, so the 60s default would flag it as stale.
+  await app.setDefaultMetadata('navigation.state', { timeout: 900 })
+  // Updates every few seconds; let the server derive the timeout.
+  await app.setDefaultMetadata('environment.inside.temperature', {
+    timeout: 'auto'
   })
+  // Emitted only when the value changes; silence means unchanged.
+  await app.setDefaultMetadata('propulsion.port.state', {
+    updateContract: 'event'
+  })
+  // ... the real plugin startup logic
 }
 ```
 
