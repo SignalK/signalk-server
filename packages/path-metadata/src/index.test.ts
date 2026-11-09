@@ -508,7 +508,7 @@ describe('device and AIS paths the NMEA parsers write', () => {
     ).to.equal('A')
     expect(
       getMetadata(self('electrical.ac.0.phase.single.acceptability'))?.enum
-    ).to.include('Being qualified')
+    ).to.include('being qualified')
     expect(getMetadata(self('electrical.inverters.0.ac.phase.B.acceptability')))
       .to.be.undefined
     expect(

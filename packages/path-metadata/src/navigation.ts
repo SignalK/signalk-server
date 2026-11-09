@@ -615,11 +615,11 @@ export const navigationMetadata: Record<string, PathMetadataEntry> = {
   '/vessels/*/navigation/speedThroughWaterReferenceType': {
     description: 'Type of sensor that measures the speed through the water',
     enum: [
-      'Paddle wheel',
-      'Pitot tube',
-      'Doppler',
-      'Correlation (ultra sound)',
-      'Electro Magnetic'
+      'paddle wheel',
+      'pitot tube',
+      'doppler',
+      'correlation (ultra sound)',
+      'electro magnetic'
     ]
   },
   '/vessels/*/navigation/specialManeuver': {
