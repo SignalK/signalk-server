@@ -1,20 +1,28 @@
-import { ReactNode } from 'react'
+import { ReactNode, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Card from 'react-bootstrap/Card'
 import ProgressBar from 'react-bootstrap/ProgressBar'
 import Row from 'react-bootstrap/Row'
 import Col from 'react-bootstrap/Col'
 import Table from 'react-bootstrap/Table'
-import { useServerStats, useWsStatus, useStore } from '../../store'
+import {
+  useLoginStatus,
+  useServerStats,
+  useWsStatus,
+  useStore
+} from '../../store'
 import type { ProviderStatistics, ProviderStatus } from '../../store/types'
 import '../../fa-pulse.css'
-import WebSocketClients from './WebSocketClients'
+import WebSocketClients, { canListWebSocketClients } from './WebSocketClients'
 
 export default function Dashboard() {
   const serverStatistics = useServerStats()
   const websocketStatus = useWsStatus()
   const providerStatus = useStore((state) => state.providerStatus) ?? []
   const navigate = useNavigate()
+  const loginStatus = useLoginStatus()
+  const [clientsOpen, setClientsOpen] = useState(false)
+  const clientsRef = useRef<HTMLDivElement>(null)
 
   const deltaRate = serverStatistics?.deltaRate ?? 0
   const numberOfAvailablePaths = serverStatistics?.numberOfAvailablePaths ?? 0
@@ -184,7 +192,26 @@ export default function Dashboard() {
                       Number of WebSocket Clients
                     </small>
                     <br />
-                    <strong className="h4">{wsClients}</strong>
+                    <strong className="h4">
+                      {canListWebSocketClients(loginStatus) ? (
+                        <button
+                          type="button"
+                          className="btn btn-link p-0 align-baseline"
+                          style={{ fontSize: 'inherit', fontWeight: 'inherit' }}
+                          title="Show the WebSocket clients"
+                          onClick={() => {
+                            setClientsOpen(true)
+                            clientsRef.current?.scrollIntoView({
+                              behavior: 'smooth'
+                            })
+                          }}
+                        >
+                          {wsClients}
+                        </button>
+                      ) : (
+                        wsClients
+                      )}
+                    </strong>
                   </div>
                   <div className="callout callout-primary">
                     <small className="text-muted">Uptime</small>
@@ -239,8 +266,6 @@ export default function Dashboard() {
             </Card.Body>
           </Card>
 
-          <WebSocketClients clientCount={wsClients} />
-
           <Card>
             <Card.Header>
               Connection & Plugin Status <p className="text-danger">{errors}</p>
@@ -280,6 +305,14 @@ export default function Dashboard() {
               </Row>
             </Card.Body>
           </Card>
+
+          <div ref={clientsRef}>
+            <WebSocketClients
+              clientCount={wsClients}
+              open={clientsOpen}
+              onToggle={() => setClientsOpen((isOpen) => !isOpen)}
+            />
+          </div>
         </div>
       )}
 

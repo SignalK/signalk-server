@@ -1,7 +1,15 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
+import Badge from 'react-bootstrap/Badge'
+import Button from 'react-bootstrap/Button'
 import Card from 'react-bootstrap/Card'
+import Collapse from 'react-bootstrap/Collapse'
 import Table from 'react-bootstrap/Table'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faChevronUp } from '@fortawesome/free-solid-svg-icons/faChevronUp'
+import { faChevronDown } from '@fortawesome/free-solid-svg-icons/faChevronDown'
+import { faRotateRight } from '@fortawesome/free-solid-svg-icons/faRotateRight'
 import { useLoginStatus } from '../../store'
+import type { LoginStatus } from '../../store/types'
 
 interface WebSocketClient {
   id: string
@@ -9,19 +17,25 @@ interface WebSocketClient {
   userAgent?: string
   principal?: string
   connectedAt?: string
+  serverEvents?: boolean
 }
 
-// The count arrives with the server statistics, but a client can leave and
-// another arrive between two of them, so the list is also polled.
-const REFRESH_INTERVAL_MS = 10000
-// Long enough for a busy server to answer over several polls, short enough
-// that a request that never answers does not stop the refreshing.
-const REQUEST_TIMEOUT_MS = 60000
+// The server lists the clients to admins, and to everyone when security is off.
+export function canListWebSocketClients(loginStatus: LoginStatus): boolean {
+  return (
+    loginStatus.authenticationRequired === false ||
+    loginStatus.userLevel === 'admin'
+  )
+}
 
 export default function WebSocketClients({
-  clientCount
+  clientCount,
+  open,
+  onToggle
 }: {
   clientCount: number
+  open: boolean
+  onToggle: () => void
 }) {
   const loginStatus = useLoginStatus()
   // The list belongs to the login that fetched it, so another login never
@@ -31,92 +45,100 @@ export default function WebSocketClients({
     identity: string
     clients: WebSocketClient[] | null
   } | null>(null)
-  const loadRef = useRef<(() => void) | null>(null)
-  const lastClientCount = useRef(clientCount)
+  const [refreshes, setRefreshes] = useState(0)
+  const allowed = canListWebSocketClients(loginStatus)
 
+  // The client count arrives with every server statistics update, so a
+  // changed count reloads the list; the refresh button covers a client
+  // leaving and another arriving between two updates.
   useEffect(() => {
-    let stopped = false
-    let request: AbortController | null = null
-    // One request at a time: a refresh asked for while one is pending runs
-    // once it has answered or timed out.
-    let refreshWanted = false
-    const load = () => {
-      if (request) {
-        refreshWanted = true
-        return
-      }
-      const current = new AbortController()
-      request = current
-      const timeout = setTimeout(() => current.abort(), REQUEST_TIMEOUT_MS)
-      const apply = (clients: WebSocketClient[] | null) => {
-        clearTimeout(timeout)
-        if (stopped) return
+    if (!open || !allowed) return
+    const request = new AbortController()
+    fetch(`${window.serverRoutesPrefix}/websocketClients`, {
+      credentials: 'include',
+      signal: request.signal
+    })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((clients: WebSocketClient[] | null) =>
         setLoaded({ identity, clients })
-        request = null
-        if (refreshWanted) {
-          refreshWanted = false
-          load()
-        }
-      }
-      fetch(`${window.serverRoutesPrefix}/websocketClients`, {
-        credentials: 'include',
-        signal: current.signal
+      )
+      .catch(() => {
+        if (!request.signal.aborted) setLoaded({ identity, clients: null })
       })
-        .then((response) => (response.ok ? response.json() : null))
-        .then(apply)
-        .catch(() => apply(null))
-    }
-    loadRef.current = load
-    load()
-    const timer = setInterval(load, REFRESH_INTERVAL_MS)
-    return () => {
-      stopped = true
-      request?.abort()
-      loadRef.current = null
-      clearInterval(timer)
-    }
-  }, [identity])
+    return () => request.abort()
+  }, [open, allowed, identity, clientCount, refreshes])
 
-  // A changed count means a client came or went: refresh at once, without
-  // restarting the polling and dropping the request still in flight.
-  useEffect(() => {
-    if (lastClientCount.current === clientCount) return
-    lastClientCount.current = clientCount
-    loadRef.current?.()
-  }, [clientCount])
+  if (!allowed) return null
 
   const clients = loaded?.identity === identity ? loaded.clients : null
-  if (!clients) return null
 
   return (
     <Card>
-      <Card.Header>WebSocket Clients</Card.Header>
-      <Card.Body>
-        <Table hover responsive bordered striped size="sm">
-          <thead>
-            <tr>
-              <th>IP</th>
-              <th>User-Agent</th>
-              <th>User / Device</th>
-              <th>Connected</th>
-            </tr>
-          </thead>
-          <tbody>
-            {clients.map((client) => (
-              <tr key={client.id}>
-                <td>{client.ip}</td>
-                <td>{client.userAgent ?? ''}</td>
-                <td>{client.principal ?? ''}</td>
-                <td>
-                  {client.connectedAt
-                    ? new Date(client.connectedAt).toLocaleString()
-                    : ''}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </Table>
-      </Card.Body>
+      <Card.Header onClick={onToggle} style={{ cursor: 'pointer' }}>
+        WebSocket Clients
+        <span className="float-end">
+          {open && (
+            <Button
+              variant="link"
+              size="sm"
+              className="p-0 me-3"
+              title="Refresh"
+              onClick={(event) => {
+                event.stopPropagation()
+                setRefreshes((count) => count + 1)
+              }}
+            >
+              <FontAwesomeIcon icon={faRotateRight} />
+            </Button>
+          )}
+          <FontAwesomeIcon icon={open ? faChevronUp : faChevronDown} />
+        </span>
+      </Card.Header>
+      <Collapse in={open}>
+        <div>
+          <Card.Body>
+            {clients ? (
+              <Table hover responsive bordered striped size="sm">
+                <thead>
+                  <tr>
+                    <th>IP</th>
+                    <th>User-Agent</th>
+                    <th>User / Device</th>
+                    <th>Connected</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {clients.map((client) => (
+                    <tr key={client.id}>
+                      <td>{client.ip}</td>
+                      <td>
+                        {client.serverEvents && (
+                          <Badge bg="secondary" className="me-2">
+                            Admin UI
+                          </Badge>
+                        )}
+                        {client.userAgent ?? ''}
+                      </td>
+                      <td>{client.principal ?? ''}</td>
+                      <td>
+                        {client.connectedAt
+                          ? new Date(client.connectedAt).toLocaleString()
+                          : ''}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </Table>
+            ) : (
+              <span className="text-muted">
+                {loaded?.identity === identity
+                  ? 'The client list is not available.'
+                  : 'Loading…'}
+              </span>
+            )}
+          </Card.Body>
+        </div>
+      </Collapse>
     </Card>
   )
 }
