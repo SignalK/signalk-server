@@ -294,6 +294,8 @@ export interface WebSocketClient {
   userAgent?: string
   principal?: string
   connectedAt?: string
+  // The admin UI connects with serverevents=all.
+  serverEvents: boolean
 }
 
 const DEFAULT_MAX_WS_CONNECTIONS_PER_IP = 30
@@ -404,7 +406,8 @@ function wsInterface(app: WsApp): WsApi {
             ip: spark.request._resolvedIp,
             userAgent: userAgentOf(spark.request.headers),
             principal: namedPrincipal(spark),
-            connectedAt: spark.skConnectedAt
+            connectedAt: spark.skConnectedAt,
+            serverEvents: spark.query.serverevents === 'all'
           })
           return true
         })
