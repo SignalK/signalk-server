@@ -164,10 +164,31 @@ export interface ServerAPI
    * Idempotent: on subsequent server starts, fields already persisted
    * from a previous call will not be overwritten.
    *
+   * This is also how a plugin declares how its paths behave for stale data
+   * detection. Call it once at plugin start rather than attaching metadata
+   * to every delta: `timeout` for a path that updates more slowly than the
+   * server default — either a number of seconds or `'auto'` to let the
+   * server derive it from the observed update rate — `0` for a path that
+   * should never be considered stale, or `updateContract: 'event'` for a
+   * path that only emits on change. A value the user has set in the Data
+   * Browser always wins.
+   *
+   * `'auto'` uses the global default until it has seen enough updates, and
+   * the timeout it derives never exceeds 300 seconds, so a path that updates
+   * less often than every few minutes needs a number of seconds instead.
+   *
    * @example
    * ```javascript
    * await app.setDefaultMetadata('electrical.batteries.house.energy', {
    *   displayUnits: { category: 'energy', targetUnit: 'Wh' }
+   * })
+   * ```
+   *
+   * @example Declaring staleness behaviour for a slow path
+   * ```javascript
+   * // This plugin republishes state every 10 minutes.
+   * await app.setDefaultMetadata('navigation.state', {
+   *   timeout: 900
    * })
    * ```
    *

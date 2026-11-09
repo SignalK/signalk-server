@@ -16,12 +16,32 @@
  */
 
 import fs from 'fs'
+import path from 'path'
 import _ from 'lodash'
 import { atomicWriteFileSync, atomicWriteFile } from './atomicWrite'
 
 const VALUES = 'values'
 const META = 'meta'
 const SELF_VESSEL = 'vessels.self'
+
+// atomicWriteFile stages every write to a file in the same temporary file,
+// so overlapping saves to one destination, from any editor, would rename it
+// away from under each other. Saves are queued per destination instead.
+const pendingSaves = new Map<string, Promise<void>>()
+
+function queueSave(filename: string, data: string): Promise<void> {
+  const destination = path.resolve(filename)
+  const previous = pendingSaves.get(destination) ?? Promise.resolve()
+  const saved = previous.then(() => atomicWriteFile(destination, data))
+  const settled = saved.catch(() => undefined)
+  pendingSaves.set(destination, settled)
+  void settled.then(() => {
+    if (pendingSaves.get(destination) === settled) {
+      pendingSaves.delete(destination)
+    }
+  })
+  return saved
+}
 
 class DeltaEditor {
   deltas: any[]
@@ -45,8 +65,10 @@ class DeltaEditor {
     atomicWriteFileSync(filename, data)
   }
 
+  // The deltas are captured now, not when the queued write runs, so a later
+  // change that is rolled back in memory is never persisted by this save.
   save(filename: string): Promise<void> {
-    return atomicWriteFile(filename, JSON.stringify(this.deltas, null, 2))
+    return queueSave(filename, JSON.stringify(this.deltas, null, 2))
   }
 
   setValue(context: string, path: string, value: any) {

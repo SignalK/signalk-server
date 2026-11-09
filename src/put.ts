@@ -15,7 +15,7 @@ import {
 } from './requestResponse'
 import * as skConfig from './config/config'
 import { ConfigApp } from './config/config'
-import { getMetadata } from '@signalk/path-metadata'
+import { getMetadata, removeMetadataFields } from '@signalk/path-metadata'
 import {
   resolveDisplayUnits,
   stripResolvedDisplayUnits,
@@ -126,9 +126,21 @@ let putNotificationHandler: (
   value: unknown
 ) => ActionResult
 
+// The registry has no entry for a path a plugin invents when the base delta
+// was saved but its registry update never happened (a failed file write in
+// setDefaultMetadata), so a delete still broadcasts an object.
+function metadataForBroadcast(metaPath: string): Record<string, unknown> {
+  return (
+    (getMetadata('vessels.self.' + metaPath) as
+      Record<string, unknown> | undefined) ?? {}
+  )
+}
+
 // Drop a deleted metadata field from the live self leaf. Metadata is merged
 // onto value-bearing leaves in the full model, so deleting it from the
 // registry alone would leave the field stuck on the tree leaf.
+const UPDATE_CONTRACTS: ReadonlySet<string> = new Set(['periodic', 'event'])
+
 function removeLeafMetaField(app: PutApp, metaPath: string, name: string) {
   const leaf = _get(app.signalk.self, metaPath) as
     { meta?: Record<string, unknown> } | undefined
@@ -205,7 +217,10 @@ export function start(app: PutApp): void {
     let metaPath = path
     let metaValue = value as Record<string, unknown>
 
-    if (parts[parts.length - 1] !== 'meta') {
+    // A PUT of one field states that field on purpose; only a PUT of the
+    // whole metadata object can be echoing back what the client was shown.
+    const singleField = parts[parts.length - 1] !== 'meta'
+    if (singleField) {
       const name = parts[parts.length - 1]
       metaPath = parts.slice(0, parts.length - 2).join('.')
 
@@ -215,6 +230,22 @@ export function start(app: PutApp): void {
       }
     } else {
       metaPath = parts.slice(0, parts.length - 1).join('.')
+    }
+
+    const submittedContract = singleField
+      ? parts[parts.length - 1] === 'updateContract'
+        ? value
+        : undefined
+      : metaValue.updateContract
+    if (
+      submittedContract !== undefined &&
+      !UPDATE_CONTRACTS.has(submittedContract as string)
+    ) {
+      return {
+        state: 'COMPLETED' as RequestState,
+        statusCode: 400,
+        message: `updateContract must be one of ${[...UPDATE_CONTRACTS].join(', ')}`
+      }
     }
 
     // Validate displayUnits.category if present
@@ -254,6 +285,23 @@ export function start(app: PutApp): void {
 
     const previousMeta = app.config.baseDeltaEditor.getMeta(context, metaPath)
 
+    // A client that sends back the metadata it was shown includes the
+    // contract the path inherits. Stored, it would become an override that
+    // pins the path to today's classification as if the user had chosen it.
+    if (
+      !singleField &&
+      metaValue.updateContract !== undefined &&
+      (previousMeta as { updateContract?: unknown } | null | undefined)
+        ?.updateContract === undefined &&
+      metaValue.updateContract ===
+        (
+          getMetadata('vessels.self.' + metaPath) as
+            { updateContract?: unknown } | undefined
+        )?.updateContract
+    ) {
+      delete metaValue.updateContract
+    }
+
     if (metaValue.displayUnits) {
       metaValue.displayUnits = stripResolvedDisplayUnits(
         metaValue.displayUnits as DisplayUnitsMetadata,
@@ -267,17 +315,16 @@ export function start(app: PutApp): void {
 
     // Remove fields that were deleted from the in-memory metadata registry
     // so they don't get re-injected via the spread below
+    if (previousMeta) {
+      removeMetadataFields(
+        'vessels.self.' + metaPath,
+        Object.keys(previousMeta).filter((key) => !(key in metaValue))
+      )
+    }
     const full_meta = getMetadata('vessels.self.' + metaPath) as Record<
       string,
       unknown
     >
-    if (previousMeta && full_meta) {
-      for (const key of Object.keys(previousMeta)) {
-        if (!(key in metaValue)) {
-          delete full_meta[key]
-        }
-      }
-    }
 
     // The delta is resolved with its override named, because the metadata
     // registry and each WebSocket connection resolve it again and need the
@@ -376,11 +423,8 @@ export function start(app: PutApp): void {
 
       delete metaValue[name]
 
-      full_meta = getMetadata('vessels.self.' + metaPath) as Record<
-        string,
-        unknown
-      >
-      delete full_meta[name]
+      removeMetadataFields('vessels.self.' + metaPath, [name])
+      full_meta = metadataForBroadcast(metaPath)
 
       removeLeafMetaField(app, metaPath, name)
 
@@ -392,20 +436,17 @@ export function start(app: PutApp): void {
     } else {
       metaPath = parts.slice(0, parts.length - 1).join('.')
 
-      full_meta = getMetadata('vessels.self.' + metaPath) as Record<
-        string,
-        unknown
-      >
       const metaValue = app.config.baseDeltaEditor.getMeta(context, metaPath)
 
       if (!metaValue) {
         return { state: 'COMPLETED', statusCode: 404 }
       }
 
+      removeMetadataFields('vessels.self.' + metaPath, Object.keys(metaValue))
       Object.keys(metaValue).forEach((key) => {
-        delete full_meta[key]
         removeLeafMetaField(app, metaPath, key)
       })
+      full_meta = metadataForBroadcast(metaPath)
 
       app.config.baseDeltaEditor.removeMeta(context, metaPath)
     }

@@ -5,6 +5,8 @@ import {
   useDeferredValue,
   useCallback
 } from 'react'
+import { faCircleInfo } from '@fortawesome/free-solid-svg-icons/faCircleInfo'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import Badge from 'react-bootstrap/Badge'
 import Button from 'react-bootstrap/Button'
 import Card from 'react-bootstrap/Card'
@@ -14,6 +16,22 @@ import Row from 'react-bootstrap/Row'
 import type { PathMetadataEntry } from '@signalk/path-metadata'
 
 type AllMetadata = Record<string, PathMetadataEntry>
+
+interface StalenessSettings {
+  enforceDataTimeouts?: boolean
+  useDefaultTimeouts?: boolean
+  defaultTimeout?: number
+}
+
+// The server's values when the settings leave them unset (src/staleness.ts)
+const SERVER_DEFAULT_TIMEOUT_SECONDS = 60
+
+const STALENESS_DOCS_URL =
+  '/admin/#/documentation/Configuration/Stale_Data_Detection.html'
+
+// Path, Description, Update contract, Timeout, Units — the empty-state row
+// spans them all, so it has to move whenever a column is added or removed.
+const TABLE_COLUMN_COUNT = 5
 
 const GROUP_LABELS: Record<string, string> = {
   navigation: 'Navigation',
@@ -39,6 +57,48 @@ function getGroup(path: string): string {
   return (parts[3] || '').toLowerCase()
 }
 
+// The timeout a path is held to: its own, when its metadata carries one, or
+// else the configurable global fallback, which applies to every periodic
+// path alike.
+function TimeoutCell({
+  meta,
+  staleness
+}: {
+  meta: PathMetadataEntry
+  staleness: StalenessSettings | null
+}) {
+  if (!meta.updateContract) return <span className="text-muted">—</span>
+  if (meta.updateContract === 'event') {
+    return <span title="Event-driven paths are never timed out">never</span>
+  }
+  const own = (meta as { timeout?: unknown }).timeout
+  if (own === 0) return <span title="Set for this path">never</span>
+  if (typeof own === 'number') {
+    return <span title="Set for this path">{own} s</span>
+  }
+  if (own === 'auto') {
+    return <span title="Derived from the observed update rate">auto</span>
+  }
+  if (!staleness) return <span className="text-muted">global fallback</span>
+  if (staleness.useDefaultTimeouts === false) {
+    return (
+      <span
+        className="text-muted"
+        title="Use default timeouts is off, so paths without their own timeout are not timed out"
+      >
+        none
+      </span>
+    )
+  }
+  const fallback = staleness.defaultTimeout ?? SERVER_DEFAULT_TIMEOUT_SECONDS
+  return (
+    <span title="The global fallback from Server Settings; no timeout is defined for this path">
+      {fallback === 0 ? 'never' : `${fallback} s`}{' '}
+      <span className="text-muted small">(global fallback)</span>
+    </span>
+  )
+}
+
 function toDotPath(slashPath: string): string {
   // /vessels/*/navigation/speedOverGround → vessels.*.navigation.speedOverGround
   return slashPath.replace(/^\//, '').replace(/\//g, '.')
@@ -51,6 +111,22 @@ export default function PathReference() {
   const deferredSearch = useDeferredValue(search)
   const [groupFilter, setGroupFilter] = useState<string>('all')
   const [expandedPath, setExpandedPath] = useState<string | null>(null)
+  const [staleness, setStaleness] = useState<StalenessSettings | null>(null)
+
+  // Settings are admin-only; without them the fallback is named but not sized
+  useEffect(() => {
+    const controller = new AbortController()
+    fetch(`${window.serverRoutesPrefix}/settings`, {
+      credentials: 'include',
+      signal: controller.signal
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: { staleness?: StalenessSettings } | null) => {
+        if (data?.staleness) setStaleness(data.staleness)
+      })
+      .catch(() => {})
+    return () => controller.abort()
+  }, [])
 
   const loadMeta = useCallback((signal?: AbortSignal) => {
     setError(null)
@@ -160,6 +236,12 @@ export default function PathReference() {
           Vessel paths also apply to <code>/aircraft/*</code>,{' '}
           <code>/aton/*</code>, and <code>/sar/*</code> contexts.
         </p>
+        {staleness && staleness.enforceDataTimeouts !== true && (
+          <p className="text-muted small mb-2">
+            Stale data detection is off; the timeouts below apply once it is
+            enabled in Server Settings.
+          </p>
+        )}
         <Row className="mb-3">
           <Col md={8}>
             <Form.Group>
@@ -208,9 +290,20 @@ export default function PathReference() {
               }}
             >
               <tr>
-                <th style={{ width: '40%' }}>Path</th>
-                <th style={{ width: '45%' }}>Description</th>
-                <th style={{ width: '15%' }}>Units</th>
+                <th style={{ width: '32%' }}>Path</th>
+                <th style={{ width: '31%' }}>Description</th>
+                <th style={{ width: '13%' }}>
+                  Update contract{' '}
+                  <a
+                    href={STALENESS_DOCS_URL}
+                    title="What update contracts mean for stale data detection"
+                    aria-label="About update contracts"
+                  >
+                    <FontAwesomeIcon icon={faCircleInfo} />
+                  </a>
+                </th>
+                <th style={{ width: '12%' }}>Timeout</th>
+                <th style={{ width: '12%' }}>Units</th>
               </tr>
             </thead>
             <tbody>
@@ -289,6 +382,36 @@ export default function PathReference() {
                       )}
                     </td>
                     <td>
+                      {meta.updateContract === 'event' && (
+                        <Badge
+                          bg="secondary"
+                          title="Emitted only when it changes, so silence means unchanged and it is never marked stale"
+                        >
+                          event
+                        </Badge>
+                      )}
+                      {meta.updateContract === 'periodic' && (
+                        <Badge
+                          bg="light"
+                          text="dark"
+                          title="Regular updates expected, so silence past the timeout marks the value stale"
+                        >
+                          periodic
+                        </Badge>
+                      )}
+                      {!meta.updateContract && (
+                        <span
+                          className="text-muted"
+                          title="Not a path that updates — a container shape or registry entry"
+                        >
+                          —
+                        </span>
+                      )}
+                    </td>
+                    <td>
+                      <TimeoutCell meta={meta} staleness={staleness} />
+                    </td>
+                    <td>
                       {meta.units && <Badge bg="info">{meta.units}</Badge>}
                     </td>
                   </tr>
@@ -296,7 +419,10 @@ export default function PathReference() {
               })}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={3} className="text-center text-muted py-4">
+                  <td
+                    colSpan={TABLE_COLUMN_COUNT}
+                    className="text-center text-muted py-4"
+                  >
                     No paths match your search
                   </td>
                 </tr>

@@ -23,7 +23,10 @@ const MetaRow = memo(function MetaRow({
       className={`virtual-table-meta-row ${index % 2 ? 'striped' : ''}`}
       style={{ padding: '0 2px' }}
     >
+      {/* A row keeps its key across a context switch, so an editor opened
+          for one context would otherwise stay open on the next. */}
       <Meta
+        key={ctx}
         meta={meta || {}}
         path={path}
         context={ctx}

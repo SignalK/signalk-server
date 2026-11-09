@@ -164,3 +164,28 @@ export function freeport(): Promise<number> {
     server.listen(0, '127.0.0.1')
   })
 }
+
+// A metadata PUT or DELETE answers 202 before it persists anything; the
+// write is done once the request the response links to leaves PENDING.
+const PUT_REQUEST_DEADLINE_MS = 5000
+const PUT_REQUEST_POLL_MS = 10
+
+export const awaitPutSuccess = async (port: number, response: Response) => {
+  expect(response.status).to.equal(202)
+  const { href } = (await response.json()) as { href: string }
+  const until = Date.now() + PUT_REQUEST_DEADLINE_MS
+  let request = { state: 'PENDING', statusCode: 202 }
+  while (Date.now() < until) {
+    request = (await fetch(`http://localhost:${port}${href}`).then((r) =>
+      r.json()
+    )) as { state: string; statusCode: number }
+    if (request.state !== 'PENDING') {
+      break
+    }
+    await new Promise((resolve) => setTimeout(resolve, PUT_REQUEST_POLL_MS))
+  }
+  // A finished handler reports COMPLETED either way; the status code says
+  // whether the write succeeded.
+  expect(request.state).to.equal('COMPLETED')
+  expect(request.statusCode).to.equal(200)
+}

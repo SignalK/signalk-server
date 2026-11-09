@@ -59,6 +59,7 @@ interface MetaData {
   longName?: string
   shortName?: string
   timeout?: number
+  updateContract?: string
   displayScale?: DisplayScaleValue
   displayUnits?: DisplayUnits
   zones?: Zone[]
@@ -145,6 +146,7 @@ const METAFIELDS = [
   'longName',
   'shortName',
   'timeout',
+  'updateContract',
   'displayScale',
   'displayUnits',
   'zones',
@@ -372,6 +374,33 @@ const UnitSelect: React.FC<ValueRenderProps> = ({
     {Object.entries(UNITS).map(([unit, description]) => (
       <option key={unit} value={unit}>
         {unit}:{description}
+      </option>
+    ))}
+  </Form.Select>
+)
+
+const UPDATE_CONTRACTS: Array<[string, string]> = [
+  ['', 'Use the shipped classification'],
+  ['periodic', 'periodic: regular updates expected'],
+  ['event', 'event: emits only on change, never stale']
+]
+
+export const UpdateContractSelect: React.FC<ValueRenderProps> = ({
+  disabled,
+  value,
+  setValue,
+  inputId
+}) => (
+  <Form.Select
+    id={inputId}
+    disabled={disabled}
+    value={(value as string) ?? ''}
+    size="sm"
+    onChange={(e) => setValue(e.target.value)}
+  >
+    {UPDATE_CONTRACTS.map(([contract, label]) => (
+      <option key={contract || 'unset'} value={contract}>
+        {label}
       </option>
     ))}
   </Form.Select>
@@ -620,6 +649,13 @@ const METAFIELDRENDERERS: Record<
   longName: (props) => <MetaFormRow {...props} renderValue={Text} />,
   shortName: (props) => <MetaFormRow {...props} renderValue={Text} />,
   timeout: (props) => <MetaFormRow {...props} renderValue={NumberValue} />,
+  updateContract: (props) => (
+    <MetaFormRow
+      {...props}
+      renderValue={UpdateContractSelect}
+      description="Whether silence on this path means a failure (periodic) or simply no change (event)"
+    />
+  ),
   displayScale: (props) => (
     <MetaFormRow {...props} renderValue={DisplaySelect} />
   ),
@@ -657,13 +693,65 @@ const METAFIELDRENDERERS: Record<
   )
 }
 
-const saveMeta = (path: string, meta: MetaData) => {
-  fetch(`/signalk/v1/api/vessels/self/${pathToUrlSegments(path)}/meta`, {
-    method: 'PUT',
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ value: meta })
+// `Add Field` and the "Use the shipped classification" option both leave the
+// key as an empty string, which keeps its row in the open editor. Only the
+// two valid contracts are sent; anything else drops the key, so the shipped
+// classification keeps applying and a contract saved earlier is cleared from
+// the store.
+const UPDATE_CONTRACT_VALUES = ['periodic', 'event']
+
+// The Data Browser keys the server's own vessel as 'self'.
+const SELF_CONTEXT = 'self'
+
+export const normalizeMetaForSave = (meta: MetaData): MetaData => {
+  if (!('updateContract' in meta)) return meta
+  if (
+    meta.updateContract !== undefined &&
+    UPDATE_CONTRACT_VALUES.includes(meta.updateContract)
+  ) {
+    return meta
+  }
+  const { updateContract: _dropped, ...rest } = meta
+  return rest
+}
+
+const putMeta = async (path: string, meta: MetaData): Promise<boolean> => {
+  const res = await fetch(
+    `/signalk/v1/api/vessels/self/${pathToUrlSegments(path)}/meta`,
+    {
+      method: 'PUT',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ value: normalizeMetaForSave(meta) })
+    }
+  ).catch(() => null)
+  return res?.ok ?? false
+}
+
+// The metadata PUT returns before the defaults file write completes, so two
+// saves of one path can be persisted in the order the writes finish rather
+// than the order they were sent — a later restore can land before an earlier
+// clear and be undone by it. Queue per path so each save is sent only once
+// the previous has settled, whether it succeeded or not.
+const saveQueues = new Map<string, Promise<unknown>>()
+
+export const saveMeta = (path: string, meta: MetaData): Promise<boolean> => {
+  const run = () => putMeta(path, meta)
+  const previous = saveQueues.get(path) ?? Promise.resolve()
+  const done = previous.then(run, run)
+  const queued = done.then(
+    () => undefined,
+    () => undefined
+  )
+  saveQueues.set(path, queued)
+  // Drop the entry once it settles, but only if no later save has already
+  // replaced it — otherwise the map grows one entry per path edited.
+  void queued.then(() => {
+    if (saveQueues.get(path) === queued) {
+      saveQueues.delete(path)
+    }
   })
+  return done
 }
 
 const Meta: React.FC<MetaProps> = ({ meta, path, context, showContext }) => {
@@ -672,6 +760,18 @@ const Meta: React.FC<MetaProps> = ({ meta, path, context, showContext }) => {
   const unitDefinitions = useUnitDefinitions()
   const [isExpanded, setIsExpanded] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
+  const saveGeneration = useRef(0)
+  // Fields an accepted save cleared while a newer save was still pending.
+  // The newer save supersedes them if it is accepted; if it fails, the
+  // server still holds the older save, so they are dropped then.
+  const supersededClears = useRef<Record<string, unknown> | undefined>(
+    undefined
+  )
+  // Every field the pending saves sent. Their meta deltas may not have
+  // reached `meta` yet when the next save starts, so a field one of them
+  // added and the next save removes would otherwise be missing from its
+  // clear.
+  const pendingSent = useRef<MetaData | undefined>(undefined)
   const [localMeta, setLocalMeta] = useState<MetaData>(meta)
   const [categoryToBaseUnit, setCategoryToBaseUnit] = useState<
     Record<string, string>
@@ -688,7 +788,7 @@ const Meta: React.FC<MetaProps> = ({ meta, path, context, showContext }) => {
   }, [])
 
   // Get current value — imperative read, no subscription to avoid re-renders on every delta.
-  const ctxData = getSignalkData()[context || 'self']
+  const ctxData = getSignalkData()[context || SELF_CONTEXT]
   let currentValue: unknown
   if (ctxData) {
     for (const entry of Object.values(ctxData)) {
@@ -703,9 +803,12 @@ const Meta: React.FC<MetaProps> = ({ meta, path, context, showContext }) => {
   const ctxPrefix = context ? context.replace(/[.:]/g, '-') + '-' : ''
   const idPrefix = `meta-${ctxPrefix}${path.replace(/\./g, '-')}`
 
+  // The metadata PUT writes vessels.self only, so editing another context
+  // would change self's metadata instead.
   const canEditMetadata =
-    !loginStatus.authenticationRequired ||
-    (loginStatus.status === 'loggedIn' && loginStatus.userLevel === 'admin')
+    (context ?? SELF_CONTEXT) === SELF_CONTEXT &&
+    (!loginStatus.authenticationRequired ||
+      (loginStatus.status === 'loggedIn' && loginStatus.userLevel === 'admin'))
 
   // Get category and converted value for preview
   const category = localMeta.displayUnits?.category
@@ -725,7 +828,34 @@ const Meta: React.FC<MetaProps> = ({ meta, path, context, showContext }) => {
   }
 
   const handleSave = () => {
-    saveMeta(path, localMeta)
+    if (!canEditMetadata) return
+    const saved = normalizeMetaForSave(localMeta)
+    const known = { ...meta, ...pendingSent.current }
+    const cleared = Object.fromEntries(
+      Object.entries(known).filter(([key]) => !(key in saved))
+    )
+    pendingSent.current = { ...pendingSent.current, ...saved }
+    // Editing reopens as soon as the request is sent, so a second save can
+    // start while this one is pending. Saves of a path complete in order, and
+    // only the newest one may prune the store, or an older callback would
+    // drop a key the newer one restored.
+    const generation = ++saveGeneration.current
+    saveMeta(path, localMeta).then((ok) => {
+      if (generation !== saveGeneration.current) {
+        if (ok) supersededClears.current = cleared
+        return
+      }
+      // The server drops a key the save omits, but its meta delta is merged
+      // into the store rather than replacing the entry, so a cleared field
+      // would linger in this session until a reload. Only drop it locally
+      // once the server has accepted the save, or the two would disagree.
+      const toRemove = ok ? cleared : supersededClears.current
+      supersededClears.current = undefined
+      pendingSent.current = undefined
+      if (toRemove && Object.keys(toRemove).length > 0) {
+        useStore.getState().removeMetaKeys(SELF_CONTEXT, path, toRemove)
+      }
+    })
     setIsEditing(false)
   }
 
@@ -1008,7 +1138,12 @@ const MetaFormRow: React.FC<MetaFormRowProps> = (props) => {
       </Col>
       <Col xs="1" md="1">
         {!disabled && (
-          <Button variant="outline-danger" size="sm" onClick={deleteKey}>
+          <Button
+            variant="outline-danger"
+            size="sm"
+            onClick={deleteKey}
+            aria-label={`Delete ${fieldKey}`}
+          >
             <FontAwesomeIcon icon={faTrashCan} />
           </Button>
         )}
