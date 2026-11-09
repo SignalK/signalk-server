@@ -291,6 +291,11 @@ export const electricalMetadata: Record<string, PathMetadataEntry> = {
       'Lower fault temperature limit - device may disable/disconnect',
     units: 'K'
   },
+  // An inverter's AC output is single phase: its values go directly under
+  // ac, as below. A three-phase system is usually three inverters, one per
+  // phase, each with its own ac. Only a device that reports lines 2 and 3
+  // of one output (NMEA 2000 127504) writes them under ac/phase/B and
+  // ac/phase/C; its line 1 stays directly under ac, not under ac/phase/A.
   '/vessels/*/electrical/inverters/RegExp/ac': {
     description: 'AC equipment common qualities'
   },
@@ -753,6 +758,7 @@ export const electricalMetadata: Record<string, PathMetadataEntry> = {
   },
   ...acPhaseMetadata('/vessels/*/electrical/ac/RegExp'),
   ...acPhaseMetadata('/vessels/*/electrical/generators/RegExp'),
+  // Lines 2 and 3 of a three-phase inverter output; see inverters/RegExp/ac
   ...acPhaseMetadata('/vessels/*/electrical/inverters/RegExp/ac'),
   [`/vessels/*/electrical/ac/RegExp/phase/${AC_PHASE_NAME}/acceptability`]: {
     description:
