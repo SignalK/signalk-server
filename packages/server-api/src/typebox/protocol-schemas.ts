@@ -400,6 +400,12 @@ export const NotificationSchema = Type.Object(
     message: Type.String({
       description: 'Message to display or speak'
     }),
+    location: Type.Optional(
+      Type.String({
+        description:
+          "The location or part of the vessel where the notification originates from, for display purposes (e.g. 'Engine Room'). Not the vessel's geographic position."
+      })
+    ),
     status: Type.Optional(AlarmStatusSchema),
     position: Type.Optional(
       Type.Ref(PositionSchema, {

@@ -1,6 +1,7 @@
 import { expect } from 'chai'
 import chai from 'chai'
 import { NotificationApi } from '../dist/api/notifications/index.js'
+import { Alarm } from '../dist/api/notifications/alarm.js'
 import { startServer, DATETIME_REGEX } from './ts-servertestutilities'
 import {
   ALARM_STATE,
@@ -468,6 +469,78 @@ describe('NotificationApi', () => {
       }
     })
 
+    it('drops a null or blank location from an external notification', function () {
+      const alarm = new Alarm()
+      const update = (location: string | null) => ({
+        $source: 'n2k' as SourceRef,
+        values: [
+          {
+            path: 'notifications.bilge' as Path,
+            value: {
+              state: 'alarm',
+              method: ['visual'],
+              message: 'Highwater',
+              location
+            }
+          }
+        ]
+      })
+      alarm.syncFromNotificationUpdate(
+        update('Engine Room'),
+        'vessels.self' as Context
+      )
+      expect(alarm.value.location).to.equal('Engine Room')
+
+      const cleared = update(null)
+      alarm.syncFromNotificationUpdate(cleared, 'vessels.self' as Context)
+      expect(alarm.value).to.not.have.property('location')
+      expect(cleared.values[0].value.location).to.equal(null)
+
+      alarm.syncFromNotificationUpdate(update('  '), 'vessels.self' as Context)
+      expect(alarm.value).to.not.have.property('location')
+    })
+
+    it('drops the location when an external notification is cleared', function () {
+      const alarm = new Alarm()
+      const update = (value: object | null) => ({
+        $source: 'n2k' as SourceRef,
+        values: [{ path: 'notifications.bilge' as Path, value }]
+      })
+      alarm.syncFromNotificationUpdate(
+        update({
+          state: 'alarm',
+          method: ['visual'],
+          message: 'Highwater',
+          location: 'Engine Room'
+        }),
+        'vessels.self' as Context
+      )
+      expect(alarm.value.location).to.equal('Engine Room')
+
+      alarm.syncFromNotificationUpdate(update(null), 'vessels.self' as Context)
+      expect(alarm.value.location).to.equal(undefined)
+    })
+
+    it('raise() carries location into the notification', async function () {
+      const { app, handleMessageCalls } = makeApp()
+      const api = new NotificationApi(app)
+      await api.start()
+      api.raise({
+        state: ALARM_STATE.alarm,
+        message: 'Highwater',
+        location: 'Engine Room',
+        path: 'environment.bilge' as Path
+      })
+      const update = handleMessageCalls[0].updates![0]
+      if ('values' in update) {
+        expect((update.values[0].value as Notification).location).to.equal(
+          'Engine Room'
+        )
+      } else {
+        throw new Error('Expected update to have values property')
+      }
+    })
+
     it('raise() ignores a context override and emits for self', async function () {
       const { app, handleMessageCalls } = makeApp()
       const api = new NotificationApi(app)
@@ -747,6 +820,143 @@ describe('NotificationApi', () => {
         ;(
           (await (await get(`/notifications/${id}`)).json()) as AlarmProperties
         ).value.state.should.equal('alarm')
+      } finally {
+        stop()
+      }
+    })
+
+    it('REST: raise sets location and update changes or removes it', async function () {
+      const { get, post, put, stop, server } = await startServer()
+      const emitted: Delta[] = []
+      const app = server.app as unknown as {
+        handleMessage: (id: string, delta: Delta, ...rest: unknown[]) => void
+      }
+      const handleMessage = app.handleMessage.bind(app)
+      app.handleMessage = (id, delta, ...rest) => {
+        if (id === 'notificationApi') {
+          emitted.push(delta)
+        }
+        handleMessage(id, delta, ...rest)
+      }
+      const lastEmitted = () => {
+        const update = emitted[emitted.length - 1].updates![0]
+        if (!('values' in update)) {
+          throw new Error('Expected update to have values property')
+        }
+        return update.values[0].value as Notification
+      }
+      try {
+        let response = await post(`/notifications`, {
+          state: 'alarm',
+          message: 'Highwater',
+          location: 'Engine Room',
+          path: 'environment.bilge'
+        })
+        response.status.should.equal(200)
+        const { id } = (await response.json()) as { id: string }
+        const location = async () =>
+          (
+            (await (
+              await get(`/notifications/${id}`)
+            ).json()) as AlarmProperties
+          ).value.location
+
+        expect(await location()).to.equal('Engine Room')
+
+        response = await put(`/notifications/${id}`, { message: 'Still high' })
+        response.status.should.equal(200)
+        expect(await location()).to.equal('Engine Room')
+
+        response = await put(`/notifications/${id}`, { location: 'Galley' })
+        response.status.should.equal(200)
+        expect(await location()).to.equal('Galley')
+        expect(lastEmitted().location).to.equal('Galley')
+
+        response = await put(`/notifications/${id}`, { location: '' })
+        response.status.should.equal(200)
+        expect(await location()).to.equal(undefined)
+        expect(lastEmitted()).to.not.have.property('location')
+
+        response = await put(`/notifications/${id}`, { location: 'Galley' })
+        response.status.should.equal(200)
+        expect(await location()).to.equal('Galley')
+        response = await put(`/notifications/${id}`, { location: null })
+        response.status.should.equal(200)
+        expect(await location()).to.equal(undefined)
+        expect(lastEmitted()).to.not.have.property('location')
+
+        response = await put(`/notifications/${id}`, { location: { room: 1 } })
+        response.status.should.equal(400)
+        response = await post(`/notifications`, {
+          state: 'alarm',
+          message: 'Highwater',
+          location: 42,
+          path: 'environment.bilge2'
+        })
+        response.status.should.equal(400)
+        response = await post(`/notifications`, {
+          state: 'alarm',
+          message: 'Highwater',
+          location: null,
+          path: 'environment.bilge3'
+        })
+        response.status.should.equal(400)
+      } finally {
+        stop()
+      }
+    })
+
+    it('REST: an update without a state keeps silenced and acknowledged', async function () {
+      const { get, post, put, stop } = await startServer()
+      try {
+        let response = await post(`/notifications`, {
+          state: 'alarm',
+          message: 'Highwater',
+          path: 'environment.bilge'
+        })
+        const { id } = (await response.json()) as { id: string }
+        const status = async () =>
+          (
+            (await (await get(`/notifications/${id}`)).json()) as {
+              value: { status: Record<string, boolean> }
+            }
+          ).value.status
+
+        await post(`/notifications/${id}/silence`, {})
+        await post(`/notifications/${id}/acknowledge`, {})
+        response = await put(`/notifications/${id}`, { location: 'Galley' })
+        response.status.should.equal(200)
+        response = await put(`/notifications/${id}`, { message: 'Still high' })
+        response.status.should.equal(200)
+        response = await put(`/notifications/${id}`, { state: 'alarm' })
+        response.status.should.equal(200)
+        let s = await status()
+        s.silenced.should.equal(true)
+        s.acknowledged.should.equal(true)
+
+        response = await put(`/notifications/${id}`, { state: 'emergency' })
+        response.status.should.equal(200)
+        s = await status()
+        s.silenced.should.equal(false)
+        s.acknowledged.should.equal(false)
+        s.canSilence.should.equal(false)
+
+        response = await put(`/notifications/${id}`, {
+          location: 'Engine Room'
+        })
+        response.status.should.equal(200)
+        s = await status()
+        s.canSilence.should.equal(false)
+
+        response = await put(`/notifications/${id}`, { state: 'sinking' })
+        response.status.should.equal(400)
+        expect(
+          (
+            (await (await get(`/notifications/${id}`)).json()) as {
+              value: { state: string }
+            }
+          ).value.state
+        ).to.equal('emergency')
       } finally {
         stop()
       }
