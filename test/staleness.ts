@@ -742,10 +742,17 @@ describe('StalenessEnforcer', () => {
     })
   })
 
-  it('times out a string enum path such as navigation.state', () => {
+  it('times out a string enum path such as navigation.gnss.methodQuality', () => {
     const app = makeMockApp({ defaultTimeout: 60 })
     const ts = isoSecondsAgo(120)
-    seedLeaf(app, SELF_CONTEXT, 'navigation.state', 'autostate', ts, 'moored')
+    seedLeaf(
+      app,
+      SELF_CONTEXT,
+      'navigation.gnss.methodQuality',
+      'gps.1',
+      ts,
+      'GNSS Fix'
+    )
     const enforcer = makeEnforcer(app)
 
     runTick(enforcer)
@@ -753,10 +760,10 @@ describe('StalenessEnforcer', () => {
     expect(app.captured).to.have.lengthOf(1)
     const [msg] = app.captured
     expect(msg.providerId).to.equal(STALENESS_PLUGIN_ID)
-    expect(msg.path).to.equal('navigation.state')
+    expect(msg.path).to.equal('navigation.gnss.methodQuality')
     expect(msg.value).to.equal(null)
     expect(msg.state?.timedOut).to.equal(true)
-    expect(msg.state?.lastValue?.value).to.equal('moored')
+    expect(msg.state?.lastValue?.value).to.equal('GNSS Fix')
   })
 
   it('honours a plugin-declared meta.timeout on a string path', () => {
@@ -764,14 +771,33 @@ describe('StalenessEnforcer', () => {
     // enforcer consults for a per-path timeout.
     const app = makeMockApp({
       defaultTimeout: 60,
-      metaByPath: { 'navigation.state': { timeout: 900 } }
+      metaByPath: { 'navigation.gnss.methodQuality': { timeout: 900 } }
     })
+    seedLeaf(
+      app,
+      SELF_CONTEXT,
+      'navigation.gnss.methodQuality',
+      'gps.1',
+      isoSecondsAgo(120),
+      'GNSS Fix'
+    )
+    const enforcer = makeEnforcer(app)
+
+    runTick(enforcer)
+
+    expect(app.captured).to.be.empty
+  })
+
+  it('never times out the navigational state', () => {
+    // A declared state stands until the next declaration, however long its
+    // source stays silent.
+    const app = makeMockApp({ defaultTimeout: 60 })
     seedLeaf(
       app,
       SELF_CONTEXT,
       'navigation.state',
       'autostate',
-      isoSecondsAgo(120),
+      isoSecondsAgo(3600),
       'moored'
     )
     const enforcer = makeEnforcer(app)
@@ -779,6 +805,31 @@ describe('StalenessEnforcer', () => {
     runTick(enforcer)
 
     expect(app.captured).to.be.empty
+  })
+
+  it('times out the navigational state its source declares periodic', () => {
+    // A plugin that restates its state on a schedule can still have it expire
+    // once the plugin falls silent.
+    const app = makeMockApp({
+      defaultTimeout: 60,
+      metaByPath: {
+        'navigation.state': { updateContract: 'periodic', timeout: 900 }
+      }
+    })
+    seedLeaf(
+      app,
+      SELF_CONTEXT,
+      'navigation.state',
+      'autostate',
+      isoSecondsAgo(1000),
+      'moored'
+    )
+    const enforcer = makeEnforcer(app)
+
+    runTick(enforcer)
+
+    expect(app.captured).to.have.lengthOf(1)
+    expect(app.captured[0].path).to.equal('navigation.state')
   })
 
   it('still times out a path whose last segment is an identity name', () => {

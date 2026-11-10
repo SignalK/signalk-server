@@ -54,9 +54,11 @@ describe('staleness on string-valued paths', function () {
         context: `vessels.${server.app.selfId}`,
         updates: [
           {
-            source: { label: 'autostate-e2e' },
+            source: { label: 'gnss-e2e' },
             timestamp: new Date().toISOString(),
-            values: [{ path: 'navigation.state', value: 'moored' }]
+            values: [
+              { path: 'navigation.gnss.methodQuality', value: 'GNSS Fix' }
+            ]
           }
         ]
       },
@@ -68,9 +70,12 @@ describe('staleness on string-valued paths', function () {
     await delay(SETTLE_MS)
 
     const res = await fetch(
-      `http://localhost:${port}/signalk/v1/api/vessels/self/navigation/state`
+      `http://localhost:${port}/signalk/v1/api/vessels/self/navigation/gnss/methodQuality`
     )
-    expect(res.ok, `GET navigation/state returned ${res.status}`).to.equal(true)
+    expect(
+      res.ok,
+      `GET navigation/gnss/methodQuality returned ${res.status}`
+    ).to.equal(true)
 
     const body: unknown = await res.json()
     expect(body).to.be.an('object')
@@ -81,6 +86,6 @@ describe('staleness on string-valued paths', function () {
 
     expect(entry.value).to.equal(null)
     expect(entry.state?.timedOut).to.equal(true)
-    expect(entry.state?.lastValue?.value).to.equal('moored')
+    expect(entry.state?.lastValue?.value).to.equal('GNSS Fix')
   })
 })
