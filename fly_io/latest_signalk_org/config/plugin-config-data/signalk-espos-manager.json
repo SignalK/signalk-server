@@ -1,0 +1,8 @@
+{
+  "enabled": true,
+  "configuration": {
+    "dayNight": {
+      "publishMode": false
+    }
+  }
+}
