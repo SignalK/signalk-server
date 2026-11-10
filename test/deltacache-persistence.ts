@@ -228,6 +228,29 @@ describe('delta cache persistence', function () {
     expect(cachedPaths(after, SELF)).to.deep.equal([])
   })
 
+  it('does not save notifications', async function () {
+    const before = makeApp({ restoreOwnData: true })
+    const timestamp = new Date().toISOString()
+    before.deltaCache.ingestDelta(
+      valueDelta(
+        SELF,
+        'notifications.environment.depth.belowKeel',
+        { state: 'alarm', method: ['sound'], message: 'Shallow water' },
+        timestamp
+      )
+    )
+    before.deltaCache.ingestDelta(
+      valueDelta(SELF, 'environment.depth.belowKeel', 1.2, timestamp)
+    )
+    await saveDeltaCache(before)
+
+    const after = makeApp({ restoreOwnData: true })
+    restoreDeltaCache(after)
+    expect(cachedPaths(after, SELF)).to.deep.equal([
+      { path: 'environment.depth.belowKeel', value: 1.2 }
+    ])
+  })
+
   it('skips saved entries without a context', function () {
     fs.mkdirSync(path.dirname(deltaCacheFilePath(configPath)), {
       recursive: true
@@ -299,5 +322,33 @@ describe('delta cache persistence across a server restart', function () {
 
   it('starts empty when turned off', async function () {
     expect(await restartedValue(false)).to.equal(undefined)
+  })
+
+  it('saves nothing when settings are reloaded in-process', async function () {
+    const { server, sendDelta, stop } = await startServer({
+      restoreOwnData: true
+    })
+    try {
+      await sendDelta('tanks.fuel.0.currentLevel', 0.62)
+      const start = server.start.bind(server)
+      let restarted: Promise<unknown> | undefined
+      server.start = () => {
+        restarted = start()
+        return restarted
+      }
+      server.reload(undefined)
+      while (!restarted) {
+        await new Promise((resolve) => setTimeout(resolve, 10))
+      }
+      await restarted
+      expect(
+        fs.existsSync(deltaCacheFilePath(server.app.config.configPath))
+      ).to.equal(false)
+    } finally {
+      await stop()
+      fs.rmSync(deltaCacheFilePath(server.app.config.configPath), {
+        force: true
+      })
+    }
   })
 })

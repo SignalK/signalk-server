@@ -831,7 +831,7 @@ class Server {
     // stop() resolves only once the plugins have stopped and the HTTP server
     // has closed; a start() before that would lose its port and its timers to
     // the stop still running.
-    this.stop()
+    this.stop(undefined, { reloading: true })
       .catch((e) => console.error(e))
       .then(() => this.start())
       .catch((e) => console.error(e))
@@ -839,7 +839,7 @@ class Server {
     return this
   }
 
-  async stop(cb?: () => void) {
+  async stop(cb?: () => void, { reloading = false } = {}) {
     this.providerStatusEmitter.cancel()
     const { connections, redirectConnections } = this
     if (!this.app.started || !connections) {
@@ -847,9 +847,13 @@ class Server {
     }
 
     try {
-      await saveDeltaCache(this.app).catch((err: Error) => {
-        console.error(`Unable to save cached values: ${err.message}`)
-      })
+      // A reload keeps the cache in memory, and a file saved for it would be
+      // restored stale on a later start that follows a power cut.
+      if (!reloading) {
+        await saveDeltaCache(this.app).catch((err: Error) => {
+          console.error(`Unable to save cached values: ${err.message}`)
+        })
+      }
 
       // The plugins interface resolves once every plugin's stop() has, and a
       // shutdown exits as soon as this method resolves: without the wait, a

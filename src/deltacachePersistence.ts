@@ -16,6 +16,9 @@ const MS_PER_MINUTE = 60 * 1000
 // Base data is reloaded from baseDeltas.json on every start; saving it here
 // could bring back a field the user has since cleared.
 const BASE_DATA_SOURCE = 'defaults'
+// An alarm is an event rather than a measurement, and a restored one would
+// lack the state the notification manager keeps for clearing it.
+const NOTIFICATIONS_PATH_PREFIX = 'notifications.'
 
 export interface DeltaCachePersistenceApp {
   config: {
@@ -35,6 +38,17 @@ export function deltaCacheFilePath(configPath: string): string {
   return join(configPath, SERVERSTATEDIRNAME, FILE_NAME)
 }
 
+function isWorthSaving(delta: Delta): boolean {
+  const update = delta.updates[0]
+  if (!update || update.$source === BASE_DATA_SOURCE) {
+    return false
+  }
+  return !(
+    'values' in update &&
+    update.values.some((pv) => pv.path.startsWith(NOTIFICATIONS_PATH_PREFIX))
+  )
+}
+
 /**
  * Save the cached values on a clean stop so that the next start can
  * restore them.
@@ -51,7 +65,7 @@ export async function saveDeltaCache(
     : ({ context }) => context === app.selfContext
   const deltas = app.deltaCache
     .getCachedDeltas(matcher, undefined, undefined, 'all', true)
-    .filter((delta) => delta.updates[0]?.$source !== BASE_DATA_SOURCE)
+    .filter(isWorthSaving)
   const filePath = deltaCacheFilePath(app.config.configPath)
   await mkdir(join(app.config.configPath, SERVERSTATEDIRNAME), {
     recursive: true
