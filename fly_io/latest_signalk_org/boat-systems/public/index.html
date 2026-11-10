@@ -20,15 +20,15 @@ main{flex:1;min-height:0;padding:8px}
 svg{width:100%;height:100%;display:block}
 .dev{cursor:pointer}
 .dev .shape{fill:var(--panel);stroke:var(--off);stroke-width:2}
-.dev text{fill:var(--dim);font-size:14px;font-weight:600;text-anchor:middle;pointer-events:none}
-.dev .state{font-size:12px;font-weight:500}
+.dev text{fill:var(--dim);font-size:16px;font-weight:600;text-anchor:middle;pointer-events:none}
+.dev .state{font-size:13px;font-weight:500}
 .dev.on .shape{fill:var(--onBg);stroke:var(--on)}
 .dev.on text{fill:var(--on)}
 .dev .glow{fill:var(--on);opacity:0;filter:url(#glow);transition:opacity .2s}
 .dev.on .glow{opacity:.35}
 .dev.busy .shape{stroke-dasharray:4 4}
 .sensor .shape{fill:#0f1f2d;stroke:var(--blue);stroke-width:2}
-.sensor text{fill:var(--txt);font-size:13px;font-weight:600;text-anchor:middle}
+.sensor text{fill:var(--txt);font-size:15px;font-weight:600;text-anchor:middle}
 .sensor.warn .shape{fill:var(--warnBg);stroke:var(--warn)}
 .sensor.warn text{fill:var(--warn)}
 .sensor.alarm .shape{stroke:var(--alarm)}
@@ -48,22 +48,22 @@ svg{width:100%;height:100%;display:block}
   <span class="chip" id="offline" hidden>Connecting…</span>
 </header>
 <main>
-<svg viewBox="0 0 1360 820" aria-label="Floor plan of the boat with its switches and sensors">
+<svg viewBox="0 0 480 1030" aria-label="Floor plan of the boat with its switches and sensors">
   <defs>
     <filter id="glow" x="-1" y="-1" width="3" height="3"><feGaussianBlur stdDeviation="8"/></filter>
-    <linearGradient id="hullFill" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#16293a"/><stop offset="1" stop-color="#0f1f2d"/></linearGradient>
+    <linearGradient id="hullFill" x1="0" x2="1" y1="0" y2="0"><stop offset="0" stop-color="#16293a"/><stop offset="1" stop-color="#0f1f2d"/></linearGradient>
   </defs>
-  <path d="M120 250 L120 570 Q130 640 420 650 L900 640 Q1150 600 1270 410 Q1150 220 900 180 L420 170 Q130 180 120 250 Z" fill="url(#hullFill)" stroke="var(--hullLine)" stroke-width="3"/>
-  <path d="M440 300 L860 285 Q960 330 960 410 Q960 490 860 535 L440 520 Z" fill="none" stroke="#2c4660" stroke-width="2"/>
-  <rect x="170" y="300" width="230" height="220" rx="24" fill="none" stroke="#2c4660" stroke-width="2"/>
-  <line x1="680" y1="292" x2="680" y2="528" stroke="#22394f" stroke-dasharray="6 6"/>
-  <line x1="960" y1="250" x2="960" y2="570" stroke="#22394f" stroke-dasharray="6 6"/>
-  <text class="zone" x="285" y="335">COCKPIT</text>
-  <text class="zone" x="560" y="320">SALOON</text>
-  <text class="zone" x="780" y="320">GALLEY</text>
-  <text class="zone" x="1075" y="330">FORWARD CABIN</text>
-  <circle cx="900" cy="410" r="12" fill="#2c4660" stroke="#5a7a99" stroke-width="2"/>
-  <text class="zone" x="900" y="445" style="font-size:12px">MAST</text>
+  <path d="M240 30 Q420 170 430 330 L430 900 Q430 960 370 965 L110 965 Q50 960 50 900 L50 330 Q60 170 240 30 Z" fill="url(#hullFill)" stroke="var(--hullLine)" stroke-width="3"/>
+  <line x1="56" y1="370" x2="424" y2="370" stroke="#2c4660" stroke-width="2"/>
+  <line x1="52" y1="575" x2="428" y2="575" stroke="#2c4660" stroke-width="2"/>
+  <line x1="240" y1="600" x2="240" y2="775" stroke="#22394f" stroke-dasharray="6 6"/>
+  <rect x="70" y="805" width="340" height="145" rx="22" fill="none" stroke="#2c4660" stroke-width="2"/>
+  <text class="zone" x="240" y="250">FORWARD CABIN</text>
+  <text class="zone" x="145" y="598">GALLEY</text>
+  <text class="zone" x="335" y="598">SALOON</text>
+  <text class="zone" x="240" y="829">COCKPIT</text>
+  <circle cx="240" cy="472" r="12" fill="#2c4660" stroke="#5a7a99" stroke-width="2"/>
+  <text class="zone" x="240" y="505" style="font-size:12px">MAST</text>
   <g id="plan"></g>
 </svg>
 </main>
@@ -74,27 +74,27 @@ const NS = 'http://www.w3.org/2000/svg'
 const K = 273.15
 // x, y: centre on the plan; w: pill width (0 = round lamp)
 const SWITCHES = [
-  { id: '10.1', label: 'Navigation', x: 1180, y: 300, w: 0 },
-  { id: '10.2', label: 'Stern', x: 120, y: 410, w: 0 },
-  { id: '10.3', label: 'Steaming', x: 900, y: 235, w: 120 },
-  { id: '10.4', label: 'Tricolour', x: 900, y: 175, w: 120 },
-  { id: '10.5', label: 'Anchor', x: 1030, y: 175, w: 110 },
-  { id: '10.6', label: 'Deck light', x: 770, y: 235, w: 120 },
-  { id: '13.1', label: 'Bow thruster', x: 1120, y: 600, w: 150 },
-  { id: '13.2', label: 'Water pump', x: 300, y: 600, w: 140 },
-  { id: '13.3', label: 'Bilge pump', x: 500, y: 600, w: 130 },
-  { id: '13.4', label: 'Fridge', x: 760, y: 375, w: 110 },
-  { id: '13.5', label: 'Freezer', x: 760, y: 465, w: 110 },
-  { id: '13.6', label: 'Saloon', x: 560, y: 375, w: 110 },
-  { id: '13.7', label: 'Cabin', x: 1075, y: 375, w: 100 },
-  { id: '13.8', label: 'Instruments', x: 285, y: 450, w: 140 }
+  { id: '10.1', label: 'Navigation', x: 240, y: 82, w: 0 },
+  { id: '10.2', label: 'Stern', x: 240, y: 965, w: 0 },
+  { id: '10.3', label: 'Steaming', x: 145, y: 530, w: 150 },
+  { id: '10.4', label: 'Tricolour', x: 145, y: 415, w: 150 },
+  { id: '10.5', label: 'Anchor', x: 335, y: 415, w: 150 },
+  { id: '10.6', label: 'Deck light', x: 335, y: 530, w: 150 },
+  { id: '13.1', label: 'Bow thruster', x: 240, y: 190, w: 170 },
+  { id: '13.2', label: 'Water pump', x: 150, y: 866, w: 150 },
+  { id: '13.3', label: 'Bilge pump', x: 330, y: 866, w: 150 },
+  { id: '13.4', label: 'Fridge', x: 145, y: 640, w: 150 },
+  { id: '13.5', label: 'Freezer', x: 145, y: 730, w: 150 },
+  { id: '13.6', label: 'Saloon', x: 335, y: 640, w: 150 },
+  { id: '13.7', label: 'Cabin', x: 150, y: 300, w: 150 },
+  { id: '13.8', label: 'Instruments', x: 335, y: 730, w: 150 }
 ]
 const SENSORS = [
-  { key: 'fridge', path: 'environment.inside.refrigerator.temperature', x: 760, y: 420, w: 110, fmt: (v) => `${c(v)} °C`, warn: (v) => v > 6 + K, alarm: (v) => v > 9 + K },
-  { key: 'freezer', path: 'environment.inside.freezer.temperature', x: 760, y: 510, w: 110, fmt: (v) => `${c(v)} °C`, warn: (v) => v > -12 + K, alarm: (v) => v > -5 + K },
-  { key: 'saloon', path: 'environment.inside.saloon.temperature', x: 560, y: 440, w: 110, fmt: (v) => `${c(v)} °C`, rh: 'environment.inside.saloon.relativeHumidity' },
-  { key: 'cabin', path: 'environment.inside.forwardCabin.temperature', x: 1075, y: 440, w: 110, fmt: (v) => `${c(v)} °C`, rh: 'environment.inside.forwardCabin.relativeHumidity' },
-  { key: 'engine', path: 'environment.inside.engineRoom.temperature', x: 285, y: 390, w: 140, fmt: (v) => `Engine ${c(v)} °C` }
+  { key: 'fridge', path: 'environment.inside.refrigerator.temperature', x: 145, y: 685, w: 150, fmt: (v) => `${c(v)} °C`, warn: (v) => v > 6 + K, alarm: (v) => v > 9 + K },
+  { key: 'freezer', path: 'environment.inside.freezer.temperature', x: 145, y: 775, w: 150, fmt: (v) => `${c(v)} °C`, warn: (v) => v > -12 + K, alarm: (v) => v > -5 + K },
+  { key: 'saloon', path: 'environment.inside.saloon.temperature', x: 335, y: 685, w: 150, fmt: (v) => `${c(v)} °C`, rh: 'environment.inside.saloon.relativeHumidity' },
+  { key: 'cabin', path: 'environment.inside.forwardCabin.temperature', x: 330, y: 300, w: 150, fmt: (v) => `${c(v)} °C`, rh: 'environment.inside.forwardCabin.relativeHumidity' },
+  { key: 'engine', path: 'environment.inside.engineRoom.temperature', x: 240, y: 919, w: 190, fmt: (v) => `Engine ${c(v)} °C` }
 ]
 const values = new Map()
 const nodes = new Map()
@@ -119,10 +119,10 @@ function build() {
       const st = el('text', { class: 'state', y: 58 }, g); st.textContent = '--'
       nodes.set(s.id, { g, st })
     } else {
-      el('rect', { class: 'glow', x: -s.w / 2, y: -22, width: s.w, height: 44, rx: 22 }, g)
-      el('rect', { class: 'shape', x: -s.w / 2, y: -22, width: s.w, height: 44, rx: 22 }, g)
+      el('rect', { class: 'glow', x: -s.w / 2, y: -24, width: s.w, height: 48, rx: 24 }, g)
+      el('rect', { class: 'shape', x: -s.w / 2, y: -24, width: s.w, height: 48, rx: 24 }, g)
       const t = el('text', { y: -2 }, g); t.textContent = s.label
-      const st = el('text', { class: 'state', y: 14 }, g); st.textContent = '--'
+      const st = el('text', { class: 'state', y: 15 }, g); st.textContent = '--'
       nodes.set(s.id, { g, st })
     }
     g.addEventListener('click', () => toggle(s.id))
@@ -130,7 +130,7 @@ function build() {
   }
   for (const s of SENSORS) {
     const g = el('g', { class: 'sensor', transform: `translate(${s.x},${s.y})` }, plan)
-    el('rect', { class: 'shape', x: -s.w / 2, y: -17, width: s.w, height: 34, rx: 9 }, g)
+    el('rect', { class: 'shape', x: -s.w / 2, y: -18, width: s.w, height: 36, rx: 9 }, g)
     const t = el('text', { y: 5 }, g); t.textContent = '--'
     nodes.set(s.key, { g, t })
   }
@@ -224,8 +224,35 @@ function connect() {
   ws.onclose = () => { offline.hidden = false; setTimeout(connect, 3000) }
 }
 
+// Inside Skip, this page fills a dashboard and takes every swipe, and Skip's
+// side panel in Freeboard has no toolbar. A horizontal swipe here moves Skip
+// to the neighbouring dashboard, as it would anywhere else on a dashboard.
+const SWIPE_MIN_PX = 60
+function passSwipesToSkip() {
+  let skip
+  try {
+    skip = window.parent !== window && window.parent.location.pathname.startsWith('/@halos-org/skip/') ? window.parent : undefined
+  } catch {
+    return
+  }
+  if (!skip) return
+  let start
+  document.addEventListener('pointerdown', (e) => { start = { x: e.clientX, y: e.clientY } }, { passive: true })
+  document.addEventListener('pointerup', (e) => {
+    if (!start) return
+    const dx = e.clientX - start.x
+    const dy = e.clientY - start.y
+    start = undefined
+    if (Math.abs(dx) < SWIPE_MIN_PX || Math.abs(dx) < 2 * Math.abs(dy)) return
+    const page = Number(/#\/page\/(\d+)/.exec(skip.location.hash)?.[1] ?? 0)
+    const next = dx < 0 ? page + 1 : page - 1
+    if (next >= 0) skip.location.hash = `#/page/${next}`
+  }, { passive: true })
+}
+
 build()
 connect()
+passSwipesToSkip()
 </script>
 </body>
 </html>
