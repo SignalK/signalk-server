@@ -42,6 +42,14 @@
       {
         "enabled": true,
         "autostart": false,
+        "url": "/signalk-espos-hmi-designer/",
+        "label": "HMI Designer",
+        "icon": "/signalk-espos-hmi-designer/icon.svg",
+        "color": ""
+      },
+      {
+        "enabled": true,
+        "autostart": false,
         "url": "/admin/",
         "label": "Settings",
         "icon": "/@signalk/app-dock/icon-settings.svg",
