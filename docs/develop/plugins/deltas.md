@@ -338,8 +338,11 @@ The same method is how a plugin tells [Stale Data Detection](../../setup/stalene
 
 ```javascript
 plugin.start = async (options) => {
-  // Republished every 10 minutes, so the 60s default would flag it as stale.
-  await app.setDefaultMetadata('navigation.state', { timeout: 900 })
+  // Read from the tank sender every 10 minutes, so the 60s default would
+  // flag it as stale.
+  await app.setDefaultMetadata('tanks.freshWater.0.currentLevel', {
+    timeout: 900
+  })
   // Updates every few seconds; let the server derive the timeout.
   await app.setDefaultMetadata('environment.inside.temperature', {
     timeout: 'auto'

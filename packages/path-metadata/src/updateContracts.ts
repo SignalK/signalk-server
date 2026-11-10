@@ -30,6 +30,10 @@ export const updateContracts: Readonly<Record<string, UpdateContract>> =
     // Day/night is a setting a person or a plugin switches, and the last
     // switch stands until the next one.
     'environment.mode': 'event',
+    // The navigational state (moored, anchored, sailing, motoring...) is
+    // declared, by a person or by a plugin from how the vessel moves, and the
+    // last declaration stands until the next one.
+    'navigation.state': 'event',
     'navigation.home': 'event',
     'navigation.course': 'event',
     uuid: 'event',

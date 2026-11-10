@@ -428,6 +428,12 @@ describe('updateContract inheritance', () => {
     expect(contractFor(self('environment.mode'))).to.equal('event')
   })
 
+  it('treats the navigational state as event-driven', () => {
+    // A state declared by hand, such as moored, must not fall back to null
+    // after the timeout.
+    expect(contractFor(self('navigation.state'))).to.equal('event')
+  })
+
   it('treats resource announcements as event-driven', () => {
     // Null on a resource path is a delete, so a timeout must never produce it.
     expect(updateContractForPath('resources.charts.nautical-charts')).to.equal(

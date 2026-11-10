@@ -186,8 +186,8 @@ export interface ServerAPI
    *
    * @example Declaring staleness behaviour for a slow path
    * ```javascript
-   * // This plugin republishes state every 10 minutes.
-   * await app.setDefaultMetadata('navigation.state', {
+   * // This plugin reads the tank sender every 10 minutes.
+   * await app.setDefaultMetadata('tanks.freshWater.0.currentLevel', {
    *   timeout: 900
    * })
    * ```
