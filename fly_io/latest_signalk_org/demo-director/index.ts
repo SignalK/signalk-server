@@ -1,4 +1,6 @@
 import type { Path, Plugin, ServerAPI, Timestamp } from '@signalk/server-api'
+import { rmSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { magvar } from 'magvar'
 
 const PLUGIN_ID = 'signalk-demo-director'
@@ -41,6 +43,17 @@ const POLAR_RATIOS = {
   vmg: { base: 0.88, swing: 0.08 }
 }
 const POLAR_WANDER_PERIOD_MS = 7 * 60 * 1000
+// Visitors steer with the public demo login, which the ACL limits to the
+// autopilot. Once nobody has touched the autopilot for a while, the boat
+// goes back to the route for the next visitor.
+const VISITOR_IDLE_MS = 5 * 60 * 1000
+export const DEMO_LOGIN = { username: 'demo', password: 'demo' }
+const SERVER_URL = 'http://127.0.0.1:3000'
+const AUTOPILOT_PATHS = [
+  'steering.autopilot.state',
+  'steering.autopilot.mode',
+  'steering.autopilot.target'
+]
 
 interface Position {
   latitude: number
@@ -102,6 +115,9 @@ export default function (app: ServerAPI): Plugin {
   let ticksSinceVariation = VARIATION_EVERY_TICKS
   let turning = false
   let startedAt = Date.now()
+  let autopilotSetting = ''
+  let autopilotChangedAt = Date.now()
+  let resuming = false
   let historyTimer: ReturnType<typeof setInterval> | undefined
   let historyStart: ReturnType<typeof setTimeout> | undefined
 
@@ -225,6 +241,62 @@ export default function (app: ServerAPI): Plugin {
     }
   }
 
+  function followsRoute() {
+    return (
+      app.getSelfPath('steering.autopilot.mode.value') === 'route' &&
+      app.getSelfPath('steering.autopilot.engaged.value') === true
+    )
+  }
+
+  // The plugin API has no autopilot commands, so the director steers through
+  // the REST API with the same login the visitors use.
+  async function resumeRoute() {
+    const login = await fetch(`${SERVER_URL}/signalk/v1/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(DEMO_LOGIN)
+    })
+    if (!login.ok) throw new Error(`login answered ${login.status}`)
+    const { token } = (await login.json()) as { token: string }
+    const resumed = await fetch(
+      `${SERVER_URL}/signalk/v2/api/vessels/self/autopilots/_default/courseCurrentPoint`,
+      { method: 'POST', headers: { Authorization: `Bearer ${token}` } }
+    )
+    if (!resumed.ok) throw new Error(`autopilot answered ${resumed.status}`)
+    // visitors share the login, so the next one starts from the demo layout
+    rmSync(
+      resolve(
+        app.getDataDirPath(),
+        '../../applicationData/users',
+        DEMO_LOGIN.username
+      ),
+      { recursive: true, force: true }
+    )
+  }
+
+  async function returnToRouteWhenIdle() {
+    const setting = JSON.stringify(
+      AUTOPILOT_PATHS.map((path) => app.getSelfPath(`${path}.value`))
+    )
+    if (setting !== autopilotSetting) {
+      autopilotSetting = setting
+      autopilotChangedAt = Date.now()
+    }
+    if (resuming || followsRoute()) return
+    if (Date.now() - autopilotChangedAt < VISITOR_IDLE_MS) return
+    resuming = true
+    try {
+      await resumeRoute()
+    } catch (error) {
+      app.error(
+        `Could not take the demo boat back to its route: ${String(error)}`
+      )
+    } finally {
+      autopilotChangedAt = Date.now()
+      resuming = false
+    }
+  }
+
   function tick() {
     if (ticksSinceVariation >= VARIATION_EVERY_TICKS) publishVariation()
     ticksSinceVariation++
@@ -232,17 +304,19 @@ export default function (app: ServerAPI): Plugin {
     if (!historyTimer) publishPiHealth()
     publishPolarPerformance()
     void turnRoundAtEnd()
+    void returnToRouteWhenIdle()
   }
 
   return {
     id: PLUGIN_ID,
     name: 'Demo director',
     description:
-      'Keeps the demo boat under way: publishes magnetic variation, the computer health and the polar performance, and turns the active route round at its end',
+      'Keeps the demo boat under way: publishes magnetic variation, the computer health and the polar performance, turns the active route round at its end, and takes the boat back to the route when visitors stop steering',
     schema: () => ({ type: 'object', properties: {} }),
     start: () => {
       ticksSinceVariation = VARIATION_EVERY_TICKS
       startedAt = Date.now()
+      autopilotChangedAt = Date.now()
       tick()
       historyStart = setTimeout(startPiHistory, PI_HISTORY_DELAY_MS)
       timer = setInterval(tick, TICK_MS)

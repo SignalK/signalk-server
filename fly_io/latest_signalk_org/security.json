@@ -2,7 +2,60 @@
   "allow_readonly": true,
   "allowNewUserRegistration": false,
   "allowDeviceAccessRequests": false,
-  "users": [],
+  "users": [
+    {
+      "username": "demo",
+      "type": "readwrite",
+      "password": "$2a$10$Ha1al/fQ6zPSTZdzsetDM.L4OycYHbNwQJfwWxO7ZUgdtzaVL.wJm"
+    }
+  ],
   "devices": [],
-  "acls": []
+  "acls": [
+    {
+      "context": "vessels.self",
+      "resources": [
+        {
+          "paths": ["autopilot"],
+          "permissions": [
+            {
+              "subject": "demo",
+              "permission": "put"
+            }
+          ]
+        },
+        {
+          "paths": ["electrical.switches.*", "environment.mode"],
+          "permissions": [
+            {
+              "subject": "demo",
+              "permission": "put"
+            }
+          ]
+        },
+        {
+          "paths": ["*"],
+          "permissions": [
+            {
+              "subject": "any",
+              "permission": "read"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "context": "*",
+      "resources": [
+        {
+          "paths": ["*"],
+          "permissions": [
+            {
+              "subject": "any",
+              "permission": "read"
+            }
+          ]
+        }
+      ]
+    }
+  ]
 }
