@@ -26,6 +26,7 @@
     "signalk-target-fusion": "0.3.0",
     "signalk-tidal-currents": "0.3.3",
     "signalk-tides": "2.2.0",
-    "signalk-underkeel": "0.2.1"
+    "signalk-underkeel": "0.2.1",
+    "signalk-universal-installer-rpi-mgmt": "0.1.1"
   }
 }
