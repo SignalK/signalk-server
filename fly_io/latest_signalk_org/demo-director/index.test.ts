@@ -16,11 +16,15 @@ interface RouteState {
   reverse: boolean
 }
 
-function fakeApp(route: RouteState, position: typeof FINAL_WAYPOINT) {
+function fakeApp(
+  route: RouteState,
+  position: typeof FINAL_WAYPOINT,
+  selfValues: Record<string, number> = {}
+) {
   const activated: unknown[] = []
   const messages: unknown[] = []
   const app = {
-    getSelfPath: () => position,
+    getSelfPath: (path: string) => selfValues[path] ?? position,
     handleMessage: (_id: string, delta: unknown) => {
       messages.push(delta)
     },
@@ -106,6 +110,40 @@ describe('demo director', () => {
     assert.ok(typeof kelvin === 'number' && kelvin > 320 && kelvin < 335)
     const [cpu] = published(messages, 'environment.rpi.cpu.utilisation')
     assert.ok(typeof cpu === 'number' && cpu > 0 && cpu < 1)
+  })
+
+  it('publishes polar speeds that match the boat speed and the ratio', async () => {
+    const stw = 3
+    const { app, messages } = fakeApp(
+      { pointIndex: 3, pointTotal: 5, reverse: false },
+      NEAR_FINAL,
+      {
+        'navigation.speedThroughWater.value': stw,
+        'environment.wind.angleTrueWater.value': Math.PI / 3
+      }
+    )
+    await runFirstTick(app)
+    const [ratio] = published(messages, 'performance.polarSpeedRatio')
+    const [polarSpeed] = published(messages, 'performance.polarSpeed')
+    assert.ok(typeof ratio === 'number' && ratio > 0.8 && ratio < 1.05)
+    assert.ok(typeof polarSpeed === 'number')
+    assert.ok(Math.abs(polarSpeed * ratio - stw) < 1e-9)
+    const [vmgRatio] = published(
+      messages,
+      'performance.polarVelocityMadeGoodRatio'
+    )
+    const [polarVmg] = published(messages, 'performance.polarVelocityMadeGood')
+    assert.ok(typeof vmgRatio === 'number' && typeof polarVmg === 'number')
+    assert.ok(Math.abs(polarVmg * vmgRatio - stw * 0.5) < 1e-9)
+  })
+
+  it('publishes no polar performance without boat speed and wind', async () => {
+    const { app, messages } = fakeApp(
+      { pointIndex: 3, pointTotal: 5, reverse: false },
+      NEAR_FINAL
+    )
+    await runFirstTick(app)
+    assert.deepEqual(published(messages, 'performance.polarSpeedRatio'), [])
   })
 
   it('keeps the route while the boat is short of the final waypoint', async () => {

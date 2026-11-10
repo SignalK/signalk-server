@@ -58,6 +58,14 @@
         "anchor": "tr",
         "col": 1,
         "row": 1
+      },
+      {
+        "instanceId": "demo-polar-performance",
+        "extension": "signalk-history-widgets",
+        "widget": "polar-performance",
+        "anchor": "tr",
+        "col": 3,
+        "row": 1
       }
     ]
   }
