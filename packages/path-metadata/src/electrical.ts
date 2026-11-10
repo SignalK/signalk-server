@@ -135,6 +135,45 @@ function acAverageAndTotalMetadata(
   }
 }
 
+// Chargers, alternators and solar controllers report the same charging
+// stages, from NMEA 2000 and from the older Signal K names.
+const chargingModeMetadata: PathMetadataEntry = {
+  description: 'Stage of the charge cycle the charging source is in',
+  enum: [
+    'not charging',
+    'bulk',
+    'absorption',
+    'acceptance',
+    'overcharge',
+    'equalise',
+    'equalize',
+    'float',
+    'no float',
+    'constant vi',
+    'disabled',
+    'fault',
+    'unknown',
+    'other'
+  ]
+}
+
+// How a charging source works together with others. NMEA 2000 names the
+// roles standalone, primary, secondary and echo; master, slave and standby
+// are the older Signal K names.
+const chargerRoleMetadata: PathMetadataEntry = {
+  description:
+    'Whether the charging source works on its own (standalone) or together with others: as the primary that sets the charge stage, as a secondary that follows it, or echoing another source.',
+  enum: [
+    'standalone',
+    'primary',
+    'secondary',
+    'echo',
+    'master',
+    'slave',
+    'standby'
+  ]
+}
+
 export const electricalMetadata: Record<string, PathMetadataEntry> = {
   '/vessels/*/electrical': {
     description:
@@ -529,38 +568,8 @@ export const electricalMetadata: Record<string, PathMetadataEntry> = {
   '/vessels/*/electrical/chargers/RegExp/chargingAlgorithm': {
     description: 'Algorithm being used by the charger'
   },
-  '/vessels/*/electrical/chargers/RegExp/chargerRole': {
-    description:
-      'How is charging source configured?  Standalone, or in sync with another charger?',
-    enum: [
-      'standalone',
-      'primary',
-      'secondary',
-      'echo',
-      'master',
-      'slave',
-      'standby'
-    ]
-  },
-  '/vessels/*/electrical/chargers/RegExp/chargingMode': {
-    description: 'Charging mode i.e. float, overcharge, etc.',
-    enum: [
-      'not charging',
-      'bulk',
-      'absorption',
-      'acceptance',
-      'overcharge',
-      'equalise',
-      'equalize',
-      'float',
-      'no float',
-      'constant vi',
-      'disabled',
-      'fault',
-      'unknown',
-      'other'
-    ]
-  },
+  '/vessels/*/electrical/chargers/RegExp/chargerRole': chargerRoleMetadata,
+  '/vessels/*/electrical/chargers/RegExp/chargingMode': chargingModeMetadata,
   '/vessels/*/electrical/chargers/RegExp/enabled': {
     description: 'Whether the charger is enabled'
   },
@@ -671,14 +680,8 @@ export const electricalMetadata: Record<string, PathMetadataEntry> = {
   '/vessels/*/electrical/alternators/RegExp/chargingAlgorithm': {
     description: 'Algorithm being used by the charger'
   },
-  '/vessels/*/electrical/alternators/RegExp/chargerRole': {
-    description:
-      'How is charging source configured?  Standalone, or in sync with another charger?'
-  },
-  '/vessels/*/electrical/alternators/RegExp/chargingMode': {
-    description:
-      'Charging mode: bulk, acceptance (absorption), overcharge, float, equalize, unknown or other.'
-  },
+  '/vessels/*/electrical/alternators/RegExp/chargerRole': chargerRoleMetadata,
+  '/vessels/*/electrical/alternators/RegExp/chargingMode': chargingModeMetadata,
   '/vessels/*/electrical/alternators/RegExp/setpointVoltage': {
     description: 'Data should be of type number.',
     units: 'V'
@@ -775,14 +778,8 @@ export const electricalMetadata: Record<string, PathMetadataEntry> = {
   '/vessels/*/electrical/solar/RegExp/chargingAlgorithm': {
     description: 'Algorithm being used by the charger'
   },
-  '/vessels/*/electrical/solar/RegExp/chargerRole': {
-    description:
-      'How is charging source configured?  Standalone, or in sync with another charger?'
-  },
-  '/vessels/*/electrical/solar/RegExp/chargingMode': {
-    description:
-      'Charging mode: bulk, acceptance (absorption), overcharge, float, equalize, unknown or other.'
-  },
+  '/vessels/*/electrical/solar/RegExp/chargerRole': chargerRoleMetadata,
+  '/vessels/*/electrical/solar/RegExp/chargingMode': chargingModeMetadata,
   '/vessels/*/electrical/solar/RegExp/setpointVoltage': {
     description: 'Data should be of type number.',
     units: 'V'
