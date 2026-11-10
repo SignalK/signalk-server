@@ -42,6 +42,14 @@
       {
         "enabled": true,
         "autostart": false,
+        "url": "/signalk-universal-installer-rpi-mgmt/",
+        "label": "RPI Manager",
+        "icon": "/signalk-universal-installer-rpi-mgmt/icon.svg",
+        "color": ""
+      },
+      {
+        "enabled": true,
+        "autostart": false,
         "url": "/signalk-espos-hmi-designer/",
         "label": "HMI Designer",
         "icon": "/signalk-espos-hmi-designer/icon.svg",

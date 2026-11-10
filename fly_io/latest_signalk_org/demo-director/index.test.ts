@@ -1,5 +1,5 @@
 import { strict as assert } from 'node:assert'
-import { afterEach, describe, it } from 'node:test'
+import { afterEach, describe, it, mock } from 'node:test'
 import type { Plugin, ServerAPI } from '@signalk/server-api'
 import { magvar } from 'magvar'
 import director from './index.ts'
@@ -19,7 +19,7 @@ interface RouteState {
 function fakeApp(
   route: RouteState,
   position: typeof FINAL_WAYPOINT,
-  selfValues: Record<string, number> = {}
+  selfValues: Record<string, unknown> = {}
 ) {
   const activated: unknown[] = []
   const messages: unknown[] = []
@@ -44,7 +44,10 @@ function fakeApp(
 describe('demo director', () => {
   let plugin: Plugin | undefined
 
-  afterEach(() => plugin?.stop())
+  afterEach(() => {
+    plugin?.stop()
+    mock.timers.reset()
+  })
 
   async function runFirstTick(app: ServerAPI) {
     plugin = director(app)
@@ -110,6 +113,63 @@ describe('demo director', () => {
     assert.ok(typeof kelvin === 'number' && kelvin > 320 && kelvin < 335)
     const [cpu] = published(messages, 'environment.rpi.cpu.utilisation')
     assert.ok(typeof cpu === 'number' && cpu > 0 && cpu < 1)
+  })
+
+  it('fills in a week of Pi history, slowly, after the first live readings', async () => {
+    mock.timers.enable({
+      apis: ['Date', 'setInterval', 'setTimeout'],
+      now: 1e12
+    })
+    const { app, messages } = fakeApp(
+      { pointIndex: 3, pointTotal: 5, reverse: false },
+      NEAR_FINAL,
+      {
+        'steering.autopilot.mode.value': 'route',
+        'steering.autopilot.engaged.value': true
+      }
+    )
+    plugin = director(app)
+    await plugin.start({}, () => {})
+    // timers set while ticking run from the next tick on
+    for (let s = 0; s < 10 * 60; s++) mock.timers.tick(1000)
+    const HOUR = 3600 * 1000
+    // the history starts 30 s after the plugin
+    const START = 1e12 + 30 * 1000
+    const readings = messages.flatMap((m) => {
+      const update = (
+        m as {
+          updates: {
+            timestamp?: string
+            values: { path: string; value: number }[]
+          }[]
+        }
+      ).updates[0]
+      const uptime = update.values.find(
+        (v) => v.path === 'environment.rpi.uptime'
+      )
+      return uptime && update.timestamp
+        ? [{ time: Date.parse(update.timestamp), uptime: uptime.value }]
+        : []
+    })
+    const history = readings.filter((r) => r.time < 1e12)
+    assert.equal(history.length, 144 + 144)
+    assert.equal(history[0].time, START - 7 * 24 * HOUR)
+    assert.equal(history[144].time, START - 24 * HOUR)
+    for (let i = 1; i < history.length; i++) {
+      assert.ok(history[i].time > history[i - 1].time)
+      assert.ok(history[i].uptime > history[i - 1].uptime)
+    }
+    assert.ok(history[0].uptime > 0)
+    // a live reading came first, so the recorder knows the paths
+    assert.ok(readings[0].time >= 1e12)
+    for (const core of [0, 1, 2, 3]) {
+      for (const value of published(
+        messages,
+        `environment.rpi.cpu.core.${core}.utilisation`
+      )) {
+        assert.ok(typeof value === 'number' && value >= 0 && value <= 1)
+      }
+    }
   })
 
   it('publishes polar speeds that match the boat speed and the ratio', async () => {
