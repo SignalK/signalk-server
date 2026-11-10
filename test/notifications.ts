@@ -47,7 +47,8 @@ describe('NotificationApi', () => {
       get: () => {},
       post: () => {},
       put: () => {},
-      delete: () => {}
+      delete: () => {},
+      use: () => {}
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any
 
@@ -195,6 +196,7 @@ describe('NotificationApi', () => {
         post: () => {},
         put: () => {},
         delete: () => {},
+        use: () => {},
         ...overrides
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any
