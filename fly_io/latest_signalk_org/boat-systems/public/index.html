@@ -6,7 +6,7 @@
 <title>Boat Systems</title>
 <link rel="icon" href="icon.svg">
 <style>
-:root{--bg:#0b1622;--panel:#12212f;--line:#1f3346;--hull:#16293a;--hullLine:#3b5873;--txt:#dfe8f1;--dim:#7d93a8;--on:#39d98a;--onBg:#123826;--warn:#ffb020;--warnBg:#2d2410;--alarm:#ff4d4f;--blue:#3aa0ff;--off:#5a7a99}
+:root{--bg:#13263a;--panel:#1d3650;--line:#2c4a66;--hull:#22415f;--hullLine:#6f9cc4;--txt:#f1f6fb;--dim:#b4c7d9;--on:#39d98a;--onBg:#17482f;--warn:#ffb020;--warnBg:#2d2410;--alarm:#ff4d4f;--blue:#3aa0ff;--off:#8fb0cf}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;height:100%}
 body{background:var(--bg);color:var(--txt);font:15px/1.3 system-ui,"Segoe UI",Roboto,Arial,sans-serif;display:flex;flex-direction:column;overflow:hidden;user-select:none}
@@ -27,13 +27,13 @@ svg{width:100%;height:100%;display:block}
 .dev .glow{fill:var(--on);opacity:0;filter:url(#glow);transition:opacity .2s}
 .dev.on .glow{opacity:.35}
 .dev.busy .shape{stroke-dasharray:4 4}
-.sensor .shape{fill:#0f1f2d;stroke:var(--blue);stroke-width:2}
+.sensor .shape{fill:#173049;stroke:var(--blue);stroke-width:2}
 .sensor text{fill:var(--txt);font-size:15px;font-weight:600;text-anchor:middle}
 .sensor.warn .shape{fill:var(--warnBg);stroke:var(--warn)}
 .sensor.warn text{fill:var(--warn)}
 .sensor.alarm .shape{stroke:var(--alarm)}
 .sensor.alarm text{fill:var(--alarm)}
-.zone{fill:#7d93a8;font-size:14px;text-anchor:middle;letter-spacing:1px}
+.zone{fill:#a9bed2;font-size:14px;text-anchor:middle;letter-spacing:1px}
 #toast{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);background:var(--panel);border:1px solid var(--warn);color:var(--txt);padding:10px 16px;border-radius:10px;opacity:0;transition:opacity .3s;pointer-events:none;max-width:90vw;text-align:center}
 #toast.show{opacity:1}
 #offline{color:var(--warn)}
@@ -51,18 +51,18 @@ svg{width:100%;height:100%;display:block}
 <svg viewBox="0 0 480 1030" aria-label="Floor plan of the boat with its switches and sensors">
   <defs>
     <filter id="glow" x="-1" y="-1" width="3" height="3"><feGaussianBlur stdDeviation="8"/></filter>
-    <linearGradient id="hullFill" x1="0" x2="1" y1="0" y2="0"><stop offset="0" stop-color="#16293a"/><stop offset="1" stop-color="#0f1f2d"/></linearGradient>
+    <linearGradient id="hullFill" x1="0" x2="1" y1="0" y2="0"><stop offset="0" stop-color="#264869"/><stop offset="1" stop-color="#1c3955"/></linearGradient>
   </defs>
   <path d="M240 30 Q420 170 430 330 L430 900 Q430 960 370 965 L110 965 Q50 960 50 900 L50 330 Q60 170 240 30 Z" fill="url(#hullFill)" stroke="var(--hullLine)" stroke-width="3"/>
-  <line x1="56" y1="370" x2="424" y2="370" stroke="#2c4660" stroke-width="2"/>
-  <line x1="52" y1="575" x2="428" y2="575" stroke="#2c4660" stroke-width="2"/>
-  <line x1="240" y1="600" x2="240" y2="775" stroke="#22394f" stroke-dasharray="6 6"/>
-  <rect x="70" y="805" width="340" height="145" rx="22" fill="none" stroke="#2c4660" stroke-width="2"/>
+  <line x1="56" y1="370" x2="424" y2="370" stroke="#4b7194" stroke-width="2"/>
+  <line x1="52" y1="575" x2="428" y2="575" stroke="#4b7194" stroke-width="2"/>
+  <line x1="240" y1="600" x2="240" y2="775" stroke="#3d5f80" stroke-dasharray="6 6"/>
+  <rect x="70" y="805" width="340" height="145" rx="22" fill="none" stroke="#4b7194" stroke-width="2"/>
   <text class="zone" x="240" y="250">FORWARD CABIN</text>
   <text class="zone" x="145" y="598">GALLEY</text>
   <text class="zone" x="335" y="598">SALOON</text>
   <text class="zone" x="240" y="829">COCKPIT</text>
-  <circle cx="240" cy="472" r="12" fill="#2c4660" stroke="#5a7a99" stroke-width="2"/>
+  <circle cx="240" cy="472" r="12" fill="#4b7194" stroke="#8fb0cf" stroke-width="2"/>
   <text class="zone" x="240" y="505" style="font-size:12px">MAST</text>
   <g id="plan"></g>
 </svg>
