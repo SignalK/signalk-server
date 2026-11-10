@@ -1,8 +1,11 @@
 import { strict as assert } from 'node:assert'
+import { existsSync, mkdirSync, mkdtempSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { afterEach, describe, it, mock } from 'node:test'
 import type { Plugin, ServerAPI } from '@signalk/server-api'
 import { magvar } from 'magvar'
-import director from './index.ts'
+import director, { DEMO_LOGIN } from './index.ts'
 
 const FINAL_WAYPOINT = { latitude: 53.296, longitude: 5.086 }
 // about 110 m south of the final waypoint
@@ -19,7 +22,8 @@ interface RouteState {
 function fakeApp(
   route: RouteState,
   position: typeof FINAL_WAYPOINT,
-  selfValues: Record<string, unknown> = {}
+  selfValues: Record<string, unknown> = {},
+  configDir = tmpdir()
 ) {
   const activated: unknown[] = []
   const messages: unknown[] = []
@@ -29,6 +33,7 @@ function fakeApp(
       messages.push(delta)
     },
     setPluginStatus: () => {},
+    getDataDirPath: () => join(configDir, 'plugin-config-data', 'director'),
     error: (msg: string) => assert.fail(msg),
     getCourse: async () => ({
       activeRoute: { href: '/resources/routes/demo', ...route },
@@ -46,6 +51,7 @@ describe('demo director', () => {
 
   afterEach(() => {
     plugin?.stop()
+    mock.reset()
     mock.timers.reset()
   })
 
@@ -207,5 +213,119 @@ describe('demo director', () => {
     )
     await runFirstTick(app)
     assert.deepEqual(activated, [])
+  })
+
+  describe('when a visitor steers', () => {
+    const FIVE_MINUTES = 5 * 60 * 1000
+    const TICK = 5000
+
+    function steeredBy(mode: string, engaged = true) {
+      return {
+        'steering.autopilot.mode.value': mode,
+        'steering.autopilot.engaged.value': engaged,
+        'steering.autopilot.state.value': engaged ? 'auto' : 'standby',
+        'steering.autopilot.target.value': 1.2
+      }
+    }
+
+    function fakeServer() {
+      const calls: { url: string; init?: RequestInit }[] = []
+      mock.method(
+        globalThis,
+        'fetch',
+        async (url: string, init?: RequestInit) => {
+          calls.push({ url, init })
+          return url.endsWith('/auth/login')
+            ? Response.json({ token: 'demo-token' })
+            : Response.json({ state: 'COMPLETED' })
+        }
+      )
+      return calls
+    }
+
+    async function startAt(app: ServerAPI) {
+      mock.timers.enable({ apis: ['Date', 'setInterval'] })
+      plugin = director(app)
+      await plugin.start({}, () => {})
+    }
+
+    async function advance(ms: number) {
+      mock.timers.tick(ms)
+      for (let i = 0; i < 5; i++) {
+        await new Promise((resolve) => setImmediate(resolve))
+      }
+    }
+
+    it('takes the boat back to the route after five idle minutes', async () => {
+      const configDir = mkdtempSync(join(tmpdir(), 'director-'))
+      const userData = join(
+        configDir,
+        'applicationData/users',
+        DEMO_LOGIN.username
+      )
+      mkdirSync(userData, { recursive: true })
+      const calls = fakeServer()
+      const { app } = fakeApp(
+        { pointIndex: 2, pointTotal: 5, reverse: false },
+        FAR_FROM_FINAL,
+        steeredBy('compass'),
+        configDir
+      )
+      await startAt(app)
+      await advance(FIVE_MINUTES - TICK)
+      assert.equal(calls.length, 0)
+      await advance(TICK)
+      assert.deepEqual(
+        calls.map((c) => c.url.replace(/^http:\/\/[^/]+/, '')),
+        [
+          '/signalk/v1/auth/login',
+          '/signalk/v2/api/vessels/self/autopilots/_default/courseCurrentPoint'
+        ]
+      )
+      assert.deepEqual(JSON.parse(String(calls[0].init?.body)), DEMO_LOGIN)
+      assert.deepEqual(calls[1].init?.headers, {
+        Authorization: 'Bearer demo-token'
+      })
+      assert.equal(existsSync(userData), false)
+    })
+
+    it('waits while the visitor keeps adjusting the autopilot', async () => {
+      const calls = fakeServer()
+      const values = steeredBy('compass')
+      const { app } = fakeApp(
+        { pointIndex: 2, pointTotal: 5, reverse: false },
+        FAR_FROM_FINAL,
+        values
+      )
+      await startAt(app)
+      await advance(FIVE_MINUTES - TICK)
+      values['steering.autopilot.target.value'] = 1.4
+      await advance(FIVE_MINUTES - TICK)
+      assert.equal(calls.length, 0)
+    })
+
+    it('leaves a boat alone that already follows the route', async () => {
+      const calls = fakeServer()
+      const { app } = fakeApp(
+        { pointIndex: 2, pointTotal: 5, reverse: false },
+        FAR_FROM_FINAL,
+        steeredBy('route')
+      )
+      await startAt(app)
+      await advance(2 * FIVE_MINUTES)
+      assert.equal(calls.length, 0)
+    })
+
+    it('takes back a boat left in standby', async () => {
+      const calls = fakeServer()
+      const { app } = fakeApp(
+        { pointIndex: 2, pointTotal: 5, reverse: false },
+        FAR_FROM_FINAL,
+        steeredBy('route', false)
+      )
+      await startAt(app)
+      await advance(FIVE_MINUTES)
+      assert.equal(calls.length, 2)
+    })
   })
 })

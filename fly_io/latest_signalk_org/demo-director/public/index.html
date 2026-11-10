@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Take the helm</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #f4f6f8;
+        --fg: #1b2430;
+        --muted: #5b6675;
+        --card: #ffffff;
+        --accent: #1565c0;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #10151c;
+          --fg: #e6ebf1;
+          --muted: #9aa6b4;
+          --card: #1b232d;
+          --accent: #64a8f0;
+        }
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--fg);
+        font:
+          17px/1.5 system-ui,
+          sans-serif;
+      }
+      main {
+        max-width: 34rem;
+        margin: 0 auto;
+        padding: 2rem 1rem;
+      }
+      .card {
+        background: var(--card);
+        border-radius: 12px;
+        padding: 1.25rem 1.5rem;
+      }
+      h1 {
+        font-size: 1.6rem;
+        margin: 0 0 0.5rem;
+      }
+      p,
+      li {
+        color: var(--muted);
+      }
+      code {
+        color: var(--fg);
+        font-weight: 600;
+      }
+      button {
+        font: inherit;
+        font-weight: 600;
+        min-height: 48px;
+        padding: 0 1.5rem;
+        border: 0;
+        border-radius: 8px;
+        background: var(--accent);
+        color: #fff;
+        cursor: pointer;
+      }
+      #status {
+        min-height: 1.5em;
+        color: var(--fg);
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="card">
+        <h1>Take the helm</h1>
+        <p>
+          The demo boat sails its route on autopilot. Log in and you steer it:
+          the demo login may change the autopilot and nothing else.
+        </p>
+        <p>Login <code>demo</code>, password <code>demo</code>.</p>
+        <button id="login" type="button">Log in and steer</button>
+        <p id="status" role="status"></p>
+        <ol>
+          <li>Open Freeboard-SK and its autopilot console.</li>
+          <li>Pick a mode, engage, and steer with ±1° and ±10°.</li>
+          <li>
+            Leave the autopilot alone for five minutes and the boat goes back to
+            its route. Other visitors may be steering too.
+          </li>
+        </ol>
+      </div>
+    </main>
+    <script>
+      const status = document.getElementById('status')
+      document.getElementById('login').addEventListener('click', async () => {
+        status.textContent = 'Logging in…'
+        try {
+          const response = await fetch('/signalk/v1/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify({ username: 'demo', password: 'demo' })
+          })
+          status.textContent = response.ok
+            ? 'Logged in. The autopilot is yours.'
+            : `Login failed (${response.status}).`
+        } catch {
+          status.textContent = 'Login failed: the server cannot be reached.'
+        }
+      })
+    </script>
+  </body>
+</html>
