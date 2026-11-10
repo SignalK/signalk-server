@@ -879,7 +879,9 @@ module.exports = function (
           app.config.settings.enablePluginLogging,
         trustProxy: app.config.settings.trustProxy || false,
         useBLEManager:
-          app.config.settings.bleApi?.localBluetoothManaged || false
+          app.config.settings.bleApi?.localBluetoothManaged || false,
+        restoreOwnData: app.config.settings.restoreOwnData || false,
+        restoreOtherVessels: app.config.settings.restoreOtherVessels || false
       },
       loggingDirectory: app.config.settings.loggingDirectory,
       pruneContextsMinutes: app.config.settings.pruneContextsMinutes || 60,
@@ -1202,6 +1204,16 @@ module.exports = function (
         ...(updatedSettings.bleApi ?? {}),
         localBluetoothManaged: Boolean(settings.options.useBLEManager)
       }
+    }
+
+    if (!isUndefined(settings.options.restoreOwnData)) {
+      updatedSettings.restoreOwnData = Boolean(settings.options.restoreOwnData)
+    }
+
+    if (!isUndefined(settings.options.restoreOtherVessels)) {
+      updatedSettings.restoreOtherVessels = Boolean(
+        settings.options.restoreOtherVessels
+      )
     }
 
     if (!isUndefined(settings.port)) {

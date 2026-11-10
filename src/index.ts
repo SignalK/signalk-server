@@ -46,6 +46,7 @@ import { ServerApp, SignalKMessageHub, WithConfig } from './app'
 import { ConfigApp, load, sendBaseDeltas } from './config/config'
 import { createDebug } from './debug'
 import DeltaCache, { buildSrcToCanonicalMap } from './deltacache'
+import { restoreDeltaCache, saveDeltaCache } from './deltacachePersistence'
 import DeltaChain from './deltachain'
 import {
   getToPreferredDelta,
@@ -628,6 +629,13 @@ class Server {
     )
     app.subscriptionmanager = new SubscriptionManager(app)
     app.deltaCache = new DeltaCache(app, app.streambundle)
+    try {
+      restoreDeltaCache(app)
+    } catch (err) {
+      console.error(
+        `Unable to restore cached values: ${(err as Error).message}`
+      )
+    }
     // Re-build the engine now that the delta cache is constructed
     // and has loaded its on-disk snapshot. The first call above ran
     // before app.deltaCache existed (so seenPublishersByPath was
@@ -839,6 +847,10 @@ class Server {
     }
 
     try {
+      await saveDeltaCache(this.app).catch((err: Error) => {
+        console.error(`Unable to save cached values: ${err.message}`)
+      })
+
       // The plugins interface resolves once every plugin's stop() has, and a
       // shutdown exits as soon as this method resolves: without the wait, a
       // plugin's asynchronous cleanup is cut off by process.exit.
