@@ -42,6 +42,14 @@
       {
         "enabled": true,
         "autostart": false,
+        "url": "/signalk-rules/",
+        "label": "Rules",
+        "icon": "/signalk-rules/icon.svg",
+        "color": ""
+      },
+      {
+        "enabled": true,
+        "autostart": false,
         "url": "/signalk-universal-installer-rpi-mgmt/",
         "label": "RPI Manager",
         "icon": "/signalk-universal-installer-rpi-mgmt/icon.svg",
