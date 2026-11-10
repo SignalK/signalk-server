@@ -132,7 +132,10 @@ export default function Login() {
     }
   }
 
-  if (loginStatus.status === 'notLoggedIn' && loginStatus.noUsers === true) {
+  if (
+    loginStatus.authenticationRequired === false ||
+    (loginStatus.status === 'notLoggedIn' && loginStatus.noUsers === true)
+  ) {
     return <EnableSecurity />
   }
 
