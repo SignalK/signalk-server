@@ -99,7 +99,10 @@ describe('WebSocketClients', () => {
     mockFetch(listResponse([{ ...spark, serverEvents: true }]))
     renderClients()
 
-    expect(await screen.findByText('Admin UI')).toBeDefined()
+    const badge = await screen.findByText('Admin UI')
+    expect(badge.getAttribute('title')).toBe(
+      'Receives server events, as the admin UI does'
+    )
   })
 
   it('reloads the list when the client count changes', async () => {

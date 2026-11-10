@@ -183,7 +183,11 @@ export default function WebSocketClients({
                       <td>{client.ip}</td>
                       <td>
                         {client.serverEvents && (
-                          <Badge bg="secondary" className="me-2">
+                          <Badge
+                            bg="secondary"
+                            className="me-2"
+                            title="Receives server events, as the admin UI does"
+                          >
                             Admin UI
                           </Badge>
                         )}
