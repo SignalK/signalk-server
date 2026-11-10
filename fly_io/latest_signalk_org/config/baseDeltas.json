@@ -99,6 +99,22 @@
                 }
               ]
             }
+          },
+          {
+            "path": "performance.polarSpeed",
+            "value": { "units": "m/s", "description": "Polar speed" }
+          },
+          {
+            "path": "performance.polarSpeedRatio",
+            "value": { "units": "ratio", "description": "Polar speed ratio" }
+          },
+          {
+            "path": "performance.polarVelocityMadeGood",
+            "value": { "units": "m/s", "description": "Polar VMG" }
+          },
+          {
+            "path": "performance.polarVelocityMadeGoodRatio",
+            "value": { "units": "ratio", "description": "Polar VMG ratio" }
           }
         ]
       }

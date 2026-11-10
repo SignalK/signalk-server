@@ -26,6 +26,14 @@ const PI_READINGS = {
   'environment.rpi.storage.utilisation': { base: 0.38, swing: 0 }
 }
 const PI_WANDER_PERIOD_MS = 10 * 60 * 1000
+// The simulator sails exactly at its polar, so the polar performance tile and
+// strip would sit on a flat 100 %. The demo sails a little below the polar
+// instead, now and then above it, and derives the polar speeds from that.
+const POLAR_RATIOS = {
+  speed: { base: 0.93, swing: 0.09 },
+  vmg: { base: 0.88, swing: 0.08 }
+}
+const POLAR_WANDER_PERIOD_MS = 7 * 60 * 1000
 
 interface Position {
   latitude: number
@@ -124,6 +132,44 @@ export default function (app: ServerAPI): Plugin {
     })
   }
 
+  function wander(
+    { base, swing }: { base: number; swing: number },
+    phase: number
+  ) {
+    const elapsed = Date.now() - startedAt
+    return (
+      base +
+      swing * Math.sin((2 * Math.PI * elapsed) / POLAR_WANDER_PERIOD_MS + phase)
+    )
+  }
+
+  function publishPolarPerformance() {
+    const stw = app.getSelfPath('navigation.speedThroughWater.value')
+    const twa = app.getSelfPath('environment.wind.angleTrueWater.value')
+    if (typeof stw !== 'number' || typeof twa !== 'number' || stw <= 0) return
+    const speedRatio = wander(POLAR_RATIOS.speed, 0)
+    const vmgRatio = wander(POLAR_RATIOS.vmg, 2)
+    const vmg = stw * Math.abs(Math.cos(twa))
+    app.handleMessage(PLUGIN_ID, {
+      updates: [
+        {
+          values: [
+            { path: 'performance.polarSpeed' as Path, value: stw / speedRatio },
+            { path: 'performance.polarSpeedRatio' as Path, value: speedRatio },
+            {
+              path: 'performance.polarVelocityMadeGood' as Path,
+              value: vmg / vmgRatio
+            },
+            {
+              path: 'performance.polarVelocityMadeGoodRatio' as Path,
+              value: vmgRatio
+            }
+          ]
+        }
+      ]
+    })
+  }
+
   async function turnRoundAtEnd() {
     if (turning) return
     turning = true
@@ -155,6 +201,7 @@ export default function (app: ServerAPI): Plugin {
     ticksSinceVariation++
     publishBattery()
     publishPiHealth()
+    publishPolarPerformance()
     void turnRoundAtEnd()
   }
 
@@ -162,7 +209,7 @@ export default function (app: ServerAPI): Plugin {
     id: PLUGIN_ID,
     name: 'Demo director',
     description:
-      'Keeps the demo boat under way: publishes magnetic variation, a charging house battery and the computer health, and turns the active route round at its end',
+      'Keeps the demo boat under way: publishes magnetic variation, a charging house battery, the computer health and the polar performance, and turns the active route round at its end',
     schema: () => ({ type: 'object', properties: {} }),
     start: () => {
       ticksSinceVariation = VARIATION_EVERY_TICKS
