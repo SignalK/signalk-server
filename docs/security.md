@@ -20,7 +20,7 @@ A server without security gives everyone who can reach it full admin rights, inc
 
 ## Enabling Security
 
-When Signal K Server does not have security enabled, the `Login` option at the top right corner of the Admin UI will not be available.
+When Signal K Server does not have security enabled, the top right corner of the Admin UI shows `Enable Security` instead of `Login`.
 
 Security can be enabled in several ways:
 

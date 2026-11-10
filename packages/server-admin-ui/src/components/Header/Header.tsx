@@ -74,6 +74,8 @@ export default function Header() {
     loginStatus.status === 'loggedIn' &&
     loginStatus.userLevel === 'admin'
 
+  const showEnableSecurity = loginStatus.authenticationRequired === false
+
   return (
     <header className="app-header navbar">
       {showRestartBanner && (
@@ -160,10 +162,11 @@ export default function Header() {
           </Nav.Item>
         )}
         {loginStatus.status !== 'loggedIn' &&
-          loginStatus.authenticationRequired && (
+          (loginStatus.authenticationRequired || showEnableSecurity) && (
             <Nav.Item className="d-none d-sm-block px-3">
               <Nav.Link href="#/login">
-                <FontAwesomeIcon icon={faLock} /> Login
+                <FontAwesomeIcon icon={faLock} />{' '}
+                {showEnableSecurity ? 'Enable Security' : 'Login'}
               </Nav.Link>
             </Nav.Item>
           )}
@@ -191,9 +194,10 @@ export default function Header() {
                 </Dropdown.Item>
               )}
               {loginStatus.status !== 'loggedIn' &&
-                loginStatus.authenticationRequired && (
+                (loginStatus.authenticationRequired || showEnableSecurity) && (
                   <Dropdown.Item href="#/login">
-                    <FontAwesomeIcon icon={faLock} /> Login
+                    <FontAwesomeIcon icon={faLock} />{' '}
+                    {showEnableSecurity ? 'Enable Security' : 'Login'}
                   </Dropdown.Item>
                 )}
             </Dropdown.Menu>
