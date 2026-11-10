@@ -1,0 +1,23 @@
+{
+  "name": "signalk-demo-boat-systems",
+  "version": "0.0.0",
+  "private": true,
+  "description": "The Signal K showcase boat's digital switching, batteries, solar, tanks and fridges, with a floor plan page to switch them",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "test": "node --test"
+  },
+  "keywords": [
+    "signalk-node-server-plugin",
+    "signalk-webapp"
+  ],
+  "signalk": {
+    "displayName": "Boat Systems",
+    "appIcon": "icon.svg"
+  },
+  "license": "Apache-2.0",
+  "dependencies": {
+    "aedes": "1.2.0"
+  }
+}
