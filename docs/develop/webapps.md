@@ -61,20 +61,51 @@ Make sure sidecars are always regenerated together with the files they accompany
 
 ## Dynamic Webapps Provided by a Plugin
 
-A plugin can publish several standalone webapps without creating additional npm
-packages. Each entry belongs to that plugin, with its URL under
-`/plugins/<pluginId>/webapps/<id>/`. Reusing an id updates the same entry.
+A normally installed webapp module adds an entry to the Webapps list and serves
+its files automatically, usually from the package's `public` directory, at
+`/<package-name>/`.
 
-The plugin serves its pages and icons through its router, with the appropriate
-access permissions. The registration API publishes metadata, not page content.
-See the {@link @signalk/server-api!ServerAPI.registerWebapp | registration contract}
-for input rules, lifecycle behavior and an example.
+A plugin can also register several standalone webapps without additional npm
+packages. Each registration only adds metadata to the Webapps list, with a link
+to `/plugins/<pluginId>/webapps/<id>/`. It does not mount files or create an HTTP
+handler.
 
-Entries appear in the existing webapp list APIs, using the registering package's
-version, license and author. Existing npm webapps are unchanged. Entries can be
-withdrawn individually and are removed automatically when the plugin stops,
-including a failed start. No restart is needed; reopen or refresh the Webapps
-page to fetch the updated list.
+The plugin must serve requests for each registered URL and its resources through
+`registerWithRouter()`, with the appropriate access permissions. See the
+{@link @signalk/server-api!ServerAPI.registerWebapp | registration contract}
+for an example, input rules and lifecycle behavior.
+
+A plugin does not need the `signalk-webapp` keyword or a default webapp to
+register dynamic entries. If it also provides a normal webapp,
+`public/webapps/<id>/` is served at `/<package-name>/webapps/<id>/`, a different
+URL from the dynamic entry. The registration does not create a competing
+static mount under `/plugins/<pluginId>/`.
+
+Reusing an id updates the same entry. Entries use the registering package's
+version, license and author. They can be withdrawn individually and are removed
+when the plugin stops, including a failed start. No server restart is needed;
+reopen or refresh the Webapps page to fetch the updated list.
+
+### Example: Managed History Interfaces
+
+[VictoriaMetrics History Provider](https://github.com/macjl/signalk-victoriametrics-history-provider/blob/ab942dbdfd25add574156eb7d025870b91f71525/README.md#managed-web-interfaces)
+provides a concrete use case: its webapp groups the exposed vmagent interface
+and each exposed VictoriaMetrics destination into tabs. Its static Webapps
+entry remains visible even when the user exposes no interfaces, opening an
+empty page.
+
+With dynamic registration instead of the static `signalk-webapp` declaration,
+the plugin could show only the interfaces the user chooses to expose:
+**no exposed interfaces means no Webapps entries**. Each exposed interface
+would have its own entry, such as **vmagent**, **VictoriaMetrics: primary** or
+**VictoriaMetrics: archive**. The plugin can remain installed and provide
+History without an empty webapp in the list.
+
+The plugin could register one entry per exposed service and route it to the
+service's existing administrator-protected proxy. The existing proxy URLs and
+resource paths can stay the same; no additional npm packages or host ports are
+needed. The registration contract above shows this adaptation. It illustrates
+a possible integration, rather than functionality already used by that provider.
 
 ## Application Data: Storing Webapp Data on the Server
 

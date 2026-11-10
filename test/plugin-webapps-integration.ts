@@ -155,4 +155,111 @@ describe('Dynamic webapp plugin integration', () => {
       fs.rmSync(directory, { recursive: true, force: true })
     }
   })
+
+  for (const withWebapp of [false, true]) {
+    it(`serves dynamic routes ${withWebapp ? 'alongside a static webapp' : 'without a default webapp'}`, async () => {
+      const original = process.env.SIGNALK_NODE_CONFIG_DIR
+      const directory = fs.mkdtempSync(
+        path.join(os.tmpdir(), 'sk-webapp-routing-')
+      )
+      const packageName = 'dynamic-webapp-test'
+      const packageDirectory = path.join(directory, 'node_modules', packageName)
+      const publicDirectory = path.join(packageDirectory, 'public')
+      fs.mkdirSync(path.join(publicDirectory, 'webapps/battery'), {
+        recursive: true
+      })
+      fs.writeFileSync(path.join(publicDirectory, 'index.html'), 'default page')
+      fs.writeFileSync(
+        path.join(publicDirectory, 'webapps/battery/index.html'),
+        'static page'
+      )
+      fs.writeFileSync(
+        path.join(publicDirectory, 'webapps/battery/icon.txt'),
+        'static icon'
+      )
+      fs.writeFileSync(
+        path.join(packageDirectory, 'package.json'),
+        JSON.stringify({
+          name: packageName,
+          version: '1.0.0',
+          main: path.join(__dirname, 'fixtures/plugin-webapps.ts'),
+          keywords: [
+            'signalk-node-server-plugin',
+            ...(withWebapp ? ['signalk-webapp'] : [])
+          ]
+        })
+      )
+      fs.mkdirSync(path.join(directory, 'plugin-config-data'))
+      fs.writeFileSync(
+        path.join(directory, 'plugin-config-data', `${packageName}.json`),
+        JSON.stringify({ enabled: true, configuration: {} })
+      )
+      process.env.SIGNALK_NODE_CONFIG_DIR = directory
+      const port = await freeport()
+      const server = new Server({
+        config: {
+          appPath: directory,
+          settings: {
+            port,
+            mdns: false,
+            interfaces: {
+              mfd_webapp: false,
+              tcp: false,
+              'nmea-tcp': false,
+              'n2k-discovery': false
+            }
+          }
+        }
+      })
+      const base = `http://127.0.0.1:${port}`
+      const expectBody = async (url: string, status: number, body?: string) => {
+        const response = await fetch(base + url)
+        assert.equal(response.status, status, url)
+        if (body !== undefined) assert.equal(await response.text(), body, url)
+      }
+      try {
+        await server.start()
+        const dynamicName = `plugins/${packageName}/webapps/battery`
+        for (const endpoint of ['/skServer/webapps', '/signalk/v1/apps/list']) {
+          const response = await fetch(base + endpoint)
+          assert.equal(response.status, 200)
+          const entries = (await response.json()) as Array<{ name: string }>
+          assert.ok(entries.some((entry) => entry.name === dynamicName))
+          assert.ok(
+            entries.some(
+              (entry) =>
+                entry.name === `plugins/${packageName}/webapps/unserved`
+            )
+          )
+          assert.equal(
+            entries.some((entry) => entry.name === packageName),
+            withWebapp
+          )
+        }
+        await expectBody(`/${dynamicName}/`, 200, 'plugin page')
+        await expectBody(`/${dynamicName}/icon.txt`, 200, 'plugin icon')
+        await expectBody(`/plugins/${packageName}/webapps/unserved/`, 404)
+        await expectBody(
+          `/${packageName}/`,
+          withWebapp ? 200 : 404,
+          withWebapp ? 'default page' : undefined
+        )
+        await expectBody(
+          `/${packageName}/webapps/battery/`,
+          withWebapp ? 200 : 404,
+          withWebapp ? 'static page' : undefined
+        )
+        await expectBody(
+          `/${packageName}/webapps/battery/icon.txt`,
+          withWebapp ? 200 : 404,
+          withWebapp ? 'static icon' : undefined
+        )
+      } finally {
+        await server.stop()
+        if (original === undefined) delete process.env.SIGNALK_NODE_CONFIG_DIR
+        else process.env.SIGNALK_NODE_CONFIG_DIR = original
+        fs.rmSync(directory, { recursive: true, force: true })
+      }
+    })
+  }
 })

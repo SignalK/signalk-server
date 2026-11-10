@@ -664,13 +664,35 @@ export interface ServerAPI
    * outside the active lifecycle throws an error.
    *
    * @example
+   * A possible adaptation of VictoriaMetrics History Provider: its existing
+   * uiTargets map contains the exposed vmagent and VictoriaMetrics interfaces,
+   * with each target's title and admin-protected /ui/ proxy URL.
+   * Replacing its static signalk-webapp declaration with these registrations
+   * means no entry appears when uiTargets is empty. The provider can still
+   * run and supply History. These excerpts keep its existing proxy routes.
+   *
    * ```typescript
-   * app.registerWebapp('battery', {
-   *   displayName: 'Battery Monitor',
-   *   description: 'Battery monitoring interface',
-   *   appIcon: 'icon.png'
+   * // In start(), once the exposed interfaces are ready:
+   * for (const [serviceId, target] of uiTargets) {
+   *   app.registerWebapp(serviceId, { displayName: target.title })
+   * }
+   * ```
+   *
+   * ```typescript
+   * // In registerWithRouter(router), alongside the existing /ui/ routes:
+   * router.get('/webapps/:serviceId/', (req, res) => {
+   *   const target = uiTargets.get(req.params.serviceId)
+   *   if (!target) {
+   *     res.sendStatus(404)
+   *     return
+   *   }
+   *   res.redirect(302, target.path)
    * })
    * ```
+   *
+   * Each exposed interface gets a separate Webapps entry. Redirecting to the
+   * existing proxy URL preserves its resource paths and administrator access;
+   * routes registered directly on the plugin router require admin access.
    * @category Server API
    */
   registerWebapp(id: string, options: WebappRegistration): string
