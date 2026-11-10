@@ -60,6 +60,30 @@
       "name": "Tide height",
       "enabled": true,
       "context": "vessels.self"
+    },
+    {
+      "path": "environment.rpi.cpu.temperature",
+      "name": "CPU temperature",
+      "enabled": true,
+      "context": "vessels.self"
+    },
+    {
+      "path": "environment.rpi.cpu.utilisation",
+      "name": "CPU load",
+      "enabled": true,
+      "context": "vessels.self"
+    },
+    {
+      "path": "environment.rpi.memory.utilisation",
+      "name": "Memory in use",
+      "enabled": true,
+      "context": "vessels.self"
+    },
+    {
+      "path": "environment.rpi.storage.utilisation",
+      "name": "Storage in use",
+      "enabled": true,
+      "context": "vessels.self"
     }
   ]
 }
