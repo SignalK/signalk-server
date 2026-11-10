@@ -759,13 +759,13 @@ export const VICTRON_DEVICES: Record<string, VictronDevice> = {
     modelId: 0xa054
   },
   orionThruster: {
-    name: 'Orion house to bow thruster',
+    name: 'Orion to thruster',
     mac: 'E2:6B:14:9D:50:11',
     key: '0d2f4b6a8c1e3a5c7e9b0d2f4a6c8e1b',
     modelId: 0xa3f0
   },
   orionStarter: {
-    name: 'Orion house to starter',
+    name: 'Orion to starter',
     mac: 'E2:6B:14:9D:50:12',
     key: '7e9c1a3b5d7f9e2c4a6b8d0f1e3c5a7b',
     modelId: 0xa3c1

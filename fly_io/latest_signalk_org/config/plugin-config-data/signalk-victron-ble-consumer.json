@@ -25,14 +25,14 @@
       },
       {
         "id": "orionThruster",
-        "name": "Orion house to bow thruster",
+        "name": "Orion to thruster",
         "mac": "E2:6B:14:9D:50:11",
         "advertisementKey": "0d2f4b6a8c1e3a5c7e9b0d2f4a6c8e1b",
         "enabled": true
       },
       {
         "id": "orionStarter",
-        "name": "Orion house to starter",
+        "name": "Orion to starter",
         "mac": "E2:6B:14:9D:50:12",
         "advertisementKey": "7e9c1a3b5d7f9e2c4a6b8d0f1e3c5a7b",
         "enabled": true
