@@ -169,7 +169,7 @@
                       "ctrlLabel": "Navigation",
                       "type": "1",
                       "pathID": "e0e95bef-b9a2-5fc3-b453-534a32faf440",
-                      "color": "green",
+                      "color": "yellow",
                       "isNumeric": true,
                       "value": null
                     },
@@ -177,7 +177,7 @@
                       "ctrlLabel": "Stern",
                       "type": "1",
                       "pathID": "0e584974-ae60-5ec4-8629-ffb6467a1d16",
-                      "color": "green",
+                      "color": "yellow",
                       "isNumeric": true,
                       "value": null
                     },
@@ -185,7 +185,7 @@
                       "ctrlLabel": "Steaming",
                       "type": "1",
                       "pathID": "29a0dc7f-e9ab-5adc-8524-7957fcb06370",
-                      "color": "green",
+                      "color": "yellow",
                       "isNumeric": true,
                       "value": null
                     },
@@ -193,7 +193,7 @@
                       "ctrlLabel": "Tricolour",
                       "type": "1",
                       "pathID": "f5d96d7e-344b-5674-a7a1-8483dc04be71",
-                      "color": "green",
+                      "color": "yellow",
                       "isNumeric": true,
                       "value": null
                     },
@@ -201,7 +201,7 @@
                       "ctrlLabel": "Anchor",
                       "type": "1",
                       "pathID": "0aa86612-4103-565a-a1f8-305bfbc23ef5",
-                      "color": "green",
+                      "color": "yellow",
                       "isNumeric": true,
                       "value": null
                     },
@@ -209,7 +209,7 @@
                       "ctrlLabel": "Deck light",
                       "type": "1",
                       "pathID": "219370a6-648e-58d6-9b55-222e044e09da",
-                      "color": "green",
+                      "color": "yellow",
                       "isNumeric": true,
                       "value": null
                     }
@@ -309,7 +309,7 @@
                       "ctrlLabel": "Saloon lights",
                       "type": "1",
                       "pathID": "5e8be78b-a860-5cfe-ac08-238799710daa",
-                      "color": "green",
+                      "color": "orange",
                       "isNumeric": true,
                       "value": null
                     },
@@ -317,7 +317,7 @@
                       "ctrlLabel": "Cabin lights",
                       "type": "1",
                       "pathID": "7474200d-7026-599f-a241-26e4ab73be72",
-                      "color": "green",
+                      "color": "orange",
                       "isNumeric": true,
                       "value": null
                     },
@@ -325,7 +325,7 @@
                       "ctrlLabel": "Instruments",
                       "type": "1",
                       "pathID": "c34c5165-d6ad-5e0e-880a-c21ccc5ae8fc",
-                      "color": "green",
+                      "color": "orange",
                       "isNumeric": true,
                       "value": null
                     },
@@ -333,7 +333,7 @@
                       "ctrlLabel": "Fridge",
                       "type": "1",
                       "pathID": "78b10b7f-e811-5a8e-a6c0-1d754a49dd22",
-                      "color": "green",
+                      "color": "orange",
                       "isNumeric": true,
                       "value": null
                     },
@@ -341,7 +341,7 @@
                       "ctrlLabel": "Freezer",
                       "type": "1",
                       "pathID": "2882636c-7d57-5736-bbf6-5323e8a97f25",
-                      "color": "green",
+                      "color": "orange",
                       "isNumeric": true,
                       "value": null
                     }
@@ -441,7 +441,7 @@
                       "ctrlLabel": "Bow thruster",
                       "type": "1",
                       "pathID": "3100b3ca-99e0-5281-b349-378cbc893954",
-                      "color": "green",
+                      "color": "blue",
                       "isNumeric": true,
                       "value": null
                     },
@@ -449,7 +449,7 @@
                       "ctrlLabel": "Water pump",
                       "type": "1",
                       "pathID": "03eef57b-f3af-5909-baff-6defbfd551cb",
-                      "color": "green",
+                      "color": "blue",
                       "isNumeric": true,
                       "value": null
                     },
@@ -457,7 +457,7 @@
                       "ctrlLabel": "Bilge pump",
                       "type": "1",
                       "pathID": "d6fe96eb-8642-58eb-b1d6-6ccedecf51ab",
-                      "color": "green",
+                      "color": "blue",
                       "isNumeric": true,
                       "value": null
                     },
@@ -465,7 +465,7 @@
                       "ctrlLabel": "Deck wash pump",
                       "type": "1",
                       "pathID": "dd51642b-474e-5e3f-b378-8e28df18847e",
-                      "color": "green",
+                      "color": "blue",
                       "isNumeric": true,
                       "value": null
                     },
@@ -473,7 +473,7 @@
                       "ctrlLabel": "Fuel transfer",
                       "type": "1",
                       "pathID": "6235ec3c-c1ae-5e99-a5a0-95c29ecf2d9e",
-                      "color": "green",
+                      "color": "blue",
                       "isNumeric": true,
                       "value": null
                     }
@@ -621,7 +621,7 @@
                   "numInt": 1,
                   "numDecimal": 0,
                   "ignoreZones": false,
-                  "color": "blue",
+                  "color": "orange",
                   "updateInterval": 1000,
                   "enableTimeout": false,
                   "dataTimeout": 5
@@ -670,7 +670,7 @@
                   "numInt": 1,
                   "numDecimal": 0,
                   "ignoreZones": false,
-                  "color": "blue",
+                  "color": "orange",
                   "updateInterval": 1000,
                   "enableTimeout": false,
                   "dataTimeout": 5
@@ -719,7 +719,7 @@
                   "numInt": 1,
                   "numDecimal": 0,
                   "ignoreZones": false,
-                  "color": "blue",
+                  "color": "purple",
                   "updateInterval": 1000,
                   "enableTimeout": false,
                   "dataTimeout": 5
@@ -765,7 +765,7 @@
                   "yScaleMax": null,
                   "inverseYAxis": false,
                   "verticalChart": false,
-                  "color": "contrast",
+                  "color": "green",
                   "updateInterval": 1000,
                   "enableTimeout": false,
                   "dataTimeout": 5,
@@ -812,7 +812,7 @@
                   "yScaleMax": null,
                   "inverseYAxis": false,
                   "verticalChart": false,
-                  "color": "contrast",
+                  "color": "blue",
                   "updateInterval": 1000,
                   "enableTimeout": false,
                   "dataTimeout": 5,
@@ -859,7 +859,7 @@
                   "yScaleMax": null,
                   "inverseYAxis": false,
                   "verticalChart": false,
-                  "color": "contrast",
+                  "color": "orange",
                   "updateInterval": 1000,
                   "enableTimeout": false,
                   "dataTimeout": 5,
@@ -906,7 +906,7 @@
                   "yScaleMax": null,
                   "inverseYAxis": false,
                   "verticalChart": false,
-                  "color": "contrast",
+                  "color": "yellow",
                   "updateInterval": 1000,
                   "enableTimeout": false,
                   "dataTimeout": 5,
@@ -936,7 +936,7 @@
                 "type": "widget-bms",
                 "uuid": "60bf5dc1-5f0a-53c9-b48a-c26cc0e06a91",
                 "config": {
-                  "color": "contrast",
+                  "color": "green",
                   "ignoreZones": false,
                   "bms": {
                     "trackedDevices": [],
@@ -960,7 +960,7 @@
                 "type": "widget-solar-charger",
                 "uuid": "8a8b24e2-60ce-51ef-8c00-ff7a62f44e84",
                 "config": {
-                  "color": "contrast",
+                  "color": "yellow",
                   "ignoreZones": false,
                   "solarCharger": {
                     "trackedDevices": [],
@@ -984,7 +984,7 @@
                 "type": "widget-charger",
                 "uuid": "8067b46d-7250-5e2c-abac-195f0738e16f",
                 "config": {
-                  "color": "contrast",
+                  "color": "blue",
                   "ignoreZones": false,
                   "charger": {
                     "trackedDevices": [],
@@ -1039,7 +1039,7 @@
                   "yScaleMax": null,
                   "inverseYAxis": false,
                   "verticalChart": false,
-                  "color": "contrast",
+                  "color": "green",
                   "updateInterval": 1000,
                   "enableTimeout": false,
                   "dataTimeout": 5,
@@ -1086,7 +1086,7 @@
                   "yScaleMax": null,
                   "inverseYAxis": false,
                   "verticalChart": false,
-                  "color": "contrast",
+                  "color": "blue",
                   "updateInterval": 1000,
                   "enableTimeout": false,
                   "dataTimeout": 5,
@@ -1133,7 +1133,7 @@
                   "yScaleMax": null,
                   "inverseYAxis": false,
                   "verticalChart": false,
-                  "color": "contrast",
+                  "color": "orange",
                   "updateInterval": 1000,
                   "enableTimeout": false,
                   "dataTimeout": 5,
@@ -1245,7 +1245,7 @@
                       "ctrlLabel": "Navigation",
                       "type": "1",
                       "pathID": "5c4595db-7ffb-5b5c-a6b8-0054f3ec377d",
-                      "color": "green",
+                      "color": "yellow",
                       "isNumeric": true,
                       "value": null
                     },
@@ -1253,7 +1253,7 @@
                       "ctrlLabel": "Stern",
                       "type": "1",
                       "pathID": "4840c0e4-dbbc-56a8-8ffd-7939b8933e5c",
-                      "color": "green",
+                      "color": "yellow",
                       "isNumeric": true,
                       "value": null
                     },
@@ -1261,7 +1261,7 @@
                       "ctrlLabel": "Steaming",
                       "type": "1",
                       "pathID": "7214c4af-6253-58b7-883d-e49776585060",
-                      "color": "green",
+                      "color": "yellow",
                       "isNumeric": true,
                       "value": null
                     },
@@ -1269,7 +1269,7 @@
                       "ctrlLabel": "Tricolour",
                       "type": "1",
                       "pathID": "1198b83a-e579-5b98-85e9-9a38330008e2",
-                      "color": "green",
+                      "color": "yellow",
                       "isNumeric": true,
                       "value": null
                     },
@@ -1277,7 +1277,7 @@
                       "ctrlLabel": "Anchor",
                       "type": "1",
                       "pathID": "c784a993-5325-5260-94f6-37e6bcabe049",
-                      "color": "green",
+                      "color": "yellow",
                       "isNumeric": true,
                       "value": null
                     },
@@ -1285,7 +1285,7 @@
                       "ctrlLabel": "Deck light",
                       "type": "1",
                       "pathID": "b92997f7-faf9-58b9-a275-050cc0b5fd10",
-                      "color": "green",
+                      "color": "yellow",
                       "isNumeric": true,
                       "value": null
                     }
@@ -1332,7 +1332,7 @@
                   "yScaleMax": null,
                   "inverseYAxis": false,
                   "verticalChart": false,
-                  "color": "contrast",
+                  "color": "green",
                   "updateInterval": 1000,
                   "enableTimeout": false,
                   "dataTimeout": 5,
@@ -1379,7 +1379,7 @@
                   "yScaleMax": null,
                   "inverseYAxis": false,
                   "verticalChart": false,
-                  "color": "contrast",
+                  "color": "blue",
                   "updateInterval": 1000,
                   "enableTimeout": false,
                   "dataTimeout": 5,
@@ -1443,7 +1443,7 @@
                       "ctrlLabel": "Bow thruster",
                       "type": "1",
                       "pathID": "3b40bcc5-bdfa-50ab-af19-fc7587679675",
-                      "color": "green",
+                      "color": "blue",
                       "isNumeric": true,
                       "value": null
                     },
@@ -1451,7 +1451,7 @@
                       "ctrlLabel": "Deck light",
                       "type": "1",
                       "pathID": "ae6622fe-b796-5d19-aef0-153aef1b84df",
-                      "color": "green",
+                      "color": "blue",
                       "isNumeric": true,
                       "value": null
                     }
