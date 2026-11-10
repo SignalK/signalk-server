@@ -52,9 +52,17 @@ function acPhaseMetadata(parent: string): Record<string, PathMetadataEntry> {
       description: 'Apparent power (|V| × |I|), in volt-amperes.',
       units: 'VA'
     },
-    [`${phase}/breakerSize`]: {
+    [`${phase}/breaker`]: {
+      description: 'The circuit breaker of this line'
+    },
+    [`${phase}/breaker/ratedCurrent`]: {
       description: 'Rated current of the breaker',
       units: 'A'
+    },
+    [`${phase}/breaker/curveType`]: {
+      description:
+        'Trip curve of the breaker (IEC 60898-1 B, C or D, or K or Z)',
+      enum: ['B', 'C', 'D', 'K', 'Z']
     }
   }
 }
@@ -337,9 +345,17 @@ export const electricalMetadata: Record<string, PathMetadataEntry> = {
     description: 'Apparent power (|V| × |I|), in volt-amperes.',
     units: 'VA'
   },
-  '/vessels/*/electrical/inverters/RegExp/ac/breakerSize': {
+  '/vessels/*/electrical/inverters/RegExp/ac/breaker': {
+    description: 'The circuit breaker of the AC output'
+  },
+  '/vessels/*/electrical/inverters/RegExp/ac/breaker/ratedCurrent': {
     description: 'Rated current of the AC output breaker',
     units: 'A'
+  },
+  '/vessels/*/electrical/inverters/RegExp/ac/breaker/curveType': {
+    description:
+      'Trip curve of the AC output breaker (IEC 60898-1 B, C or D, or K or Z)',
+    enum: ['B', 'C', 'D', 'K', 'Z']
   },
   '/vessels/*/electrical/inverters/RegExp/ac/waveform': {
     description: 'Waveform of the AC output',

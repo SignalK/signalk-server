@@ -494,7 +494,9 @@ describe('device and AIS paths the NMEA parsers write', () => {
     expect(
       units(self('electrical.inverters.2.loadSensePowerThreshold'))
     ).to.equal('W')
-    expect(units(self('electrical.ac.1c2.phase.B.breakerSize'))).to.equal('A')
+    expect(
+      units(self('electrical.ac.1c2.phase.B.breaker.ratedCurrent'))
+    ).to.equal('A')
     expect(units(self('electrical.batteries.0.nominalVoltage'))).to.equal('V')
     expect(
       units(self('electrical.displays.raymarine.helm1.brightness'))
@@ -504,8 +506,14 @@ describe('device and AIS paths the NMEA parsers write', () => {
 
   it('gives the input fields to AC buses and the waveform to inverters', () => {
     expect(
-      units(self('electrical.inverters.0.ac.phase.C.breakerSize'))
+      units(self('electrical.inverters.0.ac.phase.C.breaker.ratedCurrent'))
     ).to.equal('A')
+    expect(
+      getMetadata(self('electrical.ac.0.phase.A.breaker.curveType'))?.enum
+    ).to.deep.equal(['B', 'C', 'D', 'K', 'Z'])
+    expect(
+      getMetadata(self('electrical.inverters.0.ac.breaker.curveType'))?.enum
+    ).to.include('C')
     expect(
       getMetadata(self('electrical.ac.0.phase.single.acceptability'))?.enum
     ).to.include('being qualified')

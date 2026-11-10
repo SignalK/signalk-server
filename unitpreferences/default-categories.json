@@ -168,10 +168,10 @@
         "electrical.alternators.*.current",
         "electrical.solar.*.current",
         "propulsion.*.alternator.current",
-        "electrical.inverters.*.ac.breakerSize",
-        "electrical.ac.*.phase.*.breakerSize",
-        "electrical.inverters.*.ac.phase.*.breakerSize",
-        "electrical.generators.*.phase.*.breakerSize"
+        "electrical.inverters.*.ac.breaker.ratedCurrent",
+        "electrical.ac.*.phase.*.breaker.ratedCurrent",
+        "electrical.inverters.*.ac.phase.*.breaker.ratedCurrent",
+        "electrical.generators.*.phase.*.breaker.ratedCurrent"
       ]
     },
     "power": {
