@@ -479,3 +479,67 @@ describe('updateContract inheritance', () => {
     expect(other?.units).to.equal('m/s')
   })
 })
+
+describe('device and AIS paths the NMEA parsers write', () => {
+  const units = (p: string) =>
+    (getMetadata(p) as { units?: string } | undefined)?.units
+
+  it('resolves under any instance, with units', () => {
+    expect(
+      units(self('electrical.chargers.1.equalizationTimeRemaining'))
+    ).to.equal('s')
+    expect(
+      units(self('electrical.chargers.house.chargeCurrentLimit'))
+    ).to.equal('ratio')
+    expect(
+      units(self('electrical.inverters.2.loadSensePowerThreshold'))
+    ).to.equal('W')
+    expect(
+      units(self('electrical.ac.1c2.phase.B.breaker.ratedCurrent'))
+    ).to.equal('A')
+    expect(units(self('electrical.batteries.0.nominalVoltage'))).to.equal('V')
+    expect(
+      units(self('electrical.displays.raymarine.helm1.brightness'))
+    ).to.equal('ratio')
+    expect(units(self('propulsion.port.trip.fuelUsed'))).to.equal('m3')
+  })
+
+  it('gives the input fields to AC buses and the waveform to inverters', () => {
+    expect(
+      units(self('electrical.inverters.0.ac.phase.C.breaker.ratedCurrent'))
+    ).to.equal('A')
+    expect(
+      getMetadata(self('electrical.ac.0.phase.A.breaker.curveType'))?.enum
+    ).to.deep.equal(['B', 'C', 'D', 'K', 'Z'])
+    expect(
+      getMetadata(self('electrical.inverters.0.ac.breaker.curveType'))?.enum
+    ).to.include('C')
+    expect(
+      getMetadata(self('electrical.ac.0.phase.single.acceptability'))?.enum
+    ).to.include('being qualified')
+    expect(getMetadata(self('electrical.inverters.0.ac.phase.B.acceptability')))
+      .to.be.undefined
+    expect(
+      getMetadata(self('electrical.inverters.0.ac.phase.B.waveform'))?.enum
+    ).to.not.be.undefined
+    expect(getMetadata(self('electrical.ac.0.phase.B.waveform'))).to.be
+      .undefined
+  })
+
+  it('lists both the NMEA 2000 and the older charging modes', () => {
+    const modes = getMetadata(self('electrical.chargers.1.chargingMode'))?.enum
+    expect(modes).to.include.members(['absorption', 'acceptance', 'no float'])
+  })
+
+  it('tells satellites used from satellites in view', () => {
+    expect(getMetadata(self('navigation.gnss.satellites'))).to.not.deep.equal(
+      getMetadata(self('navigation.gnss.satellitesInView'))
+    )
+  })
+
+  it('resolves the AtoN fields under an AtoN', () => {
+    expect(
+      getMetadata('atons.urn:mrn:imo:mmsi:993672085.atonType')
+    ).to.not.equal(undefined)
+  })
+})
