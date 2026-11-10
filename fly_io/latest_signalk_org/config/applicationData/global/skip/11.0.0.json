@@ -27,7 +27,8 @@
           "muteEmergency": false
         }
       },
-      "browserTabTitle": "Skip"
+      "browserTabTitle": "Skip",
+      "pinToolbar": true
     },
     "theme": {
       "themeName": "dark-theme"
