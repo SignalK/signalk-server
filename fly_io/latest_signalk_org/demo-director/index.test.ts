@@ -88,21 +88,6 @@ describe('demo director', () => {
     ])
   })
 
-  it('publishes a charging house battery', async () => {
-    const { app, messages } = fakeApp(
-      { pointIndex: 3, pointTotal: 5, reverse: false },
-      NEAR_FINAL
-    )
-    await runFirstTick(app)
-    const [charge] = published(
-      messages,
-      'electrical.batteries.house.capacity.stateOfCharge'
-    )
-    assert.ok(typeof charge === 'number' && charge >= 0.83 && charge < 0.84)
-    const [current] = published(messages, 'electrical.batteries.house.current')
-    assert.ok(typeof current === 'number' && current > 0)
-  })
-
   it('publishes a Pi health reading in Signal K units', async () => {
     const { app, messages } = fakeApp(
       { pointIndex: 3, pointTotal: 5, reverse: false },

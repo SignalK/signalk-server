@@ -1,5 +1,5 @@
-// Builds what the demo image needs and git does not keep: the demo-director
-// plugin's JavaScript, and the large demo assets: the Waddenzee ENC
+// Builds what the demo image needs and git does not keep: the demo plugins'
+// JavaScript, and the large demo assets: the Waddenzee ENC
 // as vector MBTiles plus its raw S-57 cells, a coastline clipped to the
 // area, the land, buoys and beacons of the ENC cells for the radar emulator, and the Netherlands
 // tidal current dataset. They land in ./assets, laid out like the server's
@@ -447,15 +447,16 @@ async function downloadTidalCurrents(configDir: string): Promise<void> {
 }
 
 // The server loads plugins from node_modules, where Node does not strip types
-function buildDirector(): void {
-  const dir = join(HERE, 'demo-director')
+function buildPlugin(name: string): void {
+  const dir = join(HERE, name)
   writeFileSync(
     join(dir, 'index.js'),
     stripTypeScriptTypes(readFileSync(join(dir, 'index.ts'), 'utf8'))
   )
 }
 
-buildDirector()
+buildPlugin('demo-director')
+buildPlugin('boat-systems')
 rmSync(BUILD, { recursive: true, force: true })
 rmSync(ASSETS, { recursive: true, force: true })
 mkdirSync(BUILD, { recursive: true })

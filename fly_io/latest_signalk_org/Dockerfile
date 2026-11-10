@@ -7,11 +7,12 @@ FROM signalk/signalk-server:${SK_VERSION}
 COPY --from=mayara /usr/local/bin/mayara-server /usr/local/bin/mayara-server
 COPY --chmod=755 start.sh /home/node/start.sh
 COPY --chown=node:node demo-director /home/node/demo-director
+COPY --chown=node:node boat-systems /home/node/boat-systems
 COPY --chown=node:node config/ /home/node/.signalk/
 # Charts, ENC cells and tidal data made by build-assets.ts before the deploy
 COPY --chown=node:node assets/ /home/node/.signalk/
-# --install-links copies the local demo-director package instead of linking it,
-# so its own dependency (magvar) is installed with it
+# --install-links copies the local demo packages instead of linking them,
+# so their own dependencies (magvar) are installed with them
 RUN cd /home/node/.signalk && npm install --omit=dev --install-links --no-audit --no-fund
 # With no users in security.json, anyone could otherwise make themselves admin.
 # Server releases before 2.25.0 ignore the variable, so the build refuses them.

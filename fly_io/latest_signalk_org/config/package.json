@@ -14,6 +14,7 @@
     "signalk-buddylist-plugin": "1.3.1",
     "signalk-charts-provider-simple": "2.15.0",
     "signalk-collision-alerts": "0.5.1",
+    "signalk-demo-boat-systems": "file:../boat-systems",
     "signalk-demo-director": "file:../demo-director",
     "signalk-distance-to-shore": "0.2.1",
     "signalk-espos-hmi-designer": "0.4.0",
@@ -27,6 +28,7 @@
     "signalk-tidal-currents": "0.3.3",
     "signalk-tides": "2.2.0",
     "signalk-underkeel": "0.2.1",
-    "signalk-universal-installer-rpi-mgmt": "0.1.1"
+    "signalk-universal-installer-rpi-mgmt": "0.1.1",
+    "signalk-victron-ble-consumer": "0.2.2"
   }
 }

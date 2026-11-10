@@ -7,13 +7,6 @@ const VARIATION_EVERY_TICKS = 60
 // Turn round a little before the final waypoint so the boat never reaches the
 // harbour wall, and the autopilot's own arrival handling never ends the route.
 const TURN_ROUND_DISTANCE_M = 250
-// The house bank charges gently from the solar panel, so the battery widget
-// shows a charging bank without ever reaching full
-const BATTERY_START_CHARGE = 0.83
-const BATTERY_FULLEST_CHARGE = 0.95
-const BATTERY_CHARGE_PER_HOUR = 0.005
-const BATTERY_CURRENT_A = 4.2
-const BATTERY_VOLTAGE_V = 13.3
 const MS_PER_HOUR = 3600 * 1000
 // The demo runs on Fly, not on a Raspberry Pi, so the system health tile and
 // RPI Manager are fed what a Pi 4 on a boat typically reads; values wander
@@ -134,34 +127,6 @@ export default function (app: ServerAPI): Plugin {
     })
   }
 
-  function publishBattery() {
-    const hours = (Date.now() - startedAt) / MS_PER_HOUR
-    const charge = Math.min(
-      BATTERY_FULLEST_CHARGE,
-      BATTERY_START_CHARGE + hours * BATTERY_CHARGE_PER_HOUR
-    )
-    app.handleMessage(PLUGIN_ID, {
-      updates: [
-        {
-          values: [
-            {
-              path: 'electrical.batteries.house.capacity.stateOfCharge' as Path,
-              value: charge
-            },
-            {
-              path: 'electrical.batteries.house.current' as Path,
-              value: BATTERY_CURRENT_A
-            },
-            {
-              path: 'electrical.batteries.house.voltage' as Path,
-              value: BATTERY_VOLTAGE_V
-            }
-          ]
-        }
-      ]
-    })
-  }
-
   function publishPiHealth(time = Date.now()) {
     app.handleMessage(PLUGIN_ID, {
       updates: [
@@ -263,7 +228,6 @@ export default function (app: ServerAPI): Plugin {
   function tick() {
     if (ticksSinceVariation >= VARIATION_EVERY_TICKS) publishVariation()
     ticksSinceVariation++
-    publishBattery()
     // live readings would take the recorder's one value per second
     if (!historyTimer) publishPiHealth()
     publishPolarPerformance()
@@ -274,7 +238,7 @@ export default function (app: ServerAPI): Plugin {
     id: PLUGIN_ID,
     name: 'Demo director',
     description:
-      'Keeps the demo boat under way: publishes magnetic variation, a charging house battery, the computer health and the polar performance, and turns the active route round at its end',
+      'Keeps the demo boat under way: publishes magnetic variation, the computer health and the polar performance, and turns the active route round at its end',
     schema: () => ({ type: 'object', properties: {} }),
     start: () => {
       ticksSinceVariation = VARIATION_EVERY_TICKS

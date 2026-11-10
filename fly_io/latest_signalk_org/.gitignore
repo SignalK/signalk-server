@@ -4,3 +4,5 @@ assets/
 !config/plugin-config-data/
 demo-director/index.js
 demo-director/node_modules/
+boat-systems/index.js
+boat-systems/node_modules/

@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Boat Systems</title>
+<link rel="icon" href="icon.svg">
+<style>
+:root{--bg:#0b1622;--panel:#12212f;--line:#1f3346;--hull:#16293a;--hullLine:#3b5873;--txt:#dfe8f1;--dim:#7d93a8;--on:#39d98a;--onBg:#123826;--warn:#ffb020;--warnBg:#2d2410;--alarm:#ff4d4f;--blue:#3aa0ff;--off:#5a7a99}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--txt);font:15px/1.3 system-ui,"Segoe UI",Roboto,Arial,sans-serif;display:flex;flex-direction:column;overflow:hidden;user-select:none}
+header{display:flex;align-items:center;gap:10px 18px;padding:10px 16px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+header h1{font-size:18px;margin:0;font-weight:600}
+.chip{padding:5px 12px;border-radius:14px;background:var(--panel);border:1px solid var(--line);color:var(--dim);font-weight:600;font-size:14px;white-space:nowrap}
+.chip b{color:var(--txt)}
+.chip.warn{color:var(--warn);border-color:var(--warn);background:var(--warnBg)}
+.chip.on{color:var(--on);border-color:var(--on)}
+main{flex:1;min-height:0;padding:8px}
+svg{width:100%;height:100%;display:block}
+.dev{cursor:pointer}
+.dev .shape{fill:var(--panel);stroke:var(--off);stroke-width:2}
+.dev text{fill:var(--dim);font-size:14px;font-weight:600;text-anchor:middle;pointer-events:none}
+.dev .state{font-size:12px;font-weight:500}
+.dev.on .shape{fill:var(--onBg);stroke:var(--on)}
+.dev.on text{fill:var(--on)}
+.dev .glow{fill:var(--on);opacity:0;filter:url(#glow);transition:opacity .2s}
+.dev.on .glow{opacity:.35}
+.dev.busy .shape{stroke-dasharray:4 4}
+.sensor .shape{fill:#0f1f2d;stroke:var(--blue);stroke-width:2}
+.sensor text{fill:var(--txt);font-size:13px;font-weight:600;text-anchor:middle}
+.sensor.warn .shape{fill:var(--warnBg);stroke:var(--warn)}
+.sensor.warn text{fill:var(--warn)}
+.sensor.alarm .shape{stroke:var(--alarm)}
+.sensor.alarm text{fill:var(--alarm)}
+.zone{fill:#7d93a8;font-size:14px;text-anchor:middle;letter-spacing:1px}
+#toast{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);background:var(--panel);border:1px solid var(--warn);color:var(--txt);padding:10px 16px;border-radius:10px;opacity:0;transition:opacity .3s;pointer-events:none;max-width:90vw;text-align:center}
+#toast.show{opacity:1}
+#offline{color:var(--warn)}
+</style>
+</head>
+<body>
+<header>
+  <h1>Boat systems</h1>
+  <span class="chip" id="c-house">House <b>--</b></span>
+  <span class="chip" id="c-solar">Solar <b>--</b></span>
+  <span class="chip" id="c-engine">Engine <b>--</b></span>
+  <span class="chip" id="offline" hidden>Connecting…</span>
+</header>
+<main>
+<svg viewBox="0 0 1360 820" aria-label="Floor plan of the boat with its switches and sensors">
+  <defs>
+    <filter id="glow" x="-1" y="-1" width="3" height="3"><feGaussianBlur stdDeviation="8"/></filter>
+    <linearGradient id="hullFill" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#16293a"/><stop offset="1" stop-color="#0f1f2d"/></linearGradient>
+  </defs>
+  <path d="M120 250 L120 570 Q130 640 420 650 L900 640 Q1150 600 1270 410 Q1150 220 900 180 L420 170 Q130 180 120 250 Z" fill="url(#hullFill)" stroke="var(--hullLine)" stroke-width="3"/>
+  <path d="M440 300 L860 285 Q960 330 960 410 Q960 490 860 535 L440 520 Z" fill="none" stroke="#2c4660" stroke-width="2"/>
+  <rect x="170" y="300" width="230" height="220" rx="24" fill="none" stroke="#2c4660" stroke-width="2"/>
+  <line x1="680" y1="292" x2="680" y2="528" stroke="#22394f" stroke-dasharray="6 6"/>
+  <line x1="960" y1="250" x2="960" y2="570" stroke="#22394f" stroke-dasharray="6 6"/>
+  <text class="zone" x="285" y="335">COCKPIT</text>
+  <text class="zone" x="560" y="320">SALOON</text>
+  <text class="zone" x="780" y="320">GALLEY</text>
+  <text class="zone" x="1075" y="330">FORWARD CABIN</text>
+  <circle cx="900" cy="410" r="12" fill="#2c4660" stroke="#5a7a99" stroke-width="2"/>
+  <text class="zone" x="900" y="445" style="font-size:12px">MAST</text>
+  <g id="plan"></g>
+</svg>
+</main>
+<div id="toast" role="status"></div>
+<script>
+'use strict'
+const NS = 'http://www.w3.org/2000/svg'
+const K = 273.15
+// x, y: centre on the plan; w: pill width (0 = round lamp)
+const SWITCHES = [
+  { id: '10.1', label: 'Navigation', x: 1180, y: 300, w: 0 },
+  { id: '10.2', label: 'Stern', x: 120, y: 410, w: 0 },
+  { id: '10.3', label: 'Steaming', x: 900, y: 235, w: 120 },
+  { id: '10.4', label: 'Tricolour', x: 900, y: 175, w: 120 },
+  { id: '10.5', label: 'Anchor', x: 1030, y: 175, w: 110 },
+  { id: '10.6', label: 'Deck light', x: 770, y: 235, w: 120 },
+  { id: '13.1', label: 'Bow thruster', x: 1120, y: 600, w: 150 },
+  { id: '13.2', label: 'Water pump', x: 300, y: 600, w: 140 },
+  { id: '13.3', label: 'Bilge pump', x: 500, y: 600, w: 130 },
+  { id: '13.4', label: 'Fridge', x: 760, y: 375, w: 110 },
+  { id: '13.5', label: 'Freezer', x: 760, y: 465, w: 110 },
+  { id: '13.6', label: 'Saloon', x: 560, y: 375, w: 110 },
+  { id: '13.7', label: 'Cabin', x: 1075, y: 375, w: 100 },
+  { id: '13.8', label: 'Instruments', x: 285, y: 450, w: 140 }
+]
+const SENSORS = [
+  { key: 'fridge', path: 'environment.inside.refrigerator.temperature', x: 760, y: 420, w: 110, fmt: (v) => `${c(v)} °C`, warn: (v) => v > 6 + K, alarm: (v) => v > 9 + K },
+  { key: 'freezer', path: 'environment.inside.freezer.temperature', x: 760, y: 510, w: 110, fmt: (v) => `${c(v)} °C`, warn: (v) => v > -12 + K, alarm: (v) => v > -5 + K },
+  { key: 'saloon', path: 'environment.inside.saloon.temperature', x: 560, y: 440, w: 110, fmt: (v) => `${c(v)} °C`, rh: 'environment.inside.saloon.relativeHumidity' },
+  { key: 'cabin', path: 'environment.inside.forwardCabin.temperature', x: 1075, y: 440, w: 110, fmt: (v) => `${c(v)} °C`, rh: 'environment.inside.forwardCabin.relativeHumidity' },
+  { key: 'engine', path: 'environment.inside.engineRoom.temperature', x: 285, y: 390, w: 140, fmt: (v) => `Engine ${c(v)} °C` }
+]
+const values = new Map()
+const nodes = new Map()
+const c = (v) => (v - K).toFixed(1)
+const pathOf = (id) => `electrical.switches.bank.${id}.state`
+
+function el(tag, attrs, parent) {
+  const e = document.createElementNS(NS, tag)
+  for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v)
+  if (parent) parent.appendChild(e)
+  return e
+}
+
+function build() {
+  const plan = document.getElementById('plan')
+  for (const s of SWITCHES) {
+    const g = el('g', { class: 'dev', transform: `translate(${s.x},${s.y})`, role: 'button', tabindex: '0', 'aria-label': s.label }, plan)
+    if (s.w === 0) {
+      el('circle', { class: 'glow', r: 30 }, g)
+      el('circle', { class: 'shape', r: 20 }, g)
+      const t = el('text', { y: 42 }, g); t.textContent = s.label
+      const st = el('text', { class: 'state', y: 58 }, g); st.textContent = '--'
+      nodes.set(s.id, { g, st })
+    } else {
+      el('rect', { class: 'glow', x: -s.w / 2, y: -22, width: s.w, height: 44, rx: 22 }, g)
+      el('rect', { class: 'shape', x: -s.w / 2, y: -22, width: s.w, height: 44, rx: 22 }, g)
+      const t = el('text', { y: -2 }, g); t.textContent = s.label
+      const st = el('text', { class: 'state', y: 14 }, g); st.textContent = '--'
+      nodes.set(s.id, { g, st })
+    }
+    g.addEventListener('click', () => toggle(s.id))
+    g.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') toggle(s.id) })
+  }
+  for (const s of SENSORS) {
+    const g = el('g', { class: 'sensor', transform: `translate(${s.x},${s.y})` }, plan)
+    el('rect', { class: 'shape', x: -s.w / 2, y: -17, width: s.w, height: 34, rx: 9 }, g)
+    const t = el('text', { y: 5 }, g); t.textContent = '--'
+    nodes.set(s.key, { g, t })
+  }
+}
+
+function render() {
+  for (const s of SWITCHES) {
+    const v = values.get(pathOf(s.id))
+    const n = nodes.get(s.id)
+    const isOn = v === 1 || v === true
+    n.g.classList.toggle('on', isOn)
+    n.st.textContent = v === undefined ? '--' : isOn ? 'ON' : 'off'
+  }
+  for (const s of SENSORS) {
+    const v = values.get(s.path)
+    const n = nodes.get(s.key)
+    if (typeof v !== 'number') continue
+    const rh = s.rh ? values.get(s.rh) : undefined
+    n.t.textContent = s.fmt(v) + (typeof rh === 'number' ? ` · ${Math.round(rh * 100)} %` : '')
+    n.g.classList.toggle('warn', !!s.warn?.(v) && !s.alarm?.(v))
+    n.g.classList.toggle('alarm', !!s.alarm?.(v))
+  }
+  const soc = values.get('electrical.batteries.house.capacity.stateOfCharge')
+  const amps = values.get('electrical.batteries.house.current')
+  if (typeof soc === 'number') {
+    chip('c-house', `${Math.round(soc * 100)} %` + (typeof amps === 'number' ? ` ${amps >= 0 ? '+' : ''}${amps.toFixed(1)} A` : ''), soc < 0.5 ? 'warn' : '')
+  }
+  let solar = 0
+  for (const [p, v] of values) if (p.startsWith('electrical.solar.') && p.endsWith('.panelPower') && typeof v === 'number') solar += v
+  chip('c-solar', `${Math.round(solar)} W`, solar > 0 ? 'on' : '')
+  const engine = values.get('propulsion.main.state')
+  if (engine) chip('c-engine', engine === 'started' ? 'running' : 'off', engine === 'started' ? 'on' : '')
+}
+
+function chip(id, text, cls) {
+  const e = document.getElementById(id)
+  e.querySelector('b').textContent = text
+  e.className = `chip ${cls}`
+}
+
+let toastTimer
+function toast(msg) {
+  const t = document.getElementById('toast')
+  t.textContent = msg
+  t.classList.add('show')
+  clearTimeout(toastTimer)
+  toastTimer = setTimeout(() => t.classList.remove('show'), 3500)
+}
+
+async function toggle(id) {
+  const path = pathOf(id)
+  const current = values.get(path)
+  const next = current === 1 || current === true ? 0 : 1
+  const n = nodes.get(id)
+  n.g.classList.add('busy')
+  try {
+    const res = await fetch(`/signalk/v1/api/vessels/self/${path.replaceAll('.', '/')}`, {
+      method: 'PUT',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ value: next })
+    })
+    if (res.status === 401 || res.status === 403) toast('Switching needs a login: this demo is read-only for visitors.')
+    else if (!res.ok) toast(`The switch did not respond (${res.status}).`)
+  } catch {
+    toast('The server cannot be reached.')
+  } finally {
+    n.g.classList.remove('busy')
+  }
+}
+
+let renderQueued = false
+function queueRender() {
+  if (renderQueued) return
+  renderQueued = true
+  requestAnimationFrame(() => { renderQueued = false; render() })
+}
+
+function connect() {
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws'
+  const ws = new WebSocket(`${proto}://${location.host}/signalk/v1/stream?subscribe=self&sendCachedValues=true`)
+  const offline = document.getElementById('offline')
+  ws.onopen = () => { offline.hidden = true }
+  ws.onmessage = (e) => {
+    const msg = JSON.parse(e.data)
+    for (const u of msg.updates ?? []) {
+      for (const v of u.values ?? []) values.set(v.path, v.value)
+    }
+    queueRender()
+  }
+  ws.onclose = () => { offline.hidden = false; setTimeout(connect, 3000) }
+}
+
+build()
+connect()
+</script>
+</body>
+</html>
