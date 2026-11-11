@@ -323,18 +323,19 @@ export const environmentMetadata: Record<string, PathMetadataEntry> = {
   },
   '/vessels/*/environment/time': {
     description:
-      "A time reference for the vessel. All clocks on the vessel dispaying local time should use the timezone offset here. If a timezoneRegion is supplied the timezoneOffset must also be supplied. If timezoneRegion is supplied that should be displayed by UIs in preference to simply timezoneOffset. ie 12:05 (Europe/London) should be displayed in preference to 12:05 (UTC+01:00). Gives the vessel's time zone and local time."
+      "A time reference for the vessel. All clocks on the vessel displaying local time should use the timezone offset here. If a timezoneRegion is supplied the timezoneOffset must also be supplied. If timezoneRegion is supplied that should be displayed by UIs in preference to simply timezoneOffset. ie 12:05 (Europe/London) should be displayed in preference to 12:05 (UTC+01:00). Gives the vessel's time zone and local time."
   },
   '/vessels/*/environment/time/millis': {
-    description: 'Milliseconds since the UNIX epoch (1970-01-01 00:00:00)'
+    description:
+      'Current time as milliseconds since the Unix epoch (1970-01-01 00:00:00 UTC), so independent of the timezone.'
   },
   '/vessels/*/environment/time/timezoneOffset': {
     description:
-      'Onboard timezone offset from UTC in hours and minutes (-)hhmm. +ve means east of Greenwich. For use by UIs'
+      'Onboard timezone offset from UTC in hours and minutes, as (-)hhmm. Positive east of Greenwich. For use by UIs.'
   },
   '/vessels/*/environment/time/timezoneRegion': {
     description:
-      'Onboard timezone offset as listed in the IANA timezone database (tz database)'
+      'Onboard timezone as named in the IANA timezone database (tz database), for example Europe/Amsterdam.'
   },
   '/vessels/*/environment/mode': {
     description:
