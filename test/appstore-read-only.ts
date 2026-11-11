@@ -16,6 +16,8 @@ const NOT_INSTALLED = 'readonlystoreother'
 // Installed, but missing from the npm search, so only this server knows it.
 const INSTALLED_ONLY = 'readonlystoreinstalledonly'
 const DEPENDENCY = 'readonlystoredependency'
+// Installed, missing from the plugin search, but found by the webapp search.
+const INSTALLED_WEBAPP = 'readonlystoreinstalledwebapp'
 
 interface AppInfo {
   name: string
@@ -52,7 +54,11 @@ function seedConfigDir(configDir: string) {
     JSON.stringify({
       name: 'signalk-server-config',
       version: '0.0.1',
-      dependencies: { [INSTALLED]: '^1.0.0', [INSTALLED_ONLY]: '^1.0.0' }
+      dependencies: {
+        [INSTALLED]: '^1.0.0',
+        [INSTALLED_ONLY]: '^1.0.0',
+        [INSTALLED_WEBAPP]: '^1.0.0'
+      }
     })
   )
   // With the WASM runtime off the server registers the plugin without
@@ -65,6 +71,21 @@ function seedConfigDir(configDir: string) {
       name: INSTALLED_ONLY,
       version: '1.0.0',
       keywords: ['signalk-wasm-plugin'],
+      wasmManifest: 'plugin.wasm'
+    })
+  )
+  const installedWebappDir = path.join(
+    configDir,
+    'node_modules',
+    INSTALLED_WEBAPP
+  )
+  fs.mkdirSync(installedWebappDir, { recursive: true })
+  fs.writeFileSync(
+    path.join(installedWebappDir, 'package.json'),
+    JSON.stringify({
+      name: INSTALLED_WEBAPP,
+      version: '1.0.0',
+      keywords: ['signalk-wasm-plugin', 'signalk-webapp'],
       wasmManifest: 'plugin.wasm'
     })
   )
@@ -83,22 +104,29 @@ function stubNpm() {
   global.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input)
     if (url.startsWith('https://registry.npmjs.org/-/v1/search')) {
-      const plugins = url.includes('signalk-node-server-plugin')
-      return Promise.resolve(
-        Response.json({
-          objects: plugins
-            ? [INSTALLED, NOT_INSTALLED].map((name) => ({
+      const date = new Date().toISOString()
+      const objects = url.includes('signalk-node-server-plugin')
+        ? [INSTALLED, NOT_INSTALLED].map((name) => ({
+            package: {
+              ...packageJson(name, '2.0.0'),
+              signalk: { requires: [DEPENDENCY] },
+              date,
+              links: {}
+            }
+          }))
+        : url.includes('signalk-webapp')
+          ? [
+              {
                 package: {
-                  ...packageJson(name, '2.0.0'),
-                  signalk: { requires: [DEPENDENCY] },
-                  date: new Date().toISOString(),
+                  ...packageJson(INSTALLED_WEBAPP, '2.0.0'),
+                  keywords: ['signalk-wasm-plugin', 'signalk-webapp'],
+                  date,
                   links: {}
                 }
-              }))
-            : [],
-          total: plugins ? 2 : 0
-        })
-      )
+              }
+            ]
+          : []
+      return Promise.resolve(Response.json({ objects, total: objects.length }))
     }
     if (url.startsWith('https://registry.npmjs.org')) {
       return Promise.resolve(new Response('{}', { status: 404 }))
@@ -204,6 +232,17 @@ describe('appstore for read-only users', function () {
     ]) {
       expect(dep).to.not.have.property('installed')
     }
+  })
+
+  it('lists a package the webapp search found at its published version', async function () {
+    const store = await getStore(readToken)
+    const entry = store.available.find((a) => a.name === INSTALLED_WEBAPP)
+    expect(entry?.version).to.equal('2.0.0')
+    const res = await fetch(
+      `${host}/skServer/appstore/plugin/${INSTALLED_WEBAPP}`,
+      { headers: headers(readToken) }
+    )
+    expect(res.status).to.equal(200)
   })
 
   it('has no detail for an installed-only package for non-admins', async function () {

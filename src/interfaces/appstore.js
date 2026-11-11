@@ -1073,16 +1073,22 @@ module.exports = function (app) {
       // An installed WASM plugin published without the Node plugin keyword
       // is missing from the search, but must stay updatable and removable.
       const listed = new Set(npmPlugins.map((p) => p.package.name))
+      const publicWebapps = new Map(
+        [...embeddableWebapps, ...webapps].map((w) => [w.package.name, w])
+      )
       const notInSearch = getInstalledAsPackageEntries(NODE_PLUGIN_KEYWORD)
         .filter(
           (p) =>
             !listed.has(p.package.name) && isWasmPackage(p.package.keywords)
         )
-        .map((p) => ({
-          ...p,
-          installedVersion: p.package.version,
-          installedOnly: true
-        }))
+        .map(
+          (p) =>
+            publicWebapps.get(p.package.name) ?? {
+              ...p,
+              installedVersion: p.package.version,
+              installedOnly: true
+            }
+        )
       // Discovery reads the dist-tags the store list last fetched instead of
       // waiting for npm; the store list applies the ones it fetches itself.
       const plugins = withPublishedVersions(
