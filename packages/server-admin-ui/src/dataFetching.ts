@@ -52,6 +52,7 @@ function verifySession(): Promise<void> {
 }
 
 async function checkSession(): Promise<void> {
+  const checkedStatus = useStore.getState().loginStatus
   try {
     const response = await fetch(`${window.serverRoutesPrefix}/loginStatus`, {
       credentials: 'include'
@@ -60,8 +61,10 @@ async function checkSession(): Promise<void> {
       return
     }
     const data: LoginStatus = await response.json()
-    if (data.status !== 'loggedIn') {
-      useStore.getState().setLoginStatus(data)
+    // A login or logout during the check is newer than its answer.
+    const { loginStatus, setLoginStatus } = useStore.getState()
+    if (data.status !== 'loggedIn' && loginStatus === checkedStatus) {
+      setLoginStatus(data)
     }
   } catch (error) {
     console.error('Failed to verify session after 401:', error)
