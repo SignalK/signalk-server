@@ -161,14 +161,14 @@ export const rootMetadata: Record<string, PathMetadataEntry> = {
       'A Geo JSON feature object which describes the route between the waypoints'
   },
   '/resources/routes/*/feature/type': {
-    description: '[missing]',
+    description: 'GeoJSON object type, always Feature.',
     enum: ['Feature']
   },
   '/resources/routes/*/feature/geometry': {
-    description: '[missing]'
+    description: 'GeoJSON geometry of the route.'
   },
   '/resources/routes/*/feature/geometry/type': {
-    description: '[missing]',
+    description: 'GeoJSON geometry type, always LineString for a route.',
     enum: ['LineString']
   },
   '/resources/routes/*/feature/geometry/coordinates': {
@@ -178,7 +178,7 @@ export const rootMetadata: Record<string, PathMetadataEntry> = {
     description: 'Additional data of any type'
   },
   '/resources/routes/*/feature/id': {
-    description: '[missing]'
+    description: 'Identifier of the GeoJSON feature.'
   },
   '/resources/notes': {
     description:
@@ -243,17 +243,17 @@ export const rootMetadata: Record<string, PathMetadataEntry> = {
       'A Geo JSON feature object which describes the regions boundary'
   },
   '/resources/regions/*/feature/type': {
-    description: '[missing]',
+    description: 'GeoJSON object type, always Feature.',
     enum: ['Feature']
   },
   '/resources/regions/*/feature/geometry': {
-    description: '[missing]'
+    description: 'GeoJSON geometry of the region.'
   },
   '/resources/regions/*/feature/properties': {
     description: 'Additional data of any type'
   },
   '/resources/regions/*/feature/id': {
-    description: '[missing]'
+    description: 'Identifier of the GeoJSON feature.'
   },
   '/resources/waypoints': {
     description: 'A holder for waypoints, each named with a UUID'
@@ -287,14 +287,14 @@ export const rootMetadata: Record<string, PathMetadataEntry> = {
     description: 'A Geo JSON feature object'
   },
   '/resources/waypoints/*/feature/type': {
-    description: '[missing]',
+    description: 'GeoJSON object type, always Feature.',
     enum: ['Feature']
   },
   '/resources/waypoints/*/feature/geometry': {
-    description: '[missing]'
+    description: 'GeoJSON geometry of the waypoint.'
   },
   '/resources/waypoints/*/feature/geometry/type': {
-    description: '[missing]',
+    description: 'GeoJSON geometry type, always Point for a waypoint.',
     enum: ['Point']
   },
   '/resources/waypoints/*/feature/geometry/coordinates': {
@@ -304,7 +304,7 @@ export const rootMetadata: Record<string, PathMetadataEntry> = {
     description: 'Additional data of any type'
   },
   '/resources/waypoints/*/feature/id': {
-    description: '[missing]'
+    description: 'Identifier of the GeoJSON feature.'
   },
   '/version': {
     description:

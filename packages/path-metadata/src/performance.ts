@@ -9,19 +9,20 @@ export const performanceMetadata: Record<string, PathMetadataEntry> = {
     description: 'Polar objects'
   },
   '/vessels/*/performance/polars/RegExp': {
-    description: '[missing]'
+    description:
+      'A polar: target boat speeds for each true wind speed and angle.'
   },
   '/vessels/*/performance/polars/RegExp/id': {
-    description: '[missing]'
+    description: 'Identifier of the polar.'
   },
   '/vessels/*/performance/polars/RegExp/name': {
-    description: '[missing]'
+    description: 'Name of the polar.'
   },
   '/vessels/*/performance/polars/RegExp/description': {
-    description: '[missing]'
+    description: 'Description of the polar.'
   },
   '/vessels/*/performance/polars/RegExp/windData': {
-    description: '[missing]'
+    description: 'Target boat speeds per true wind speed, by true wind angle.'
   },
   '/vessels/*/performance/activePolar': {
     description: 'The UUID of the active polar table'
@@ -30,16 +31,16 @@ export const performanceMetadata: Record<string, PathMetadataEntry> = {
     description: "The 'polar' object belonging to the selected 'activePolar'"
   },
   '/vessels/*/performance/activePolarData/id': {
-    description: '[missing]'
+    description: 'Identifier of the polar.'
   },
   '/vessels/*/performance/activePolarData/name': {
-    description: '[missing]'
+    description: 'Name of the polar.'
   },
   '/vessels/*/performance/activePolarData/description': {
-    description: '[missing]'
+    description: 'Description of the polar.'
   },
   '/vessels/*/performance/activePolarData/windData': {
-    description: '[missing]'
+    description: 'Target boat speeds per true wind speed, by true wind angle.'
   },
   '/vessels/*/performance/polarSpeed': {
     description:

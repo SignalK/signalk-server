@@ -9,7 +9,7 @@ export const sailsMetadata: Record<string, PathMetadataEntry> = {
       'An object containing a description of each sail available to the vessel crew'
   },
   '/vessels/*/sails/inventory/RegExp': {
-    description: "'sail' data type."
+    description: "A sail in the vessel's sail inventory."
   },
   '/vessels/*/sails/inventory/RegExp/name': {
     description: 'A unique identifier by which the crew identifies a sail'
@@ -55,11 +55,11 @@ export const sailsMetadata: Record<string, PathMetadataEntry> = {
     description: "An object containing information about the vessels' sails."
   },
   '/vessels/*/sails/area/total': {
-    description: 'Data should be of type number.',
+    description: 'Total area of all sails on the vessel.',
     units: 'm2'
   },
   '/vessels/*/sails/area/active': {
-    description: 'Data should be of type number.',
+    description: 'Total area of the sails currently set.',
     units: 'm2'
   }
 }

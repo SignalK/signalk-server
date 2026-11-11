@@ -20,11 +20,11 @@ export const propulsionMetadata: Record<string, PathMetadataEntry> = {
     units: 'Hz'
   },
   '/vessels/*/propulsion/RegExp/temperature': {
-    description: 'Engine temperature',
+    description: 'Engine temperature, usually the coolant temperature.',
     units: 'K'
   },
   '/vessels/*/propulsion/RegExp/oilTemperature': {
-    description: 'Oil temperature',
+    description: 'Engine oil temperature.',
     units: 'K'
   },
   '/vessels/*/propulsion/RegExp/oilPressure': {
@@ -76,7 +76,7 @@ export const propulsionMetadata: Record<string, PathMetadataEntry> = {
     units: 'ratio'
   },
   '/vessels/*/propulsion/RegExp/transmission/oilTemperature': {
-    description: 'Oil temperature',
+    description: 'Transmission oil temperature.',
     units: 'K'
   },
   '/vessels/*/propulsion/RegExp/transmission/oilPressure': {

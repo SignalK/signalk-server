@@ -88,11 +88,12 @@ export const designMetadata: Record<string, PathMetadataEntry> = {
     ]
   },
   '/vessels/*/design/keel/angle': {
-    description: 'Data should be of type number.',
+    description: 'Angle of a canting keel; negative to port.',
     units: 'rad'
   },
   '/vessels/*/design/keel/lift': {
-    description: 'Data should be of type number.',
+    description:
+      'How far a lifting keel, centreboard or daggerboard is extended: 0 is fully up, 1 is fully down.',
     units: 'ratio'
   },
   '/vessels/*/design/beam': {

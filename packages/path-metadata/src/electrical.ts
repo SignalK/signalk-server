@@ -4,12 +4,21 @@ import type { PathMetadataEntry } from './types'
 // its own group: an unbracketed | would split the whole key in two.
 const AC_PHASE_NAME = '(single|[A-C])'
 
-function acPhaseMetadata(parent: string): Record<string, PathMetadataEntry> {
+const AC_PHASES_DESCRIPTION =
+  'Values per phase: single for a single-phase system, A, B and C for a three-phase system, A and B for a split-phase system.'
+
+const INVERTER_AC_PHASES_DESCRIPTION =
+  'Values for lines 2 and 3 (B and C) of an inverter output that reports more than one line. Line 1 is directly under ac.'
+
+function acPhaseMetadata(
+  parent: string,
+  phasesDescription = AC_PHASES_DESCRIPTION
+): Record<string, PathMetadataEntry> {
   const phases = `${parent}/phase`
   const phase = `${phases}/${AC_PHASE_NAME}`
   return {
     [phases]: {
-      description: 'Single or A,B or C in 3 Phase systems '
+      description: phasesDescription
     },
     [phase]: {
       description: 'AC equipment common qualities'
@@ -32,7 +41,7 @@ function acPhaseMetadata(parent: string): Record<string, PathMetadataEntry> {
       units: 'A'
     },
     [`${phase}/frequency`]: {
-      description: 'Data should be of type number.',
+      description: 'AC frequency on this phase.',
       units: 'Hz'
     },
     [`${phase}/reactivePower`]: {
@@ -40,15 +49,17 @@ function acPhaseMetadata(parent: string): Record<string, PathMetadataEntry> {
       units: 'VAR'
     },
     [`${phase}/powerFactor`]: {
-      description: 'Power factor: real power divided by apparent power',
+      description:
+        'Power factor on this phase: real power divided by apparent power.',
       units: 'ratio'
     },
     [`${phase}/powerFactorLagging`]: {
-      description: 'Lead/lag status.',
+      description:
+        'Whether the current on this phase leads or lags the voltage.',
       enum: ['leading', 'lagging', 'error', 'not available']
     },
     [`${phase}/realPower`]: {
-      description: 'Data should be of type number.',
+      description: 'Real power on this phase.',
       units: 'W'
     },
     [`${phase}/apparentPower`]: {
@@ -199,7 +210,7 @@ export const electricalMetadata: Record<string, PathMetadataEntry> = {
     units: 'RFC 3339 (UTC)'
   },
   '/vessels/*/electrical/batteries/RegExp/manufacturer': {
-    description: '[missing]'
+    description: 'Manufacturer of the battery.'
   },
   '/vessels/*/electrical/batteries/RegExp/manufacturer/name': {
     description: "Manufacturer's name"
@@ -319,11 +330,12 @@ export const electricalMetadata: Record<string, PathMetadataEntry> = {
     units: 'ratio'
   },
   '/vessels/*/electrical/batteries/RegExp/capacity/stateOfHealth': {
-    description: 'Data should be of type number.',
+    description:
+      'Capacity the battery has now compared with when it was new; 1 is as new.',
     units: 'ratio'
   },
   '/vessels/*/electrical/batteries/RegExp/capacity/dischargeSinceFull': {
-    description: 'Data should be of type number.',
+    description: 'Charge taken from the battery since it was last full.',
     units: 'C'
   },
   '/vessels/*/electrical/batteries/RegExp/capacity/timeRemaining': {
@@ -360,7 +372,7 @@ export const electricalMetadata: Record<string, PathMetadataEntry> = {
     units: 'RFC 3339 (UTC)'
   },
   '/vessels/*/electrical/inverters/RegExp/manufacturer': {
-    description: '[missing]'
+    description: 'Manufacturer of the inverter.'
   },
   '/vessels/*/electrical/inverters/RegExp/manufacturer/name': {
     description: "Manufacturer's name"
@@ -372,7 +384,7 @@ export const electricalMetadata: Record<string, PathMetadataEntry> = {
     description: 'Web reference / URL'
   },
   '/vessels/*/electrical/inverters/RegExp/dc': {
-    description: 'DC common qualities'
+    description: 'DC side of the inverter.'
   },
   '/vessels/*/electrical/inverters/RegExp/dc/associatedBus': {
     description: 'Name of BUS device is associated with'
@@ -439,7 +451,7 @@ export const electricalMetadata: Record<string, PathMetadataEntry> = {
     units: 'A'
   },
   '/vessels/*/electrical/inverters/RegExp/ac/frequency': {
-    description: 'Data should be of type number.',
+    description: 'AC frequency at the output of the inverter.',
     units: 'Hz'
   },
   '/vessels/*/electrical/inverters/RegExp/ac/reactivePower': {
@@ -447,15 +459,17 @@ export const electricalMetadata: Record<string, PathMetadataEntry> = {
     units: 'VAR'
   },
   '/vessels/*/electrical/inverters/RegExp/ac/powerFactor': {
-    description: 'Power factor: real power divided by apparent power',
+    description:
+      'Power factor at the AC output of the inverter: real power divided by apparent power.',
     units: 'ratio'
   },
   '/vessels/*/electrical/inverters/RegExp/ac/powerFactorLagging': {
-    description: 'Lead/lag status.',
+    description:
+      'Whether the current at the AC output of the inverter leads or lags the voltage.',
     enum: ['leading', 'lagging', 'error', 'not available']
   },
   '/vessels/*/electrical/inverters/RegExp/ac/realPower': {
-    description: 'Data should be of type number.',
+    description: 'Real power at the AC output of the inverter.',
     units: 'W'
   },
   '/vessels/*/electrical/inverters/RegExp/ac/apparentPower': {
@@ -520,7 +534,7 @@ export const electricalMetadata: Record<string, PathMetadataEntry> = {
     units: 'RFC 3339 (UTC)'
   },
   '/vessels/*/electrical/chargers/RegExp/manufacturer': {
-    description: '[missing]'
+    description: 'Manufacturer of the charger.'
   },
   '/vessels/*/electrical/chargers/RegExp/manufacturer/name': {
     description: "Manufacturer's name"
@@ -605,11 +619,11 @@ export const electricalMetadata: Record<string, PathMetadataEntry> = {
     units: 's'
   },
   '/vessels/*/electrical/chargers/RegExp/setpointVoltage': {
-    description: 'Data should be of type number.',
+    description: 'Target voltage the charger regulates to.',
     units: 'V'
   },
   '/vessels/*/electrical/chargers/RegExp/setpointCurrent': {
-    description: 'Data should be of type number.',
+    description: 'Current limit the charger regulates to.',
     units: 'A'
   },
   '/vessels/*/electrical/alternators': {
@@ -631,7 +645,7 @@ export const electricalMetadata: Record<string, PathMetadataEntry> = {
     units: 'RFC 3339 (UTC)'
   },
   '/vessels/*/electrical/alternators/RegExp/manufacturer': {
-    description: '[missing]'
+    description: 'Manufacturer of the alternator.'
   },
   '/vessels/*/electrical/alternators/RegExp/manufacturer/name': {
     description: "Manufacturer's name"
@@ -687,27 +701,28 @@ export const electricalMetadata: Record<string, PathMetadataEntry> = {
   '/vessels/*/electrical/alternators/RegExp/chargerRole': chargerRoleMetadata,
   '/vessels/*/electrical/alternators/RegExp/chargingMode': chargingModeMetadata,
   '/vessels/*/electrical/alternators/RegExp/setpointVoltage': {
-    description: 'Data should be of type number.',
+    description: 'Target voltage the alternator regulates to.',
     units: 'V'
   },
   '/vessels/*/electrical/alternators/RegExp/setpointCurrent': {
-    description: 'Data should be of type number.',
+    description: 'Current limit the alternator regulates to.',
     units: 'A'
   },
   '/vessels/*/electrical/alternators/RegExp/revolutions': {
-    description: 'Data should be of type number.',
+    description: 'Alternator speed.',
     units: 'Hz'
   },
   '/vessels/*/electrical/alternators/RegExp/pulleyRatio': {
-    description: 'Data should be of type number.',
+    description:
+      'Ratio of alternator speed to engine speed, set by the pulleys; used to calculate engine speed from alternator speed.',
     units: 'ratio'
   },
   '/vessels/*/electrical/alternators/RegExp/fieldDrive': {
-    description: 'Data should be of type number.',
+    description: 'Share of the field voltage the regulator applies.',
     units: '%'
   },
   '/vessels/*/electrical/alternators/RegExp/regulatorTemperature': {
-    description: 'Data should be of type number.',
+    description: "Temperature of the regulator's critical components.",
     units: 'K'
   },
   '/vessels/*/electrical/solar': {
@@ -729,7 +744,7 @@ export const electricalMetadata: Record<string, PathMetadataEntry> = {
     units: 'RFC 3339 (UTC)'
   },
   '/vessels/*/electrical/solar/RegExp/manufacturer': {
-    description: '[missing]'
+    description: 'Manufacturer of the solar controller.'
   },
   '/vessels/*/electrical/solar/RegExp/manufacturer/name': {
     description: "Manufacturer's name"
@@ -785,11 +800,11 @@ export const electricalMetadata: Record<string, PathMetadataEntry> = {
   '/vessels/*/electrical/solar/RegExp/chargerRole': chargerRoleMetadata,
   '/vessels/*/electrical/solar/RegExp/chargingMode': chargingModeMetadata,
   '/vessels/*/electrical/solar/RegExp/setpointVoltage': {
-    description: 'Data should be of type number.',
+    description: 'Target voltage the solar controller regulates to.',
     units: 'V'
   },
   '/vessels/*/electrical/solar/RegExp/setpointCurrent': {
-    description: 'Data should be of type number.',
+    description: 'Current limit the solar controller regulates to.',
     units: 'A'
   },
   '/vessels/*/electrical/solar/RegExp/controllerMode': {
@@ -813,14 +828,14 @@ export const electricalMetadata: Record<string, PathMetadataEntry> = {
     units: 'K'
   },
   '/vessels/*/electrical/solar/RegExp/yieldToday': {
-    description: 'Data should be of type number.',
+    description: 'Energy produced by the solar panels today.',
     units: 'J'
   },
   '/vessels/*/electrical/solar/RegExp/load': {
     description: 'State of load port on controller (if applicable)'
   },
   '/vessels/*/electrical/solar/RegExp/loadCurrent': {
-    description: 'Data should be of type number.',
+    description: 'Current supplied to the load output of the solar controller.',
     units: 'A'
   },
   '/vessels/*/electrical/ac': {
@@ -842,7 +857,7 @@ export const electricalMetadata: Record<string, PathMetadataEntry> = {
     units: 'RFC 3339 (UTC)'
   },
   '/vessels/*/electrical/ac/RegExp/manufacturer': {
-    description: '[missing]'
+    description: 'Manufacturer of the AC bus.'
   },
   '/vessels/*/electrical/ac/RegExp/manufacturer/name': {
     description: "Manufacturer's name"
@@ -858,7 +873,10 @@ export const electricalMetadata: Record<string, PathMetadataEntry> = {
   ...acAverageAndTotalMetadata('/vessels/*/electrical/ac/RegExp'),
   ...acAverageAndTotalMetadata('/vessels/*/electrical/generators/RegExp'),
   // Lines 2 and 3 of a three-phase inverter output; see inverters/RegExp/ac
-  ...acPhaseMetadata('/vessels/*/electrical/inverters/RegExp/ac'),
+  ...acPhaseMetadata(
+    '/vessels/*/electrical/inverters/RegExp/ac',
+    INVERTER_AC_PHASES_DESCRIPTION
+  ),
   [`/vessels/*/electrical/ac/RegExp/phase/${AC_PHASE_NAME}/acceptability`]: {
     description:
       'Whether the AC input is acceptable, or why not, such as bad level or bad frequency',

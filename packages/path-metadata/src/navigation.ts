@@ -498,7 +498,8 @@ export const navigationMetadata: Record<string, PathMetadataEntry> = {
     description: 'Global satellite navigation meta information'
   },
   '/vessels/*/navigation/gnss/type': {
-    description: 'Fix type'
+    description:
+      'Satellite system or method used for the fix, such as GPS, GLONASS or Galileo.'
   },
   '/vessels/*/navigation/gnss/methodQuality': {
     description:

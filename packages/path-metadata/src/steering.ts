@@ -19,10 +19,11 @@ export const steeringMetadata: Record<string, PathMetadataEntry> = {
   },
   '/vessels/*/steering/autopilot/state': {
     description:
-      'Autopilot state. For example standby, auto, wind or route; the autopilot is also called the pilot or AP.'
+      'Autopilot state, such as enabled or disabled (standby). Which states are available depends on the autopilot; the Autopilot API lists them. The autopilot is also called the pilot or AP.'
   },
   '/vessels/*/steering/autopilot/mode': {
-    description: 'Operational mode'
+    description:
+      'Steering mode of the autopilot, such as compass, gps or wind. Which modes are available depends on the autopilot; the Autopilot API lists them.'
   },
   '/vessels/*/steering/autopilot/target': {
     description: 'Autopilot target'
@@ -48,30 +49,32 @@ export const steeringMetadata: Record<string, PathMetadataEntry> = {
     units: 'rad'
   },
   '/vessels/*/steering/autopilot/deadZone': {
-    description: 'Data should be of type number.',
+    description:
+      'Heading error the autopilot ignores before it moves the rudder.',
     units: 'rad'
   },
   '/vessels/*/steering/autopilot/backlash': {
-    description: 'Data should be of type number.',
+    description: 'Slack in the rudder drive.',
     units: 'rad'
   },
   '/vessels/*/steering/autopilot/gain': {
-    description: 'Data should be of type number.'
+    description:
+      'Autopilot gain; a higher value gives more rudder for the same heading error.'
   },
   '/vessels/*/steering/autopilot/maxDriveCurrent': {
-    description: 'Data should be of type number.',
+    description: 'Maximum current the autopilot uses to drive the rudder.',
     units: 'A'
   },
   '/vessels/*/steering/autopilot/maxDriveRate': {
-    description: 'Data should be of type number.',
+    description: 'Maximum speed at which the autopilot turns the rudder.',
     units: 'rad/s'
   },
   '/vessels/*/steering/autopilot/portLock': {
-    description: 'Data should be of type number.',
+    description: 'Rudder drive position at the port stop.',
     units: 'rad'
   },
   '/vessels/*/steering/autopilot/starboardLock': {
-    description: 'Data should be of type number.',
+    description: 'Rudder drive position at the starboard stop.',
     units: 'rad'
   }
 }
