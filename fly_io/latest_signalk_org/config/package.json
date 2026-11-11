@@ -11,6 +11,7 @@
     "@signalk/tracks-plugin": "latest",
     "hoekens-anchor-alarm": "latest",
     "signalk-aiscast": "latest",
+    "signalk-alert-center": "latest",
     "signalk-autopilot-emulator-v2": "latest",
     "signalk-buddylist-plugin": "latest",
     "signalk-charts-provider-simple": "latest",
