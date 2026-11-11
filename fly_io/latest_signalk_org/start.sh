@@ -1,4 +1,14 @@
 #!/bin/sh
+# A Fly volume mounts as root. Hand the history directory to node and go on
+# as node; without a volume it is a plain directory in the image.
+HISTORY_DIR=/home/node/history
+if [ "$(id -u)" = 0 ]; then
+  mkdir -p "$HISTORY_DIR"
+  chown node:node "$HISTORY_DIR"
+  export HOME=/home/node
+  exec setpriv --reuid=node --regid=node --init-groups "$0" "$@"
+fi
+
 # The radar is mayara's emulator, following the simulated boat and showing
 # its AIS traffic and the ENC's land, buoys and beacons. --parent stops it
 # with the server, which takes over this shell's process.

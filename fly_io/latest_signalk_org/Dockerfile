@@ -29,4 +29,6 @@ ENV DISABLE_SECURITY_ACTIVATION=true
 # Set by the image's own startup.sh, which start.sh replaces
 ENV IS_IN_DOCKER=true SIGNALK_SERVER_IS_UPDATABLE=true
 COPY --chown=node:node --chmod=600 security.json /home/node/.signalk/security.json
+# start.sh starts as root to hand the history volume to node, then drops to node
+USER root
 ENTRYPOINT ["/home/node/start.sh"]
