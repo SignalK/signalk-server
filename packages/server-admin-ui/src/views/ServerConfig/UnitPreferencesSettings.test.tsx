@@ -73,4 +73,19 @@ describe('UnitPreferencesSettings without admin rights', () => {
       )
     ).toBeTruthy()
   })
+
+  it('shows the units to a logged-in read-only user on a closed server', async () => {
+    useStore.setState({
+      loginStatus: {
+        status: 'loggedIn',
+        authenticationRequired: true,
+        readOnlyAccess: false,
+        userLevel: 'readonly'
+      }
+    })
+    render(<UnitPreferencesSettings />)
+    const select = (await screen.findByRole('combobox')) as HTMLSelectElement
+    expect(select.value).toBe(SERVER_DEFAULT)
+    expect(select.disabled).toBe(true)
+  })
 })

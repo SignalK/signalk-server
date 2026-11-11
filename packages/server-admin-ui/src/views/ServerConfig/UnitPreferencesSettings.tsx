@@ -47,11 +47,14 @@ const UnitPreferencesSettings: React.FC = () => {
     loginStatus.authenticationRequired === false ||
     (loggedIn && loginStatus.userLevel !== 'readonly')
 
+  // Every logged-in user may read; the preset to show changes with the user.
+  const canRead = loggedIn || canChoose || loginStatus.readOnlyAccess
+  const username = loginStatus.username
   useEffect(() => {
-    if (canChoose || loginStatus.readOnlyAccess) {
+    if (canRead) {
       fetchUnitPreferences()
     }
-  }, [fetchUnitPreferences, canChoose, loginStatus.readOnlyAccess])
+  }, [fetchUnitPreferences, canRead, username])
 
   const isAdmin =
     !loginStatus.authenticationRequired ||
