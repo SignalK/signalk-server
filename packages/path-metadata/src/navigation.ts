@@ -424,8 +424,7 @@ export const navigationMetadata: Record<string, PathMetadataEntry> = {
     }
   },
   '/vessels/*/navigation/racing/distanceStartline': {
-    description:
-      'The current distance to the start line. Also called distance to the line, before a race start.',
+    description: 'Current distance to the start line, before a race start.',
     units: 'm'
   },
   '/vessels/*/navigation/racing/timeToStart': {
@@ -672,12 +671,11 @@ export const navigationMetadata: Record<string, PathMetadataEntry> = {
   },
   '/vessels/*/navigation/anchor/maxRadius': {
     description:
-      'Radius of anchor alarm boundary. The distance from anchor to the center of the boat. Also called the anchor alarm radius or swing circle.',
+      'Radius of the anchor alarm boundary around the anchor position. An active anchor watch raises an alarm when currentRadius exceeds it.',
     units: 'm'
   },
   '/vessels/*/navigation/anchor/currentRadius': {
-    description:
-      'Current distance to anchor. Also called the distance from the anchor.',
+    description: 'Current distance between the anchor position and the vessel.',
     units: 'm'
   },
   '/vessels/*/navigation/anchor/position': {
