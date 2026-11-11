@@ -560,12 +560,18 @@ module.exports = function (app) {
     } catch (err) {
       debug.enabled && debug('npm metadata fetch for %s failed: %O', name, err)
     }
+    if (registryMeta && typeof registryMeta.deprecated === 'string') {
+      pkgForEnrichment = { ...pkg, deprecated: registryMeta.deprecated }
+    }
     if (registryMeta && registryMeta.signalk) {
-      pkgForEnrichment = { ...pkg, signalk: registryMeta.signalk }
+      pkgForEnrichment = { ...pkgForEnrichment, signalk: registryMeta.signalk }
     } else if (isInstalled) {
       const installedMeta = getInstalledPackageMetadata(name)
       if (installedMeta && installedMeta.signalk) {
-        pkgForEnrichment = { ...pkg, signalk: installedMeta.signalk }
+        pkgForEnrichment = {
+          ...pkgForEnrichment,
+          signalk: installedMeta.signalk
+        }
       }
     }
 
@@ -644,6 +650,7 @@ module.exports = function (app) {
           screenshots: ext.screenshots || [],
           official: ext.official,
           deprecated: ext.deprecated,
+          deprecationMessage: ext.deprecationMessage,
           description: pkg.description,
           author: getAuthor(pkg),
           categories: getCategories(pkgForEnrichment),
@@ -1069,43 +1076,74 @@ module.exports = function (app) {
       findModulesWithKeyword(NODE_PLUGIN_KEYWORD),
       findModulesWithKeyword('signalk-embeddable-webapp'),
       findModulesWithKeyword('signalk-webapp')
-    ]).then(([npmPlugins, embeddableWebapps, webapps]) => {
-      // An installed WASM plugin published without the Node plugin keyword
-      // is missing from the search, but must stay updatable and removable.
-      const listed = new Set(npmPlugins.map((p) => p.package.name))
-      const publicWebapps = new Map(
-        [...embeddableWebapps, ...webapps].map((w) => [w.package.name, w])
-      )
-      const notInSearch = getInstalledAsPackageEntries(NODE_PLUGIN_KEYWORD)
-        .filter(
-          (p) =>
-            !listed.has(p.package.name) && isWasmPackage(p.package.keywords)
-        )
-        .map(
-          (p) =>
-            publicWebapps.get(p.package.name) ?? {
-              ...p,
-              installedVersion: p.package.version,
-              installedOnly: true
-            }
-        )
-      // Discovery reads the dist-tags the store list last fetched instead of
-      // waiting for npm; the store list applies the ones it fetches itself.
-      const plugins = withPublishedVersions(
-        npmPlugins.concat(notInSearch),
-        cachedDistTags()
-      )
-      const allWebapps = []
+    ]).then(async ([npmPlugins, embeddableWebapps, webapps]) => {
+      const searchedWebapps = []
         .concat(embeddableWebapps)
         .concat(webapps)
         .filter((m) => !bundledAdminUIs.includes(m.package.name))
+      // An installed WASM plugin published without the Node plugin keyword
+      // is missing from the search, and so is every package whose current
+      // version npm marks deprecated. Both must stay visible, updatable and
+      // removable.
+      const publicWebapps = new Map(
+        [...embeddableWebapps, ...webapps].map((w) => [w.package.name, w])
+      )
+      const [pluginsNotInSearch, webappsNotInSearch] = await Promise.all([
+        installedNotInSearch(NODE_PLUGIN_KEYWORD, npmPlugins, publicWebapps),
+        installedNotInSearch('signalk-webapp', searchedWebapps)
+      ])
+      // Discovery reads the dist-tags the store list last fetched instead of
+      // waiting for npm; the store list applies the ones it fetches itself.
+      const plugins = withPublishedVersions(
+        npmPlugins.concat(pluginsNotInSearch),
+        cachedDistTags()
+      )
       return [
         plugins,
-        _.uniqBy(allWebapps, (plugin) => {
+        _.uniqBy(searchedWebapps.concat(webappsNotInSearch), (plugin) => {
           return plugin.package.name
         })
       ]
     })
+  }
+
+  // A WASM plugin npm lists as a webapp keeps that public entry; anything
+  // else comes from the local install only.
+  async function installedNotInSearch(keyword, searched, publicEntries) {
+    const listed = new Set(searched.map((p) => p.package.name))
+    const candidates = getInstalledAsPackageEntries(keyword).filter(
+      (p) =>
+        !listed.has(p.package.name) && !bundledAdminUIs.includes(p.package.name)
+    )
+    const entries = await Promise.all(
+      candidates.map(async (p) => {
+        const deprecated = await npmDeprecationOf(
+          p.package.name,
+          p.package.version
+        )
+        if (!deprecated && !isWasmPackage(p.package.keywords)) return undefined
+        const published = !deprecated && publicEntries?.get(p.package.name)
+        if (published) return published
+        return {
+          ...p,
+          package: deprecated ? { ...p.package, deprecated } : p.package,
+          installedVersion: p.package.version,
+          installedOnly: true
+        }
+      })
+    )
+    return entries.filter(Boolean)
+  }
+
+  async function npmDeprecationOf(name, version) {
+    if (!version) return undefined
+    try {
+      const meta = await npmMetadata.get(name, version)
+      return typeof meta?.deprecated === 'string' ? meta.deprecated : undefined
+    } catch (err) {
+      debug.enabled && debug('npm metadata for %s failed: %O', name, err)
+      return undefined
+    }
   }
 
   function getInstalledAsPackageEntries(keyword) {
@@ -1322,6 +1360,7 @@ module.exports = function (app) {
             : undefined,
         official: ext.official,
         deprecated: ext.deprecated,
+        deprecationMessage: ext.deprecationMessage,
         githubUrl: ext.githubUrl,
         issuesUrl: ext.issuesUrl,
         requires: ext.requires,
