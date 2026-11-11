@@ -108,6 +108,40 @@ function seedInstalledPlugins(configDir: string) {
   }
 }
 
+// A detail page cached for the installed version before npm deprecated it.
+function seedCachedDetail(configDir: string) {
+  const dir = path.join(
+    configDir,
+    'appstore-cache',
+    'plugins',
+    DEPRECATED_PLUGIN
+  )
+  fs.mkdirSync(dir, { recursive: true })
+  fs.writeFileSync(
+    path.join(dir, 'detail.json'),
+    JSON.stringify({
+      writtenAt: Date.now(),
+      installed: true,
+      payload: {
+        name: DEPRECATED_PLUGIN,
+        version: INSTALLED_VERSION,
+        screenshots: [],
+        official: false,
+        deprecated: false,
+        isWasm: false,
+        readme: '',
+        changelog: '',
+        requires: [],
+        recommends: [],
+        readmeFormat: 'markdown',
+        changelogFormat: 'markdown',
+        fetchedAt: Date.now(),
+        fromCache: true
+      }
+    })
+  )
+}
+
 async function startAppStoreServer() {
   const configDir = fs.mkdtempSync(
     path.join(os.tmpdir(), 'sk-appstore-deprecated-')
@@ -119,6 +153,7 @@ async function startAppStoreServer() {
   }
   try {
     seedInstalledPlugins(configDir)
+    seedCachedDetail(configDir)
     const port = await freeport()
     const server = await startServerP(
       port,
@@ -185,7 +220,7 @@ describe('appstore lists installed npm-deprecated plugins', function () {
     expect(entry!.deprecationMessage).to.equal(undefined)
   })
 
-  it('shows the npm deprecation notice on the detail page', async function () {
+  it('shows the npm deprecation notice on a detail page cached before the deprecation', async function () {
     await getAppStore(host)
     const res = await fetch(
       `${host}/skServer/appstore/plugin/${DEPRECATED_PLUGIN}`

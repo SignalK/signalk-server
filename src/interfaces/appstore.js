@@ -535,14 +535,22 @@ module.exports = function (app) {
     // plugin's entry as fresh indefinitely, so without it a newly
     // published release would never reach the detail page.
     const cachedDetail = readDetailFromCache(cache, name)
+    const npmNotice =
+      typeof pkg.deprecated === 'string' ? pkg.deprecated.trim() : ''
     // An entry cached while the README was unreachable is rebuilt once
     // the installed copy can supply it, and so is an entry without
-    // isWasm, which the detail page needs for the WASM badge.
+    // isWasm, which the detail page needs for the WASM badge, and one
+    // cached before npm deprecated the version.
     if (
       cachedDetail &&
       cachedDetail.version === pkg.version &&
       typeof cachedDetail.isWasm === 'boolean' &&
-      !(isInstalled && !cachedDetail.readme && installedReadmeFor(pkg)?.trim())
+      !(
+        isInstalled &&
+        !cachedDetail.readme &&
+        installedReadmeFor(pkg)?.trim()
+      ) &&
+      !(npmNotice && cachedDetail.deprecationMessage !== npmNotice)
     ) {
       return cachedDetail
     }
