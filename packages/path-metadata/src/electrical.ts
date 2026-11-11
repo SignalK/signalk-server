@@ -38,7 +38,7 @@ function acPhaseMetadata(parent: string): Record<string, PathMetadataEntry> {
       units: 'VAR'
     },
     [`${phase}/powerFactor`]: {
-      description: 'Data should be of type number.',
+      description: 'Power factor: real power divided by apparent power',
       units: 'ratio'
     },
     [`${phase}/powerFactorLagging`]: {
@@ -113,7 +113,8 @@ function acAverageAndTotalMetadata(
       units: 'VAR'
     },
     [`${total}/powerFactor`]: {
-      description: 'Power factor of all phases together',
+      description:
+        'Power factor of all phases together: total real power divided by total apparent power',
       units: 'ratio'
     },
     [`${total}/powerFactorLagging`]: {
@@ -397,7 +398,7 @@ export const electricalMetadata: Record<string, PathMetadataEntry> = {
     units: 'VAR'
   },
   '/vessels/*/electrical/inverters/RegExp/ac/powerFactor': {
-    description: 'Data should be of type number.',
+    description: 'Power factor: real power divided by apparent power',
     units: 'ratio'
   },
   '/vessels/*/electrical/inverters/RegExp/ac/powerFactorLagging': {
