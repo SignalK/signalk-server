@@ -40,11 +40,12 @@ const UnitPreferencesSettings: React.FC = () => {
   const [updateServerDefault, setUpdateServerDefault] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // The chosen preset is stored per user, so an anonymous read-only
-  // visitor sees the server default without being able to change it.
+  // The chosen preset is saved as the user's application data, which the
+  // server lets only users with write access store.
+  const loggedIn = loginStatus.status === 'loggedIn'
   const canChoose =
-    loginStatus.status === 'loggedIn' ||
-    loginStatus.authenticationRequired === false
+    loginStatus.authenticationRequired === false ||
+    (loggedIn && loginStatus.userLevel !== 'readonly')
 
   useEffect(() => {
     if (canChoose || loginStatus.readOnlyAccess) {
@@ -312,7 +313,9 @@ const UnitPreferencesSettings: React.FC = () => {
             </div>
             {!canChoose && (
               <Form.Text className="text-muted">
-                Log in to choose your own display units.
+                {loggedIn
+                  ? 'Only users with write access can choose their own display units.'
+                  : 'Log in to choose your own display units.'}
               </Form.Text>
             )}
             {isAdmin && (

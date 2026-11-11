@@ -54,4 +54,23 @@ describe('UnitPreferencesSettings without admin rights', () => {
     const select = (await screen.findByRole('combobox')) as HTMLSelectElement
     expect(select.disabled).toBe(false)
   })
+
+  it('keeps the choice locked for a logged-in read-only user', async () => {
+    useStore.setState({
+      loginStatus: {
+        status: 'loggedIn',
+        authenticationRequired: true,
+        readOnlyAccess: true,
+        userLevel: 'readonly'
+      }
+    })
+    render(<UnitPreferencesSettings />)
+    const select = (await screen.findByRole('combobox')) as HTMLSelectElement
+    expect(select.disabled).toBe(true)
+    expect(
+      screen.getByText(
+        'Only users with write access can choose their own display units.'
+      )
+    ).toBeTruthy()
+  })
 })
