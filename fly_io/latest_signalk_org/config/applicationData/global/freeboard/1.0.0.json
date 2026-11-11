@@ -78,6 +78,7 @@
   "resources": {
     "paths": [
       "restricted-areas"
-    ]
+    ],
+    "routeStyle": "chevrons"
   }
 }
