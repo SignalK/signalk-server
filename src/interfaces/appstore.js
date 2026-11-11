@@ -358,8 +358,12 @@ module.exports = function (app) {
             name = req.params.org + '/' + name
           }
 
+          const publicOnly = !seesInstalled(req)
           try {
-            const detail = await loadPluginDetail(name)
+            const detail =
+              publicOnly && (await isInstalledOnly(name))
+                ? null
+                : await loadPluginDetail(name)
             if (!detail) {
               res.status(404).json({
                 error: 'Plugin not found',
@@ -372,7 +376,12 @@ module.exports = function (app) {
           } catch (err) {
             console.log(err.message)
             debug.enabled && debug(err.stack)
-            const cached = readDetailFromCache(cache, name)
+            // Offline nothing tells an installed-only package from a
+            // published one, so visitors get no detail of anything installed.
+            const cached =
+              publicOnly && (getPlugin(name) || getWebApp(name))
+                ? undefined
+                : readDetailFromCache(cache, name)
             if (cached) {
               const offline = {
                 ...cached,
@@ -1279,7 +1288,7 @@ module.exports = function (app) {
       const pluginInfo = {
         name: name,
         version: version,
-        installedOnly: plugin.installedOnly,
+        installedOnly: plugin.installedOnly === true,
         description: plugin.package.description,
         author: getAuthor(plugin.package),
         categories: getCategories(plugin.package),
@@ -1460,9 +1469,21 @@ module.exports = function (app) {
   }
 
   // Without npm and without a cached list, the offline answer lists what is
-  // installed as available.
+  // installed as available. A list cached before entries were marked cannot
+  // tell installed-only packages apart.
   function listsOnlyInstalled(appStore) {
-    return appStore.storeAvailable === false && appStore.fromCache === false
+    if (appStore.storeAvailable !== false) return false
+    return (
+      appStore.fromCache === false ||
+      appStore.available.some(
+        (entry) => typeof entry.installedOnly !== 'boolean'
+      )
+    )
+  }
+
+  async function isInstalledOnly(name) {
+    const [plugins] = await findPluginsAndWebapps()
+    return plugins.some((p) => p.package.name === name && p.installedOnly)
   }
 
   function catalogOnly(appStore) {

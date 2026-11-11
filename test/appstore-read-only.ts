@@ -206,6 +206,21 @@ describe('appstore for read-only users', function () {
     }
   })
 
+  it('has no detail for an installed-only package for non-admins', async function () {
+    for (const token of [undefined, readToken]) {
+      const res = await fetch(
+        `${host}/skServer/appstore/plugin/${INSTALLED_ONLY}`,
+        { headers: headers(token) }
+      )
+      expect(res.status).to.equal(404)
+    }
+    const res = await fetch(
+      `${host}/skServer/appstore/plugin/${INSTALLED_ONLY}`,
+      { headers: headers(adminToken) }
+    )
+    expect(res.status).to.equal(200)
+  })
+
   it('still tells the admin what is installed', async function () {
     const store = await getStore(adminToken)
     const installed = store.installed.find((a) => a.name === INSTALLED)
