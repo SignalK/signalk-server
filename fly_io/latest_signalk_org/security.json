@@ -20,6 +20,10 @@
             {
               "subject": "demo",
               "permission": "put"
+            },
+            {
+              "subject": "any",
+              "permission": "read"
             }
           ]
         },
@@ -29,6 +33,10 @@
             {
               "subject": "demo",
               "permission": "put"
+            },
+            {
+              "subject": "any",
+              "permission": "read"
             }
           ]
         },
