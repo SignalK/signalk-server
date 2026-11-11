@@ -34,6 +34,14 @@
       {
         "enabled": true,
         "autostart": false,
+        "url": "/signalk-alert-center/",
+        "label": "Alert Center",
+        "icon": "/signalk-alert-center/icon-192.png",
+        "color": ""
+      },
+      {
+        "enabled": true,
+        "autostart": false,
         "url": "/signalk-rules/",
         "label": "Rules",
         "icon": "/signalk-rules/icon.svg",
