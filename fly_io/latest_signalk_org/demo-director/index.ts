@@ -308,11 +308,9 @@ export default function (app: ServerAPI): Plugin {
     nightSince ??= Date.now()
     if (Date.now() - nightSince < VISITOR_IDLE_MS) return
     nightSince = undefined
-    app.handleMessage(PLUGIN_ID, {
-      updates: [
-        { values: [{ path: 'environment.mode' as Path, value: 'day' }] }
-      ]
-    })
+    // Through App Dock's own handler, so the mode keeps one source and a
+    // client never gets a stale night next to the day.
+    void app.putSelfPath('environment.mode', 'day', () => {})
   }
 
   function tick() {

@@ -27,10 +27,14 @@ function fakeApp(
 ) {
   const activated: unknown[] = []
   const messages: unknown[] = []
+  const puts: unknown[] = []
   const app = {
     getSelfPath: (path: string) => selfValues[path] ?? position,
     handleMessage: (_id: string, delta: unknown) => {
       messages.push(delta)
+    },
+    putSelfPath: async (path: string, value: unknown) => {
+      puts.push({ path, value })
     },
     setPluginStatus: () => {},
     getDataDirPath: () => join(configDir, 'plugin-config-data', 'director'),
@@ -43,7 +47,7 @@ function fakeApp(
       activated.push(dest)
     }
   }
-  return { app: app as unknown as ServerAPI, activated, messages }
+  return { app: app as unknown as ServerAPI, activated, messages, puts }
 }
 
 describe('demo director', () => {
@@ -219,12 +223,6 @@ describe('demo director', () => {
     const FIVE_MINUTES = 5 * 60 * 1000
     const TICK = 5000
 
-    function modeDeltas(messages: unknown[]) {
-      return messages.filter((m) =>
-        JSON.stringify(m).includes('"environment.mode"')
-      )
-    }
-
     it('switches back to day after five minutes', async () => {
       mock.timers.enable({ apis: ['Date', 'setInterval'] })
       const values: Record<string, unknown> = {
@@ -233,7 +231,7 @@ describe('demo director', () => {
         'steering.autopilot.mode.value': 'route',
         'steering.autopilot.engaged.value': true
       }
-      const { app, messages } = fakeApp(
+      const { app, puts } = fakeApp(
         { pointIndex: 2, pointTotal: 5, reverse: false },
         FAR_FROM_FINAL,
         values
@@ -241,13 +239,9 @@ describe('demo director', () => {
       plugin = director(app)
       await plugin.start({}, () => {})
       mock.timers.tick(FIVE_MINUTES - TICK)
-      assert.equal(modeDeltas(messages).length, 0)
+      assert.deepEqual(puts, [])
       mock.timers.tick(TICK)
-      assert.deepEqual(modeDeltas(messages), [
-        {
-          updates: [{ values: [{ path: 'environment.mode', value: 'day' }] }]
-        }
-      ])
+      assert.deepEqual(puts, [{ path: 'environment.mode', value: 'day' }])
     })
 
     it('starts counting again after a switch to day', async () => {
@@ -258,7 +252,7 @@ describe('demo director', () => {
         'steering.autopilot.mode.value': 'route',
         'steering.autopilot.engaged.value': true
       }
-      const { app, messages } = fakeApp(
+      const { app, puts } = fakeApp(
         { pointIndex: 2, pointTotal: 5, reverse: false },
         FAR_FROM_FINAL,
         values
@@ -270,7 +264,7 @@ describe('demo director', () => {
       mock.timers.tick(TICK)
       values['environment.mode.value'] = 'night'
       mock.timers.tick(FIVE_MINUTES - TICK)
-      assert.equal(modeDeltas(messages).length, 0)
+      assert.deepEqual(puts, [])
     })
   })
 
