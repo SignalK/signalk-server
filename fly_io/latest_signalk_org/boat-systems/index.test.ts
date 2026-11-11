@@ -4,8 +4,10 @@ import { afterEach, beforeEach, describe, it } from 'node:test'
 import type { Plugin, ServerAPI } from '@signalk/server-api'
 import boatSystems, {
   antennaPosition,
+  bilgePumpDue,
   CHARGE_STATES,
   CIRCUITS,
+  inverterSurgeAmps,
   orionXsRecord,
   parseSwitchValue,
   PUSHPIT_ANTENNAS,
@@ -98,6 +100,25 @@ describe('parseSwitchValue', () => {
   it('rejects anything else', () => {
     for (const other of [2, 'yes', null, undefined, {}])
       assert.equal(parseSwitchValue(other), undefined)
+  })
+})
+
+describe('events for Alert Center', () => {
+  it('runs the bilge pump for 45 s every 45 minutes', () => {
+    assert.equal(bilgePumpDue(0), true)
+    assert.equal(bilgePumpDue(44), true)
+    assert.equal(bilgePumpDue(45), false)
+    assert.equal(bilgePumpDue(45 * 60 - 1), false)
+    assert.equal(bilgePumpDue(45 * 60), true)
+  })
+
+  it('draws the inverter surge for one minute in every 70', () => {
+    const start = 50 * 60
+    assert.equal(inverterSurgeAmps(start - 1), 0)
+    assert.ok(inverterSurgeAmps(start) > 0)
+    assert.ok(inverterSurgeAmps(start + 59) > 0)
+    assert.equal(inverterSurgeAmps(start + 60), 0)
+    assert.ok(inverterSurgeAmps(start + 70 * 60) > 0)
   })
 })
 
