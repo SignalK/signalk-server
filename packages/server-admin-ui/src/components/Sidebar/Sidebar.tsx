@@ -276,10 +276,10 @@ export default function Sidebar({ location }: SidebarProps) {
               ? { variant: 'warning', text: `${unconfiguredGnssCount}` }
               : null
         },
-        { name: 'Fiddler', url: '/data/fiddler' },
-        { name: 'BLE Manager', url: '/data/blemanager' }
+        { name: 'Fiddler', url: '/data/fiddler' }
       )
     }
+    dataChildren.push({ name: 'BLE Manager', url: '/data/blemanager' })
 
     const result: NavItemData[] = [
       {

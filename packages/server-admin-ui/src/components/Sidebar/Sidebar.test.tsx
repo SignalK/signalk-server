@@ -10,11 +10,15 @@ const appStore = vi.hoisted(() => ({
   serverUpdate: undefined as string | undefined
 }))
 
+const loginStatus = vi.hoisted(() => ({
+  current: { authenticationRequired: false } as Record<string, unknown>
+}))
+
 vi.mock('../../store', () => ({
   useAppStore: () => appStore,
   useAccessRequests: () => [],
   useDevices: () => [],
-  useLoginStatus: () => ({ authenticationRequired: false }),
+  useLoginStatus: () => loginStatus.current,
   usePlugins: () => [],
   useMultiSourcePaths: () => ({}),
   useReconciledGroups: () => [],
@@ -51,6 +55,7 @@ describe('Sidebar', () => {
   afterEach(() => {
     document.body.classList.remove(MOBILE_SHOWN)
     appStore.serverUpdate = undefined
+    loginStatus.current = { authenticationRequired: false }
   })
 
   it('closes the mobile sidebar when a page is picked', () => {
@@ -97,5 +102,16 @@ describe('Sidebar', () => {
     renderSidebar()
     const server = screen.getByText('Server').closest('a')!
     expect(server.textContent).toContain('2.35.0')
+  })
+
+  it('shows the BLE Manager to read-only visitors, without admin pages', () => {
+    loginStatus.current = {
+      authenticationRequired: true,
+      status: 'notLoggedIn',
+      readOnlyAccess: true
+    }
+    renderSidebar('/data/browser')
+    expect(screen.getByText('BLE Manager')).toBeTruthy()
+    expect(screen.queryByText('Fiddler')).toBeNull()
   })
 })
