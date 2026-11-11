@@ -175,4 +175,40 @@ describe('GnssPositionSettings for a read-only visitor', () => {
     expect(screen.queryByText('Reset all GNSS sensors')).toBeNull()
     expect(screen.queryByText('Clear')).toBeNull()
   })
+
+  it('replaces edits an admin left unsaved with the saved layout', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) =>
+        url.endsWith('/sensors/gnss')
+          ? {
+              ok: true,
+              status: 200,
+              json: async () => ({
+                correction: 'off',
+                sensors: [
+                  {
+                    sensorId: 'gnss1',
+                    $source: SOURCE,
+                    fromBow: 5,
+                    fromCenter: 2
+                  }
+                ]
+              })
+            }
+          : { ok: false, status: 404, json: async () => ({}) }
+      )
+    )
+    useStore.setState((state) => ({
+      gnssSensorsData: {
+        ...state.gnssSensorsData,
+        saveState: { dirty: true, timeoutsOk: true }
+      }
+    }))
+    render(<GnssPositionSettings />)
+
+    await vi.waitFor(() => expect(storedFromCenter()).toBe(2))
+    expect(useStore.getState().gnssSensorsData.saveState.dirty).toBe(false)
+    expect((sideSelect() as HTMLSelectElement).value).toBe('starboard')
+  })
 })

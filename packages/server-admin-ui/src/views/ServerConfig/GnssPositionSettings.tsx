@@ -21,7 +21,8 @@ import { useSourceAliases } from '../../hooks/useSourceAliases'
 import type { GnssCorrectionMode, GnssSensorConfig } from '../../store/types'
 import {
   EMPTY_GNSS_CONFIG,
-  GNSS_API_PATH
+  GNSS_API_PATH,
+  sanitizeGnssConfig
 } from '../../store/slices/gnssPositionSlice'
 import {
   type CenterlineSide,
@@ -151,6 +152,24 @@ const GnssPositionSettings: React.FC = () => {
   }, [])
 
   const { correction, sensors, saveState, status } = gnssSensorsData
+
+  // Edits an admin left unsaved before logging out would otherwise stay on
+  // screen, and the dirty guard would keep refusing the saved layout.
+  const discardEdits = readOnly && saveState.dirty
+  useEffect(() => {
+    if (!discardEdits) return
+    fetch(GNSS_API_PATH, { credentials: 'include' })
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        return res.json()
+      })
+      .then((data: unknown) => {
+        useStore.getState().setGnssSensors(sanitizeGnssConfig(data), true)
+        setDrafts({})
+        setSideChoices({})
+      })
+      .catch((err) => console.warn('Failed to reload GNSS sensors', err))
+  }, [discardEdits])
 
   // Vessel reference point correction ('replace'/'both') needs the vessel
   // length to locate the CCRP; without it the server cannot correct. Disable
