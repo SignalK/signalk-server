@@ -474,7 +474,7 @@ export const navigationMetadata: Record<string, PathMetadataEntry> = {
   },
   '/vessels/*/navigation/magneticVariation': {
     description:
-      'The magnetic variation (declination) at the current position that must be added to the magnetic heading to derive the true heading. Easterly variations are positive and Westerly variations are negative (in Radians).',
+      'The magnetic variation (declination) at the current position that must be added to the magnetic heading to derive the true heading. Easterly variations are positive and Westerly variations are negative.',
     units: 'rad'
   },
   '/vessels/*/navigation/magneticVariationAgeOfService': {
@@ -611,7 +611,7 @@ export const navigationMetadata: Record<string, PathMetadataEntry> = {
   },
   '/vessels/*/navigation/speedOverGround': {
     description:
-      "Vessel speed over ground. If converting from AIS 'HIGH' value, set to 102.2 (Ais max value) and add warning in notifications. Commonly abbreviated SOG.",
+      "Vessel speed over ground. If converting from the AIS 'HIGH' value, set to the AIS maximum speed and add a warning in notifications. Commonly abbreviated SOG.",
     units: 'm/s'
   },
   '/vessels/*/navigation/speedThroughWater': {

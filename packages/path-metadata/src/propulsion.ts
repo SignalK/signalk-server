@@ -16,8 +16,7 @@ export const propulsionMetadata: Record<string, PathMetadataEntry> = {
     description: 'The current state of the engine'
   },
   '/vessels/*/propulsion/RegExp/revolutions': {
-    description:
-      'Engine revolutions (x60 for RPM). Also called engine speed, revs or RPM.',
+    description: 'Engine speed.',
     units: 'Hz'
   },
   '/vessels/*/propulsion/RegExp/temperature': {
