@@ -246,4 +246,37 @@ describe('GnssPositionSettings for a read-only visitor', () => {
     expect(storedFromCenter()).toBe(-1.5)
     expect(useStore.getState().gnssSensorsData.saveState.dirty).toBe(true)
   })
+
+  it('applies the saved layout even after the page is left', async () => {
+    let answer: (value: unknown) => void = () => {}
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string) =>
+        url.endsWith('/sensors/gnss')
+          ? new Promise((resolve) => {
+              answer = resolve
+            })
+          : Promise.resolve({ ok: false, status: 404, json: async () => ({}) })
+      )
+    )
+    useStore.setState((state) => ({
+      gnssSensorsData: {
+        ...state.gnssSensorsData,
+        saveState: { dirty: true, timeoutsOk: true }
+      }
+    }))
+    const { unmount } = render(<GnssPositionSettings />)
+
+    unmount()
+    await act(async () => {
+      answer({
+        ok: true,
+        status: 200,
+        json: async () => ({ correction: 'off', sensors: [] })
+      })
+    })
+
+    expect(useStore.getState().gnssSensorsData.sensors).toEqual([])
+    expect(useStore.getState().gnssSensorsData.saveState.dirty).toBe(false)
+  })
 })
