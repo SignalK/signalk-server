@@ -36,6 +36,12 @@ const BASE = `http://127.0.0.1:${PORT}`
 const PLUGIN = `${BASE}/plugins/signalk-charts-provider-simple`
 
 const ENC_SET = 'Waddenzee'
+const ENC_STORE = join(
+  ASSETS,
+  'plugin-config-data',
+  'signalk-charts-provider-simple',
+  'enc-store'
+)
 const ENC_CELLS = Array.from(
   { length: 13 },
   (_, i) => `1R7WAD${String(i + 1).padStart(2, '0')}`
@@ -307,6 +313,10 @@ async function convertEnc(configDir: string): Promise<void> {
   )
   for (const cell of readdirSync(cells)) {
     cpSync(join(cells, cell, 'raw'), join(ASSETS, 'enc-cells', cell), {
+      recursive: true
+    })
+    // the provider's ENC store, where signalk-underkeel reads the cells from
+    cpSync(join(cells, cell, 'raw'), join(ENC_STORE, ENC_SET, cell), {
       recursive: true
     })
   }
