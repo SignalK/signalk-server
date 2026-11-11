@@ -558,7 +558,8 @@ export const electricalMetadata: Record<string, PathMetadataEntry> = {
     units: 'V'
   },
   '/vessels/*/electrical/chargers/RegExp/current': {
-    description: 'Current the charger delivers to the battery.',
+    description:
+      'Output current of the charger. Positive while it delivers current; it can be slightly negative when the charger draws a small supply current, for example while it has no AC input.',
     units: 'A'
   },
   '/vessels/*/electrical/chargers/RegExp/temperature': {
@@ -670,7 +671,8 @@ export const electricalMetadata: Record<string, PathMetadataEntry> = {
     units: 'V'
   },
   '/vessels/*/electrical/alternators/RegExp/current': {
-    description: 'Current the alternator delivers to the battery.',
+    description:
+      'Output current of the alternator. Positive while it delivers current; it can be slightly negative when the alternator or regulator draws a small supply current, for example while the engine is off.',
     units: 'A'
   },
   '/vessels/*/electrical/alternators/RegExp/temperature': {
@@ -769,7 +771,8 @@ export const electricalMetadata: Record<string, PathMetadataEntry> = {
     units: 'V'
   },
   '/vessels/*/electrical/solar/RegExp/current': {
-    description: 'Current the solar controller delivers to the battery.',
+    description:
+      'Output current of the solar controller. Positive while it delivers current; it can be slightly negative when the controller draws a small supply current, for example at night.',
     units: 'A'
   },
   '/vessels/*/electrical/solar/RegExp/temperature': {
