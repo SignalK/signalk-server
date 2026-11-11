@@ -405,7 +405,9 @@ export default function Full() {
                 />
                 <Route
                   path="/data/blemanager"
-                  element={<ProtectedRoute component={BLEManager} />}
+                  element={
+                    <ProtectedRoute component={BLEManager} supportsReadOnly />
+                  }
                 />
                 <Route
                   path="/security/settings"
