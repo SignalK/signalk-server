@@ -152,6 +152,16 @@ export class NotificationApi {
 
   /** Initialise API endpoints */
   private initNotificationRoutes() {
+    // Every write goes through the ACL, as in the other v2 APIs: a user
+    // allowed to write elsewhere must not raise or clear alarms for all.
+    this.app.use(NOTI_API_PATH, (req: Request, res: Response, next) => {
+      if (req.method === 'GET' || this.updateAllowed(req)) {
+        next()
+      } else {
+        res.status(403).json(Responses.unauthorised)
+      }
+    })
+
     // Return list of notifications
     this.app.get(`${NOTI_API_PATH}`, async (req: Request, res: Response) => {
       debug(`** ${req.method} ${req.path}`)
@@ -409,6 +419,15 @@ export class NotificationApi {
       throw new NotificationManagerDisabledError()
     }
     return this.notificationManager
+  }
+
+  private updateAllowed(request: Request): boolean {
+    return this.app.securityStrategy.shouldAllowPut(
+      request,
+      'vessels.self',
+      null,
+      'notifications'
+    )
   }
 
   private rejectIfDisabled(res: Response): boolean {
