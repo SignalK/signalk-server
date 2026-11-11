@@ -316,7 +316,7 @@ module.exports = function (app) {
             ([[plugins, webapps], serverVersion, distTagsMap, regIndex]) => {
               const result = getAllModuleInfo(
                 withPublishedVersions(plugins, distTagsMap),
-                webapps,
+                withPublishedVersions(webapps, distTagsMap),
                 serverVersion,
                 distTagsMap,
                 regIndex
@@ -540,7 +540,7 @@ module.exports = function (app) {
     // An entry cached while the README was unreachable is rebuilt once
     // the installed copy can supply it, and so is an entry without
     // isWasm, which the detail page needs for the WASM badge, and one
-    // cached before npm deprecated the version.
+    // whose npm deprecation notice is no longer the current one.
     if (
       cachedDetail &&
       cachedDetail.version === pkg.version &&
@@ -550,7 +550,7 @@ module.exports = function (app) {
         !cachedDetail.readme &&
         installedReadmeFor(pkg)?.trim()
       ) &&
-      !(npmNotice && cachedDetail.deprecationMessage !== npmNotice)
+      (cachedDetail.deprecationMessage ?? '') === npmNotice
     ) {
       return cachedDetail
     }
@@ -1102,15 +1102,15 @@ module.exports = function (app) {
       ])
       // Discovery reads the dist-tags the store list last fetched instead of
       // waiting for npm; the store list applies the ones it fetches itself.
-      const plugins = withPublishedVersions(
-        npmPlugins.concat(pluginsNotInSearch),
-        cachedDistTags()
-      )
+      const distTags = cachedDistTags()
       return [
-        plugins,
-        _.uniqBy(searchedWebapps.concat(webappsNotInSearch), (plugin) => {
-          return plugin.package.name
-        })
+        withPublishedVersions(npmPlugins.concat(pluginsNotInSearch), distTags),
+        withPublishedVersions(
+          _.uniqBy(searchedWebapps.concat(webappsNotInSearch), (webapp) => {
+            return webapp.package.name
+          }),
+          distTags
+        )
       ]
     })
   }

@@ -12,8 +12,10 @@ const NODE_KEYWORD = 'signalk-node-server-plugin'
 const LISTED_PLUGIN = 'listed-plugin'
 const DEPRECATED_PLUGIN = 'npm-deprecated-plugin'
 const UNPUBLISHED_PLUGIN = 'unpublished-local-plugin'
+const DEPRECATED_WEBAPP = 'npm-deprecated-webapp'
 
 const INSTALLED_VERSION = '1.0.0'
+const LATEST_VERSION = '1.1.0'
 const DEPRECATION_NOTICE = 'Replaced by listed-plugin'
 
 const SUITE_TIMEOUT_MS = 60000
@@ -29,11 +31,13 @@ interface AppInfo {
 interface AppStoreResponse {
   installed: AppInfo[]
   available: AppInfo[]
+  updates: AppInfo[]
 }
 
 // npm search leaves out packages whose current version is deprecated, so
 // only LISTED_PLUGIN is found. The per-version metadata of the installed
-// DEPRECATED_PLUGIN carries npm's notice; UNPUBLISHED_PLUGIN is not on npm.
+// DEPRECATED_PLUGIN and DEPRECATED_WEBAPP carry npm's notice, and npm
+// publishes a newer release of the webapp; UNPUBLISHED_PLUGIN is not on npm.
 function stubNpmRegistry() {
   const realFetch = global.fetch
   global.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
@@ -55,17 +59,24 @@ function stubNpmRegistry() {
         : []
       return Promise.resolve(Response.json({ objects, total: objects.length }))
     }
-    if (
-      url ===
-      `https://registry.npmjs.org/${DEPRECATED_PLUGIN}/${INSTALLED_VERSION}`
-    ) {
+    const deprecated = [DEPRECATED_PLUGIN, DEPRECATED_WEBAPP].find(
+      (name) =>
+        url === `https://registry.npmjs.org/${name}/${INSTALLED_VERSION}`
+    )
+    if (deprecated) {
       return Promise.resolve(
         Response.json({
-          name: DEPRECATED_PLUGIN,
+          name: deprecated,
           version: INSTALLED_VERSION,
           deprecated: DEPRECATION_NOTICE
         })
       )
+    }
+    if (
+      url ===
+      `https://registry.npmjs.org/-/package/${DEPRECATED_WEBAPP}/dist-tags`
+    ) {
+      return Promise.resolve(Response.json({ latest: LATEST_VERSION }))
     }
     if (url.startsWith('http://localhost')) {
       return realFetch(input, init)
@@ -77,8 +88,8 @@ function stubNpmRegistry() {
   }
 }
 
-function seedInstalledPlugins(configDir: string) {
-  const names = [DEPRECATED_PLUGIN, UNPUBLISHED_PLUGIN]
+function seedInstalledPackages(configDir: string) {
+  const names = [DEPRECATED_PLUGIN, UNPUBLISHED_PLUGIN, DEPRECATED_WEBAPP]
   fs.writeFileSync(
     path.join(configDir, 'package.json'),
     JSON.stringify({
@@ -89,7 +100,7 @@ function seedInstalledPlugins(configDir: string) {
       )
     })
   )
-  for (const name of names) {
+  for (const name of [DEPRECATED_PLUGIN, UNPUBLISHED_PLUGIN]) {
     const moduleDir = path.join(configDir, 'node_modules', name)
     fs.mkdirSync(moduleDir, { recursive: true })
     fs.writeFileSync(
@@ -106,16 +117,30 @@ function seedInstalledPlugins(configDir: string) {
       `module.exports = () => ({ id: '${name}', name: '${name}', schema: {}, start() {}, stop() {} })\n`
     )
   }
+  const webappDir = path.join(configDir, 'node_modules', DEPRECATED_WEBAPP)
+  fs.mkdirSync(path.join(webappDir, 'public'), { recursive: true })
+  fs.writeFileSync(
+    path.join(webappDir, 'package.json'),
+    JSON.stringify({
+      name: DEPRECATED_WEBAPP,
+      version: INSTALLED_VERSION,
+      keywords: ['signalk-webapp']
+    })
+  )
+  fs.writeFileSync(
+    path.join(webappDir, 'public', 'index.html'),
+    '<html></html>'
+  )
 }
 
-// A detail page cached for the installed version before npm deprecated it.
-function seedCachedDetail(configDir: string) {
-  const dir = path.join(
-    configDir,
-    'appstore-cache',
-    'plugins',
-    DEPRECATED_PLUGIN
-  )
+// Detail pages cached before npm deprecated DEPRECATED_PLUGIN and while
+// npm still deprecated LISTED_PLUGIN.
+function seedCachedDetail(
+  configDir: string,
+  name: string,
+  deprecationMessage?: string
+) {
+  const dir = path.join(configDir, 'appstore-cache', 'plugins', name)
   fs.mkdirSync(dir, { recursive: true })
   fs.writeFileSync(
     path.join(dir, 'detail.json'),
@@ -123,11 +148,12 @@ function seedCachedDetail(configDir: string) {
       writtenAt: Date.now(),
       installed: true,
       payload: {
-        name: DEPRECATED_PLUGIN,
+        name,
         version: INSTALLED_VERSION,
         screenshots: [],
         official: false,
-        deprecated: false,
+        deprecated: deprecationMessage !== undefined,
+        deprecationMessage,
         isWasm: false,
         readme: '',
         changelog: '',
@@ -152,8 +178,9 @@ async function startAppStoreServer() {
     fs.rmSync(configDir, { recursive: true, force: true })
   }
   try {
-    seedInstalledPlugins(configDir)
-    seedCachedDetail(configDir)
+    seedInstalledPackages(configDir)
+    seedCachedDetail(configDir, DEPRECATED_PLUGIN)
+    seedCachedDetail(configDir, LISTED_PLUGIN, 'No longer maintained')
     const port = await freeport()
     const server = await startServerP(
       port,
@@ -207,6 +234,15 @@ describe('appstore lists installed npm-deprecated plugins', function () {
     expect(entry!.deprecationMessage).to.equal(DEPRECATION_NOTICE)
   })
 
+  it('offers the published update for an installed webapp npm deprecated', async function () {
+    const store = await getAppStore(host)
+    const update = store.updates.find((a) => a.name === DEPRECATED_WEBAPP)
+    expect(update, 'newer release should be offered').to.exist
+    expect(update!.installedVersion).to.equal(INSTALLED_VERSION)
+    expect(update!.version).to.equal(LATEST_VERSION)
+    expect(update!.deprecationMessage).to.equal(DEPRECATION_NOTICE)
+  })
+
   it('does not list an installed plugin that is not on npm', async function () {
     const store = await getAppStore(host)
     expect(store.installed.find((a) => a.name === UNPUBLISHED_PLUGIN)).to.not
@@ -229,5 +265,14 @@ describe('appstore lists installed npm-deprecated plugins', function () {
     const detail = (await res.json()) as AppInfo
     expect(detail.deprecated).to.equal(true)
     expect(detail.deprecationMessage).to.equal(DEPRECATION_NOTICE)
+  })
+
+  it('drops a cached deprecation notice npm no longer reports', async function () {
+    await getAppStore(host)
+    const res = await fetch(`${host}/skServer/appstore/plugin/${LISTED_PLUGIN}`)
+    expect(res.status).to.equal(200)
+    const detail = (await res.json()) as AppInfo
+    expect(detail.deprecated).to.equal(false)
+    expect(detail.deprecationMessage).to.equal(undefined)
   })
 })
