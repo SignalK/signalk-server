@@ -17,7 +17,7 @@
     "signalk-demo-boat-systems": "file:../boat-systems",
     "signalk-demo-director": "file:../demo-director",
     "signalk-distance-to-shore": "0.2.1",
-    "signalk-espos-hmi-designer": "0.4.0",
+    "signalk-espos-hmi-designer": "0.5.0",
     "signalk-espos-manager": "0.8.2",
     "signalk-ext-companion-apps": "1.1.1",
     "signalk-flags": "1.1.3",
