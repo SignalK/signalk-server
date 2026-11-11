@@ -324,4 +324,15 @@ describe('Apps for a read-only visitor', () => {
     expect(screen.queryByRole('button', { name: /Updates/ })).toBeNull()
     expect(screen.queryByRole('button', { name: /Install/ })).toBeNull()
   })
+  it('shows the whole catalog when an install view is still selected', () => {
+    act(() => {
+      useStore.getState().setAppstoreView('Installed')
+    })
+    render(
+      <MemoryRouter future={ROUTER_FUTURE_FLAGS}>
+        <Apps />
+      </MemoryRouter>
+    )
+    expect(screen.getAllByText('plugin-a').length).toBeGreaterThan(0)
+  })
 })

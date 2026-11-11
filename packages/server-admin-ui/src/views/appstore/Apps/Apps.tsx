@@ -122,13 +122,16 @@ const Apps: React.FC = () => {
   // unmount/remount when the user opens a plugin detail page and returns
   // via "Back to Store".
   const {
-    view,
+    view: selectedView,
     search,
     category,
     setView: setSelectedView,
     setSearch,
     setCategory: setSelectedCategory
   } = useAppstoreFilter()
+  // A view chosen while logged in as admin stays in the store after logout,
+  // and the install views are empty for a read-only user.
+  const view = readOnly ? 'All' : selectedView
 
   // An explicit ?q= in the URL (author link from a card/detail page, or a
   // reloaded/bookmarked search) wins over the remembered store value. Runs
