@@ -836,7 +836,6 @@ function tokenSecurityFactory(
       '/backup',
       '/restore',
       '/providers',
-      '/vessel',
       '/serialports'
     ].forEach((p) =>
       app.use(`${SERVERROUTESPREFIX}${p}`, adminAuthenticationMiddleware(false))

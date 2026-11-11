@@ -35,7 +35,8 @@ export function startEvents(
  *
  * The admin UI renders these for every logged-in user: VESSEL_INFO in the
  * footer on every page, SERVERSTATISTICS and PROVIDERSTATUS on the dashboard,
- * and RECEIVE_LOGIN_STATUS drives the login state itself (the equivalent REST
+ * POSITION_SOURCES and GNSS_SENSORS on the read-only GNSS preferences, and
+ * RECEIVE_LOGIN_STATUS drives the login state itself (the equivalent REST
  * route is deliberately public too).
  *
  * Everything else - server configuration, source and priority state, debug
@@ -46,6 +47,8 @@ const NON_ADMIN_SERVER_EVENTS = new Set([
   'VESSEL_INFO',
   'SERVERSTATISTICS',
   'PROVIDERSTATUS',
+  'POSITION_SOURCES',
+  'GNSS_SENSORS',
   'RECEIVE_LOGIN_STATUS'
 ])
 

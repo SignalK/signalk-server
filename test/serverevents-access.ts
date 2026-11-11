@@ -17,9 +17,10 @@ import {
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
-// SERVERSTATISTICS and PROVIDERSTATUS are also allowed for non-admins, but a
-// freshly started server has not emitted them yet, so they never reach the
-// bootstrap replay here and cannot be asserted on.
+// SERVERSTATISTICS, PROVIDERSTATUS, POSITION_SOURCES and GNSS_SENSORS are
+// also allowed for non-admins, but a freshly started server has not emitted
+// them yet, so they never reach the bootstrap replay here and cannot be
+// asserted on.
 const NON_ADMIN = ['VESSEL_INFO', 'RECEIVE_LOGIN_STATUS']
 const ADMIN_ONLY = [
   'DEBUG_SETTINGS',

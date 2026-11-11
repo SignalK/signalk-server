@@ -267,17 +267,19 @@ export default function Sidebar({ location }: SidebarProps) {
                   text: `${prioritiesAttentionCount}`
                 }
               : null
-        },
-        {
-          name: 'Preferences',
-          url: '/data/preferences',
-          badge:
-            unconfiguredGnssCount > 0
-              ? { variant: 'warning', text: `${unconfiguredGnssCount}` }
-              : null
-        },
-        { name: 'Fiddler', url: '/data/fiddler' }
+        }
       )
+    }
+    dataChildren.push({
+      name: 'Preferences',
+      url: '/data/preferences',
+      badge:
+        isAdmin && unconfiguredGnssCount > 0
+          ? { variant: 'warning', text: `${unconfiguredGnssCount}` }
+          : null
+    })
+    if (isAdmin) {
+      dataChildren.push({ name: 'Fiddler', url: '/data/fiddler' })
     }
     dataChildren.push({ name: 'BLE Manager', url: '/data/blemanager' })
 

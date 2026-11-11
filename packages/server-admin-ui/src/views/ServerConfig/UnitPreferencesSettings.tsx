@@ -40,18 +40,17 @@ const UnitPreferencesSettings: React.FC = () => {
   const [updateServerDefault, setUpdateServerDefault] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  // The chosen preset is stored per user, so an anonymous read-only
+  // visitor sees the server default without being able to change it.
+  const canChoose =
+    loginStatus.status === 'loggedIn' ||
+    loginStatus.authenticationRequired === false
+
   useEffect(() => {
-    if (
-      loginStatus.status === 'loggedIn' ||
-      loginStatus.authenticationRequired === false
-    ) {
+    if (canChoose || loginStatus.readOnlyAccess) {
       fetchUnitPreferences()
     }
-  }, [
-    fetchUnitPreferences,
-    loginStatus.status,
-    loginStatus.authenticationRequired
-  ])
+  }, [fetchUnitPreferences, canChoose, loginStatus.readOnlyAccess])
 
   const isAdmin =
     !loginStatus.authenticationRequired ||
@@ -280,6 +279,7 @@ const UnitPreferencesSettings: React.FC = () => {
                 onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
                   handlePresetChange(e.target.value)
                 }
+                disabled={!canChoose}
                 style={{ maxWidth: '300px' }}
               >
                 <optgroup label="Built-in">
@@ -310,6 +310,11 @@ const UnitPreferencesSettings: React.FC = () => {
                 </Button>
               )}
             </div>
+            {!canChoose && (
+              <Form.Text className="text-muted">
+                Log in to choose your own display units.
+              </Form.Text>
+            )}
             {isAdmin && (
               <div style={{ marginTop: '10px' }}>
                 <Form.Check

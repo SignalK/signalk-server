@@ -104,7 +104,7 @@ describe('Sidebar', () => {
     expect(server.textContent).toContain('2.35.0')
   })
 
-  it('shows the BLE Manager to read-only visitors, without admin pages', () => {
+  it('shows the read-only pages to read-only visitors, without admin pages', () => {
     loginStatus.current = {
       authenticationRequired: true,
       status: 'notLoggedIn',
@@ -112,6 +112,7 @@ describe('Sidebar', () => {
     }
     renderSidebar('/data/browser')
     expect(screen.getByText('BLE Manager')).toBeTruthy()
+    expect(screen.getByText('Preferences')).toBeTruthy()
     expect(screen.queryByText('Fiddler')).toBeNull()
   })
 })

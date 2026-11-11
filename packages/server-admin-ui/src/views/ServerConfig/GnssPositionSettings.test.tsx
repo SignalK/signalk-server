@@ -22,7 +22,8 @@ function setSensor(sensor: Partial<GnssSensorConfig>) {
       ],
       saveState: { dirty: false, timeoutsOk: true }
     },
-    positionSources: [SOURCE]
+    positionSources: [SOURCE],
+    loginStatus: { authenticationRequired: false }
   })
 }
 
@@ -140,5 +141,38 @@ describe('GnssPositionSettings From Center', () => {
     expect(distanceInput()).toHaveAccessibleDescription(
       'Enter the distance without a sign and pick the side.'
     )
+  })
+})
+
+describe('GnssPositionSettings for a read-only visitor', () => {
+  beforeEach(() => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({ ok: false, status: 404, json: async () => ({}) }))
+    )
+    setSensor({ fromCenter: -1.5 })
+    useStore.setState({
+      loginStatus: {
+        authenticationRequired: true,
+        status: 'notLoggedIn',
+        readOnlyAccess: true
+      }
+    })
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('shows the antenna positions without offering to change them', () => {
+    render(<GnssPositionSettings />)
+
+    expect((distanceInput() as HTMLInputElement).value).toBe('1.5')
+    expect((sideSelect() as HTMLSelectElement).value).toBe('port')
+    expect(distanceInput()).toHaveProperty('disabled', true)
+    expect(sideSelect()).toHaveProperty('disabled', true)
+    expect(screen.queryByText('Save')).toBeNull()
+    expect(screen.queryByText('Reset all GNSS sensors')).toBeNull()
+    expect(screen.queryByText('Clear')).toBeNull()
   })
 })

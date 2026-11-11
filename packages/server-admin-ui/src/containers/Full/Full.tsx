@@ -327,7 +327,12 @@ export default function Full() {
                 />
                 <Route
                   path="/data/preferences"
-                  element={<ProtectedRoute component={PreferencesPage} />}
+                  element={
+                    <ProtectedRoute
+                      component={PreferencesPage}
+                      supportsReadOnly
+                    />
+                  }
                 />
                 <Route
                   path="/data/fiddler"
