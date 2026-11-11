@@ -15,7 +15,7 @@ import { createEnvImports } from '../bindings/env-imports'
 import { updateResourceProviderInstance } from '../bindings/resource-provider'
 import { updateWeatherProviderInstance } from '../bindings/weather-provider'
 import { updateRadarProviderInstance } from '../bindings/radar-provider'
-import { getNodeFetch } from '../utils/fetch-wrapper'
+import { getNodeFetch, resolveFailedRequests } from '../utils/fetch-wrapper'
 import { derivePluginId } from '../../pluginid'
 
 const debug = Debug('signalk:wasm:loader:standard')
@@ -150,7 +150,7 @@ export async function loadStandardPlugin(
 
     // Dynamic import for ESM-only as-fetch package
     const { FetchHandler } = await import('as-fetch/bindings.raw.esm.js')
-    fetchHandler = new FetchHandler(fetchWrapper)
+    fetchHandler = new FetchHandler(resolveFailedRequests(fetchWrapper))
     fetchImports = fetchHandler.imports
   }
 

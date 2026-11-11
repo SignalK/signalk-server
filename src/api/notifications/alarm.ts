@@ -58,11 +58,23 @@ export class Alarm {
       this.path = this.update.values[0].path
       // ensure value is not empty
       if (this.update.values[0].value) {
-        this.value = this.update.values[0].value as Notification
+        const value = this.update.values[0].value as Notification
+        // Same as a managed update: an empty or null location removes it.
+        // Copied, so the incoming delta itself is left as sent.
+        if (
+          value.location === null ||
+          (typeof value.location === 'string' && !value.location.trim())
+        ) {
+          const { location: _removed, ...withoutLocation } = value
+          this.value = withoutLocation
+        } else {
+          this.value = value
+        }
       } else {
         this.value.message = ''
         this.value.method = []
         this.value.state = ALARM_STATE.normal
+        delete this.value.location
       }
     }
   }

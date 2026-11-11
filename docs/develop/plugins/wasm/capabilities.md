@@ -38,10 +38,7 @@ A plugin checks `hasNetworkCapability()` from the SDK before making requests, th
 
 `fetchSync` relies on Asyncify, which the server drives only while the plugin is starting and while it serves weather and radar provider requests. Requests made from polling, delta, HTTP, PUT or resource handlers are not supported.
 
-Two limitations of `fetchSync` in as-fetch 2.1.4 matter in practice:
-
-- A request that fails without any HTTP response, such as a DNS lookup or connection error, never resumes the plugin. A request at startup then leaves the plugin starting forever, and network plugins that start after it wait behind it, because their starts are serialized. Only request hosts the boat can be expected to reach at startup.
-- The response always reports status `200`, so `ok` is `true` even for an HTTP error such as `401`. Validate the response body before using it, rather than relying on the status.
+The response from `fetchSync` in as-fetch 2.1.4 always reports status `200`, so `ok` is `true` even for an HTTP error such as `401`. A request that gets no HTTP response at all, such as a DNS lookup or connection error, also resumes the plugin with status `200`, and its body is empty. Validate the response body before using it, rather than relying on the status.
 
 **Build Configuration (asconfig.json):**
 

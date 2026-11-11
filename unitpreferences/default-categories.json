@@ -164,7 +164,8 @@
         "electrical.inverters.*.ac.voltage",
         "electrical.alternators.*.voltage",
         "electrical.solar.*.voltage",
-        "propulsion.*.alternator.voltage"
+        "propulsion.*.alternator.voltage",
+        "electrical.batteries.*.nominalVoltage"
       ]
     },
     "current": {
@@ -176,7 +177,11 @@
         "electrical.inverters.*.ac.current",
         "electrical.alternators.*.current",
         "electrical.solar.*.current",
-        "propulsion.*.alternator.current"
+        "propulsion.*.alternator.current",
+        "electrical.inverters.*.ac.breaker.ratedCurrent",
+        "electrical.ac.*.phase.*.breaker.ratedCurrent",
+        "electrical.inverters.*.ac.phase.*.breaker.ratedCurrent",
+        "electrical.generators.*.phase.*.breaker.ratedCurrent"
       ]
     },
     "power": {
@@ -188,7 +193,8 @@
         "electrical.inverters.*.ac.power",
         "electrical.alternators.*.power",
         "electrical.solar.*.power",
-        "propulsion.*.power"
+        "propulsion.*.power",
+        "electrical.inverters.*.loadSensePowerThreshold"
       ]
     },
     "frequency": {
@@ -216,12 +222,18 @@
         "tanks.lubrication.*.capacity",
         "tanks.lubrication.*.currentVolume",
         "propulsion.*.fuel.used",
+        "propulsion.*.trip.fuelUsed",
         "environment.outside.precipitationVolume"
       ]
     },
     "volumeRate": {
       "siUnit": "m3/s",
-      "paths": ["propulsion.*.fuel.rate"]
+      "paths": [
+        "propulsion.*.fuel.rate",
+        "propulsion.*.trip.fuelRate.average",
+        "propulsion.*.trip.fuelRate.economy",
+        "propulsion.*.trip.fuelRate.instantaneousEconomy"
+      ]
     },
     "mass": {
       "siUnit": "kg",
@@ -238,7 +250,11 @@
         "electrical.batteries.*.capacity.stateOfHealth",
         "tanks.*.currentLevel",
         "propulsion.*.engineLoad",
-        "steering.autopilot.gain"
+        "steering.autopilot.gain",
+        "electrical.batteries.*.temperatureCoefficient",
+        "electrical.batteries.*.chargeEfficiencyFactor",
+        "electrical.chargers.*.chargeCurrentLimit",
+        "electrical.displays.*.*.brightness"
       ]
     },
     "energy": {
@@ -258,6 +274,9 @@
         "navigation.racing.timePortDown",
         "navigation.racing.timeStbdDown",
         "navigation.closestApproach.timeTo",
+        "electrical.chargers.*.equalizationTimeRemaining",
+        "electrical.chargers.*.equalizeTime",
+        "electrical.inverters.*.loadSenseInterval",
         "environment.water.waves.period",
         "environment.water.swell.period"
       ]

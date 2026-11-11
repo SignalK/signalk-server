@@ -33,6 +33,32 @@ export const buildKey = (
 }
 
 /**
+ * `location` arrives in REST bodies, so its type is not guaranteed. Only an
+ * update may send null, which removes the location.
+ */
+export const checkLocation = (location: unknown, allowNull = false) => {
+  if (
+    location !== undefined &&
+    !(allowNull && location === null) &&
+    typeof location !== 'string'
+  ) {
+    throw new Error('Notification `location` must be a string!')
+  }
+}
+
+const ALARM_STATES = new Set<unknown>(Object.values(ALARM_STATE))
+
+/**
+ * `state` arrives in REST bodies, so its value is not guaranteed. A missing
+ * or null state leaves the alarm's state as it is.
+ */
+const checkState = (state: unknown) => {
+  if (state !== undefined && state !== null && !ALARM_STATES.has(state)) {
+    throw new Error('Notification `state` is not a valid alarm state!')
+  }
+}
+
+/**
  * Class to manage the lifecycle of alarms
  */
 export class NotificationManager {
@@ -91,6 +117,7 @@ export class NotificationManager {
     const {
       state,
       message,
+      location,
       context,
       path,
       idInPath,
@@ -104,6 +131,7 @@ export class NotificationManager {
         'Notification `state` or `message` properties are missing!'
       )
     }
+    checkLocation(location)
 
     const id = uuid.v4() as NotificationId
     const alarm = new Alarm(id)
@@ -114,6 +142,9 @@ export class NotificationManager {
     alarm.value.state = state
     alarm.status.canSilence = state === ALARM_STATE.emergency ? false : true
     alarm.value.message = message
+    if (location?.trim()) {
+      alarm.value.location = location
+    }
 
     if (path) {
       alarm.setPath(path, idInPath ? id : undefined)
@@ -147,7 +178,9 @@ export class NotificationManager {
     if (!options) {
       throw new Error('Notification options not supplied!')
     }
-    const { state, message, data } = options
+    const { state, message, location, data } = options
+    checkState(state)
+    checkLocation(location, true)
 
     // Silence and acknowledgement answer the current state, so only a new
     // state clears them; a message or data update leaves them standing.
@@ -158,6 +191,13 @@ export class NotificationManager {
       alarm.status.acknowledged = false
     }
     alarm.value.message = message ?? alarm.value.message
+    if (location !== undefined) {
+      if (location?.trim()) {
+        alarm.value.location = location
+      } else {
+        delete alarm.value.location
+      }
+    }
     if (data) {
       alarm.value.data = structuredClone(data)
     }

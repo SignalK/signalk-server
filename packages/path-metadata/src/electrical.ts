@@ -1,5 +1,72 @@
 import type { PathMetadataEntry } from './types'
 
+// One pattern covers the single-phase and the three-phase names, so it needs
+// its own group: an unbracketed | would split the whole key in two.
+const AC_PHASE_NAME = '(single|[A-C])'
+
+function acPhaseMetadata(parent: string): Record<string, PathMetadataEntry> {
+  const phases = `${parent}/phase`
+  const phase = `${phases}/${AC_PHASE_NAME}`
+  return {
+    [phases]: {
+      description: 'Single or A,B or C in 3 Phase systems '
+    },
+    [phase]: {
+      description: 'AC equipment common qualities'
+    },
+    [`${phase}/associatedBus`]: {
+      description: 'Name of BUS device is associated with'
+    },
+    [`${phase}/lineNeutralVoltage`]: {
+      description: 'Data should be of type number.',
+      units: 'V'
+    },
+    [`${phase}/lineLineVoltage`]: {
+      description: 'Data should be of type number.',
+      units: 'V'
+    },
+    [`${phase}/current`]: {
+      description: 'Data should be of type number.',
+      units: 'A'
+    },
+    [`${phase}/frequency`]: {
+      description: 'Data should be of type number.',
+      units: 'Hz'
+    },
+    [`${phase}/reactivePower`]: {
+      description: 'Reactive power, in volt-amperes reactive.',
+      units: 'VAR'
+    },
+    [`${phase}/powerFactor`]: {
+      description: 'Data should be of type number.'
+    },
+    [`${phase}/powerFactorLagging`]: {
+      description: 'Lead/lag status.',
+      enum: ['leading', 'lagging', 'error', 'not available']
+    },
+    [`${phase}/realPower`]: {
+      description: 'Data should be of type number.',
+      units: 'W'
+    },
+    [`${phase}/apparentPower`]: {
+      description: 'Apparent power (|V| × |I|), in volt-amperes.',
+      units: 'VA'
+    },
+    [`${phase}/breaker`]: {
+      description: 'The circuit breaker of this line'
+    },
+    [`${phase}/breaker/ratedCurrent`]: {
+      description: 'Rated current of the breaker',
+      units: 'A'
+    },
+    [`${phase}/breaker/curveType`]: {
+      description:
+        'Trip curve of the breaker (IEC 60898-1 B, C or D, or K or Z)',
+      enum: ['B', 'C', 'D', 'K', 'Z']
+    }
+  }
+}
+
 export const electricalMetadata: Record<string, PathMetadataEntry> = {
   '/vessels/*/electrical': {
     description:
@@ -91,6 +158,29 @@ export const electricalMetadata: Record<string, PathMetadataEntry> = {
   },
   '/vessels/*/electrical/batteries/RegExp/chemistry': {
     description: 'Type of battery FLA, LiFePO4, etc.'
+  },
+  '/vessels/*/electrical/batteries/RegExp/batteryType': {
+    description: 'Construction of a lead-acid battery',
+    enum: ['flooded', 'gel', 'agm']
+  },
+  '/vessels/*/electrical/batteries/RegExp/nominalVoltage': {
+    description: 'Nominal voltage of the battery',
+    units: 'V'
+  },
+  '/vessels/*/electrical/batteries/RegExp/supportsEqualization': {
+    description: 'Whether the battery may be equalized'
+  },
+  '/vessels/*/electrical/batteries/RegExp/temperatureCoefficient': {
+    description:
+      'Change of the battery capacity per kelvin, as a ratio of its nominal capacity',
+    units: 'ratio'
+  },
+  '/vessels/*/electrical/batteries/RegExp/peukertExponent': {
+    description: 'Peukert exponent of the battery'
+  },
+  '/vessels/*/electrical/batteries/RegExp/chargeEfficiencyFactor': {
+    description: 'Charge stored as a ratio of the charge put into the battery',
+    units: 'ratio'
   },
   '/vessels/*/electrical/batteries/RegExp/capacity': {
     description: "Data about the battery's capacity"
@@ -209,6 +299,11 @@ export const electricalMetadata: Record<string, PathMetadataEntry> = {
       'Lower fault temperature limit - device may disable/disconnect',
     units: 'K'
   },
+  // An inverter's AC output is single phase: its values go directly under
+  // ac, as below. A three-phase system is usually three inverters, one per
+  // phase, each with its own ac. Only a device that reports lines 2 and 3
+  // of one output (NMEA 2000 127504) writes them under ac/phase/B and
+  // ac/phase/C; its line 1 stays directly under ac, not under ac/phase/A.
   '/vessels/*/electrical/inverters/RegExp/ac': {
     description: 'AC equipment common qualities'
   },
@@ -250,8 +345,43 @@ export const electricalMetadata: Record<string, PathMetadataEntry> = {
     description: 'Apparent power (|V| × |I|), in volt-amperes.',
     units: 'VA'
   },
+  '/vessels/*/electrical/inverters/RegExp/ac/breaker': {
+    description: 'The circuit breaker of the AC output'
+  },
+  '/vessels/*/electrical/inverters/RegExp/ac/breaker/ratedCurrent': {
+    description: 'Rated current of the AC output breaker',
+    units: 'A'
+  },
+  '/vessels/*/electrical/inverters/RegExp/ac/breaker/curveType': {
+    description:
+      'Trip curve of the AC output breaker (IEC 60898-1 B, C or D, or K or Z)',
+    enum: ['B', 'C', 'D', 'K', 'Z']
+  },
+  '/vessels/*/electrical/inverters/RegExp/ac/waveform': {
+    description: 'Waveform of the AC output',
+    enum: ['sine wave', 'modified sine wave']
+  },
   '/vessels/*/electrical/inverters/RegExp/inverterMode': {
     description: 'Mode of inverter'
+  },
+  '/vessels/*/electrical/inverters/RegExp/operatingState': {
+    description: 'Operating state of the inverter',
+    enum: ['invert', 'ac passthru', 'load sense', 'fault', 'disabled']
+  },
+  '/vessels/*/electrical/inverters/RegExp/enabled': {
+    description: 'Whether the inverter is enabled'
+  },
+  '/vessels/*/electrical/inverters/RegExp/loadSenseEnabled': {
+    description:
+      'Whether the inverter only starts when it senses a load on its output'
+  },
+  '/vessels/*/electrical/inverters/RegExp/loadSensePowerThreshold': {
+    description: 'Load above which a load-sensing inverter starts',
+    units: 'W'
+  },
+  '/vessels/*/electrical/inverters/RegExp/loadSenseInterval': {
+    description: 'Interval at which a load-sensing inverter checks for a load',
+    units: 's'
   },
   '/vessels/*/electrical/chargers': {
     description: 'Data about AC sourced battery charger'
@@ -326,10 +456,65 @@ export const electricalMetadata: Record<string, PathMetadataEntry> = {
   },
   '/vessels/*/electrical/chargers/RegExp/chargerRole': {
     description:
-      'How is charging source configured?  Standalone, or in sync with another charger?'
+      'How is charging source configured?  Standalone, or in sync with another charger?',
+    enum: [
+      'standalone',
+      'primary',
+      'secondary',
+      'echo',
+      'master',
+      'slave',
+      'standby'
+    ]
   },
   '/vessels/*/electrical/chargers/RegExp/chargingMode': {
-    description: 'Charging mode i.e. float, overcharge, etc.'
+    description: 'Charging mode i.e. float, overcharge, etc.',
+    enum: [
+      'not charging',
+      'bulk',
+      'absorption',
+      'acceptance',
+      'overcharge',
+      'equalise',
+      'equalize',
+      'float',
+      'no float',
+      'constant vi',
+      'disabled',
+      'fault',
+      'unknown',
+      'other'
+    ]
+  },
+  '/vessels/*/electrical/chargers/RegExp/enabled': {
+    description: 'Whether the charger is enabled'
+  },
+  '/vessels/*/electrical/chargers/RegExp/equalizationPending': {
+    description: 'Whether an equalization is pending'
+  },
+  '/vessels/*/electrical/chargers/RegExp/equalizationTimeRemaining': {
+    description: 'Time remaining in the current equalization',
+    units: 's'
+  },
+  '/vessels/*/electrical/chargers/RegExp/chargeCurrentLimit': {
+    description:
+      "Limit on the charge current, as a ratio of the charger's maximum output current",
+    units: 'ratio'
+  },
+  '/vessels/*/electrical/chargers/RegExp/estimatedTemperature': {
+    description:
+      'Battery temperature the charger assumes when it has no temperature sensor',
+    enum: ['cold', 'warm', 'hot']
+  },
+  '/vessels/*/electrical/chargers/RegExp/equalizeOneTimeEnabled': {
+    description: 'Whether a one-time equalization is enabled'
+  },
+  '/vessels/*/electrical/chargers/RegExp/overChargeEnabled': {
+    description: 'Whether the overcharge stage is enabled'
+  },
+  '/vessels/*/electrical/chargers/RegExp/equalizeTime': {
+    description: 'Duration of an equalization',
+    units: 's'
   },
   '/vessels/*/electrical/chargers/RegExp/setpointVoltage': {
     description: 'Data should be of type number.',
@@ -587,48 +772,37 @@ export const electricalMetadata: Record<string, PathMetadataEntry> = {
   '/vessels/*/electrical/ac/RegExp/manufacturer/URL': {
     description: 'Web reference / URL'
   },
-  '/vessels/*/electrical/ac/RegExp/phase': {
-    description: 'Single or A,B or C in 3 Phase systems '
+  ...acPhaseMetadata('/vessels/*/electrical/ac/RegExp'),
+  ...acPhaseMetadata('/vessels/*/electrical/generators/RegExp'),
+  // Lines 2 and 3 of a three-phase inverter output; see inverters/RegExp/ac
+  ...acPhaseMetadata('/vessels/*/electrical/inverters/RegExp/ac'),
+  [`/vessels/*/electrical/ac/RegExp/phase/${AC_PHASE_NAME}/acceptability`]: {
+    description:
+      'Whether the AC input is acceptable, or why not, such as bad level or bad frequency',
+    enum: ['bad level', 'bad frequency', 'being qualified', 'good']
   },
-  '/vessels/*/electrical/ac/RegExp/phase/(single)|([A-C])': {
-    description: 'AC equipment common qualities'
+  [`/vessels/*/electrical/inverters/RegExp/ac/phase/${AC_PHASE_NAME}/waveform`]:
+    {
+      description: 'Waveform of the AC output',
+      enum: ['sine wave', 'modified sine wave']
+    },
+  '/vessels/*/electrical/displays': {
+    description:
+      'Display settings of instrument and chart displays, by maker and display group'
   },
-  '/vessels/*/electrical/ac/RegExp/phase/(single)|([A-C])/associatedBus': {
-    description: 'Name of BUS device is associated with'
+  '/vessels/*/electrical/displays/RegExp/RegExp/brightness': {
+    description: 'Backlight brightness of the display group',
+    units: 'ratio'
   },
-  '/vessels/*/electrical/ac/RegExp/phase/(single)|([A-C])/lineNeutralVoltage': {
-    description: 'Data should be of type number.',
-    units: 'V'
+  '/vessels/*/electrical/displays/RegExp/RegExp/color': {
+    description: 'Color scheme of the display group',
+    enum: ['day1', 'day2', 'redBlack', 'inverse']
   },
-  '/vessels/*/electrical/ac/RegExp/phase/(single)|([A-C])/lineLineVoltage': {
-    description: 'Data should be of type number.',
-    units: 'V'
+  '/vessels/*/electrical/displays/RegExp/RegExp/nightMode/state': {
+    description: 'Night mode of the display group: 1 at night, 0 by day'
   },
-  '/vessels/*/electrical/ac/RegExp/phase/(single)|([A-C])/current': {
-    description: 'Data should be of type number.',
-    units: 'A'
-  },
-  '/vessels/*/electrical/ac/RegExp/phase/(single)|([A-C])/frequency': {
-    description: 'Data should be of type number.',
-    units: 'Hz'
-  },
-  '/vessels/*/electrical/ac/RegExp/phase/(single)|([A-C])/reactivePower': {
-    description: 'Reactive power, in volt-amperes reactive.',
-    units: 'VAR'
-  },
-  '/vessels/*/electrical/ac/RegExp/phase/(single)|([A-C])/powerFactor': {
-    description: 'Data should be of type number.'
-  },
-  '/vessels/*/electrical/ac/RegExp/phase/(single)|([A-C])/powerFactorLagging': {
-    description: 'Lead/lag status.',
-    enum: ['leading', 'lagging', 'error', 'not available']
-  },
-  '/vessels/*/electrical/ac/RegExp/phase/(single)|([A-C])/realPower': {
-    description: 'Data should be of type number.',
-    units: 'W'
-  },
-  '/vessels/*/electrical/ac/RegExp/phase/(single)|([A-C])/apparentPower': {
-    description: 'Apparent power (|V| × |I|), in volt-amperes.',
-    units: 'VA'
+  '/vessels/*/electrical/displays/RegExp/RegExp/nightModeColor': {
+    description: 'Color of the display group in night mode',
+    enum: ['red', 'green', 'blue', 'white', 'magenta', 'unknown']
   }
 }

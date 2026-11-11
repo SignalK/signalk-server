@@ -69,6 +69,15 @@ describe('appstore/registry badgesToIndicators', () => {
     expect(byId.audit.status).to.equal('ok')
   })
 
+  it('replaces loads/activates with an ok webapp check for a webapp', () => {
+    const r = badgesToIndicators(['compatible', 'webapp', 'npm-audit-ok'], 75)
+    const ids = r.checks.map((c) => c.id)
+    expect(ids).to.not.include('loads')
+    expect(ids).to.not.include('activates')
+    const webapp = r.checks.find((c) => c.id === 'webapp')
+    expect(webapp?.status).to.equal('ok')
+  })
+
   it('marks tested as fail when tests-failing badge present', () => {
     const r = badgesToIndicators(['compatible', 'tests-failing'], 50)
     const tested = r.checks.find((c) => c.id === 'tested')

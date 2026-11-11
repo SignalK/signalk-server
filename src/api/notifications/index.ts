@@ -27,6 +27,7 @@ import { WithSecurityStrategy } from '../../security'
 import { Responses } from '..'
 import {
   buildKey,
+  checkLocation,
   NotificationManager,
   NotificationKey
 } from './notificationManager'
@@ -490,6 +491,7 @@ export class NotificationApi {
         'Notification `path` is required when core notification management is disabled.'
       )
     }
+    checkLocation(options.location)
     const id = uuid.v4() as NotificationId
     const basePath = String(options.path).startsWith('notifications.')
       ? String(options.path)
@@ -501,6 +503,9 @@ export class NotificationApi {
       message: options.message,
       method: [ALARM_METHOD.visual, ALARM_METHOD.sound],
       id
+    }
+    if (options.location?.trim()) {
+      value.location = options.location
     }
     if (options.includePosition || options.state === ALARM_STATE.emergency) {
       value.position =

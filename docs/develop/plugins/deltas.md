@@ -326,9 +326,37 @@ plugin.start = async (options) => {
 }
 ```
 
+Metadata that does not change is set once this way, rather than repeated in a `meta` entry on every delta, which only adds traffic.
+
 The method is **idempotent**: on subsequent server starts, fields already persisted from a previous call will not be overwritten. It returns `true` if any new fields were applied, `false` if all fields already existed.
 
 The `displayUnits.category` is validated against the path's SI unit. If the category doesn't match, the method returns `false` and logs a debug message.
+
+### Declaring stale data behaviour
+
+The same method is how a plugin tells [Stale Data Detection](../../setup/staleness.md) how its paths behave. Declare it once at plugin start, before the plugin starts its real work:
+
+```javascript
+plugin.start = async (options) => {
+  // Republished every 10 minutes, so the 60s default would flag it as stale.
+  await app.setDefaultMetadata('navigation.state', { timeout: 900 })
+  // Updates every few seconds; let the server derive the timeout.
+  await app.setDefaultMetadata('environment.inside.temperature', {
+    timeout: 'auto'
+  })
+  // Emitted only when the value changes; silence means unchanged.
+  await app.setDefaultMetadata('propulsion.port.state', {
+    updateContract: 'event'
+  })
+  // ... the real plugin startup logic
+}
+```
+
+A `timeout` of `0` exempts a periodic path from stale detection altogether, which suits a value published once and not repeated.
+
+`'auto'` suits paths that update every few seconds or minutes. Until it has seen enough updates it uses the global default timeout (no timeout while that is 0), and the timeout it derives never exceeds 300 seconds, so a path that updates less often than every few minutes needs a numeric `timeout`.
+
+Per-field merge applies here too: a field the user has set in the Data Browser wins, and the plugin's suggestion for that field is ignored. The merge is per field, so a user's `timeout` does not stop a plugin from declaring `updateContract: 'event'`, and an event-driven path is never timed out. A user who wants their timeout enforced on such a path also sets `updateContract` to `periodic`.
 
 ## Display Units
 

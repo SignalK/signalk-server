@@ -9,6 +9,7 @@
  */
 
 import Debug from 'debug'
+import { wildcardMatcher } from '../wildcard'
 
 const debug = Debug('signalk:wasm:subscriptions')
 
@@ -86,15 +87,7 @@ export class WasmSubscriptionManager {
       return true
     }
 
-    // Simple glob-style matching
-    // "navigation.*" matches "navigation.position", "navigation.courseOverGroundTrue", etc.
-    const regexPattern = pattern
-      .replace(/[\\^$+?()[\]{}|]/g, '\\$&')
-      .replace(/\./g, '\\.')
-      .replace(/\*/g, '.*')
-
-    const regex = new RegExp(`^${regexPattern}$`)
-    return regex.test(path)
+    return wildcardMatcher(pattern)(path)
   }
 
   /**

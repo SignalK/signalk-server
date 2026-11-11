@@ -41,6 +41,13 @@ export const AlarmSchema = Type.Object(
     state: AlarmStateSchema,
     method: AlarmMethodArraySchema,
     message: Type.String({ description: 'Message to display or speak' }),
+    location: Type.Optional(
+      Type.String({
+        description:
+          "The location or part of the vessel where the notification originates from, for display purposes (e.g. 'Engine Room'). Not the vessel's geographic position.",
+        example: 'Engine Room'
+      })
+    ),
     status: Type.Optional(AlarmStatusSchema),
     id: Type.Optional(
       Type.String({
@@ -68,6 +75,13 @@ export const AlarmRaiseOptionsSchema = Type.Object(
   {
     state: AlarmStateSchema,
     message: Type.String({ description: 'Message to display or speak' }),
+    location: Type.Optional(
+      Type.String({
+        description:
+          "The location or part of the vessel where the notification originates from, for display purposes (e.g. 'Engine Room'). Not the vessel's geographic position.",
+        example: 'Engine Room'
+      })
+    ),
     context: Type.Optional(
       Type.String({
         description: 'Signal K context',
@@ -115,6 +129,12 @@ export const AlarmUpdateOptionsSchema = Type.Object(
     state: Type.Optional(AlarmStateSchema),
     message: Type.Optional(
       Type.String({ description: 'Message to display or speak' })
+    ),
+    location: Type.Optional(
+      Type.Union([Type.String(), Type.Null()], {
+        description:
+          'The location or part of the vessel where the notification originates from, for display purposes. An empty string or null removes it.'
+      })
     ),
     data: Type.Optional(Type.Record(Type.String(), Type.Unknown()))
   },

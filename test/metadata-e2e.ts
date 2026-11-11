@@ -1,14 +1,20 @@
 import { expect } from 'chai'
+import { metadataRegistry } from '@signalk/path-metadata'
 import {
   getReadOnlyToken,
   getWriteToken,
   LIMITED_USER_NAME,
+  sendDelta,
   serverTestConfigDirectory,
   startServerFromConfigP,
   startServerP,
   WsPromiser
 } from './servertestutilities'
-import { freeport, SERVER_START_TIMEOUT } from './ts-servertestutilities'
+import {
+  awaitPutSuccess,
+  freeport,
+  SERVER_START_TIMEOUT
+} from './ts-servertestutilities'
 import fs from 'fs'
 import os from 'os'
 import path from 'path'
@@ -33,26 +39,6 @@ const REQUEST_POLL_MS = 10
 const WS_MESSAGE_TIMEOUT_MS = 500
 
 type ServerHandle = { stop: () => Promise<unknown> }
-
-const awaitPutSuccess = async (port: number, response: Response) => {
-  expect(response.status).to.equal(202)
-  const { href } = (await response.json()) as { href: string }
-  const until = Date.now() + REQUEST_DEADLINE_MS
-  let request = { state: 'PENDING', statusCode: 202 }
-  while (Date.now() < until) {
-    request = (await fetch(`http://localhost:${port}${href}`).then((r) =>
-      r.json()
-    )) as { state: string; statusCode: number }
-    if (request.state !== 'PENDING') {
-      break
-    }
-    await new Promise((resolve) => setTimeout(resolve, REQUEST_POLL_MS))
-  }
-  // A finished handler reports COMPLETED either way; the status code says
-  // whether the write succeeded.
-  expect(request.state).to.equal('COMPLETED')
-  expect(request.statusCode).to.equal(200)
-}
 
 const emptyConfigDirectory = () =>
   Promise.all(
@@ -250,6 +236,47 @@ describe('Metadata end to end', function () {
       'description',
       'Updated description'
     )
+  })
+
+  it('deletes a metadata field on a path that inherits an update contract', async () => {
+    // navigation.anchor is event-driven, so the registry's lookup for this
+    // path carries a contract its stored entry does not.
+    const anchorMeta = 'navigation/anchor/maxRadius/meta'
+    const zones = [{ lower: 50, state: 'alarm', message: 'Dragging' }]
+    await awaitPutSuccess(
+      port,
+      await selfPutV1(`${anchorMeta}/zones`, { value: zones })
+    )
+
+    // A fresh process rebuilds the entry from the stored meta alone, with
+    // no contract of its own.
+    metadataRegistry.reset()
+    await sendDelta(
+      {
+        context: 'vessels.self',
+        updates: [
+          { meta: [{ path: 'navigation.anchor.maxRadius', value: { zones } }] }
+        ]
+      },
+      `http://localhost:${port}/signalk/v1/api/_test/delta`
+    )
+    const before = await getV1(`/vessels/self/${anchorMeta}`).then((r) =>
+      r.json()
+    )
+    expect(before).to.have.property('zones')
+
+    await awaitPutSuccess(
+      port,
+      await fetch(`${v1Api}/vessels/self/${anchorMeta}/zones`, {
+        method: 'DELETE'
+      })
+    )
+
+    const after = await getV1(`/vessels/self/${anchorMeta}`).then((r) =>
+      r.json()
+    )
+    expect(after).to.not.have.property('zones')
+    expect(after).to.have.property('updateContract', 'event')
   })
 })
 

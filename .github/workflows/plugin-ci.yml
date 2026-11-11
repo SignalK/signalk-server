@@ -250,6 +250,102 @@ jobs:
             npm install
           fi
 
+      # Another App Store plugin or webapp in dependencies is installed by
+      # npm into the user's ~/.signalk at this plugin's range, outside the
+      # App Store, and the server loads that copy as a plugin of its own.
+      # signalk.requires / signalk.recommends is how the App Store installs
+      # companions. Mirrors the plugin registry's bundles-plugins check.
+      # Runs after the install and reads each dependency's installed
+      # package.json, so git, tarball and npm: alias specs resolve to the
+      # package npm actually installed.
+      - name: Check for bundled App Store plugins
+        shell: bash
+        run: |
+          cat << 'BUNDLED' > "$RUNNER_TEMP/bundled-plugins.mjs"
+          import { execFileSync } from 'node:child_process';
+          import { existsSync, readFileSync } from 'node:fs';
+          import { dirname, join } from 'node:path';
+          const pkg = JSON.parse(readFileSync('package.json', 'utf8'));
+          const APPSTORE_KEYWORDS = ['signalk-node-server-plugin', 'signalk-webapp', 'signalk-embeddable-webapp'];
+          const GUIDE = 'https://github.com/SignalK/signalk-server/blob/master/docs/develop/plugins/publishing.md#requires-and-recommends';
+          // npm installs a dependency under its key, hoisted to a workspace
+          // root's node_modules in a monorepo.
+          function installedManifest(key) {
+            for (let dir = process.cwd(); ; dir = dirname(dir)) {
+              const file = join(dir, 'node_modules', key, 'package.json');
+              if (existsSync(file)) return JSON.parse(readFileSync(file, 'utf8'));
+              if (dirname(dir) === dir) return null;
+            }
+          }
+          // A required peer can be left out here (legacy-peer-deps in the
+          // repo's .npmrc) although a user's install would add it, so a
+          // registry spec that was not installed is resolved on npm instead.
+          // Anything else cannot be inspected and fails the check.
+          const NPM_VIEW_TIMEOUT_MS = 60000;
+          function publishedManifest(key, range) {
+            let spec;
+            if (range.startsWith('npm:')) spec = range.slice(4);
+            else if (!/^(git\+|git:|github:|file:|link:|workspace:|https?:)/.test(range) && !range.includes('/')) spec = key + '@' + range;
+            if (!spec) return { problem: 'is not a registry spec that npm could look up' };
+            let out;
+            try {
+              out = execFileSync('npm', ['view', '--json', '--', spec, 'name', 'keywords'], { encoding: 'utf8', timeout: NPM_VIEW_TIMEOUT_MS });
+            } catch (err) {
+              const notFound = /"code":\s*"E404"/.test(String(err.stdout || '')) || /E404/.test(String(err.stderr || ''));
+              return {
+                problem: notFound
+                  ? 'has no published version on npm matching it'
+                  : 'could not be looked up because the npm registry did not answer (' + String(err.message).split('\n')[0] + ')'
+              };
+            }
+            // One entry per matching version, newest last; npm prints just
+            // the name when the version has no keywords.
+            const parsed = JSON.parse(out);
+            const latest = Array.isArray(parsed) ? parsed[parsed.length - 1] : parsed;
+            if (typeof latest === 'string') return { manifest: { name: latest, keywords: [] } };
+            if (latest && typeof latest.name === 'string') return { manifest: latest };
+            return { problem: 'has no published version on npm matching it' };
+          }
+          const errors = [];
+          const seen = new Set();
+          // npm treats a name in both dependencies and optionalDependencies as
+          // optional, so optionalDependencies is read first.
+          for (const field of ['optionalDependencies', 'dependencies', 'peerDependencies']) {
+            for (const [key, range] of Object.entries(pkg[field] || {})) {
+              if (typeof range !== 'string' || seen.has(key)) continue;
+              if (field === 'peerDependencies' && pkg.peerDependenciesMeta?.[key]?.optional === true) continue;
+              seen.add(key);
+              let dep = installedManifest(key);
+              if (!dep) {
+                if (field === 'optionalDependencies') continue;
+                const published = publishedManifest(key, range);
+                dep = published.manifest;
+                if (!dep) {
+                  errors.push(
+                    field + ' lists ' + key + ' (' + range + '), which was not installed and ' + published.problem + ', ' +
+                    'so the bundled-plugin check cannot tell whether it is an App Store plugin or webapp. ' +
+                    'Make sure npm installs it (for a peer, do not set legacy-peer-deps) or mark an optional peer in peerDependenciesMeta.'
+                  );
+                  continue;
+                }
+              }
+              if (dep.name === pkg.name) continue;
+              const keywords = Array.isArray(dep.keywords) ? dep.keywords : [];
+              if (!keywords.some((k) => APPSTORE_KEYWORDS.includes(k))) continue;
+              errors.push(
+                field + ' lists ' + key + ' (' + range + '), which installs the App Store plugin or webapp ' + dep.name + '. ' +
+                'npm installs it into the user\'s ~/.signalk at this range, outside the App Store, and the server loads that copy as a plugin of its own. ' +
+                'Remove it from ' + field + ' and add ' + dep.name + ' to "signalk": { "requires": [...] } (the App Store installs it with your plugin) ' +
+                'or "signalk": { "recommends": [...] } (suggested to the user). See ' + GUIDE
+              );
+            }
+          }
+          errors.forEach((e) => console.log('::error::' + e));
+          if (errors.length > 0) process.exit(1);
+          console.log('No bundled App Store plugins');
+          BUNDLED
+          node "$RUNNER_TEMP/bundled-plugins.mjs"
+
       - name: Build
         env:
           BUILD_CMD: ${{ inputs.build-command }}
@@ -1608,6 +1704,22 @@ jobs:
           const path = require('path');
           const nmDir = path.join(process.env.APPSTORE_DIR, 'node_modules');
           const nativeModules = [];
+          // Native addons that ship prebuilt binaries, by platform.
+          const prebuiltModules = new Map();
+
+          // The platforms (e.g. linux-x64) a package ships prebuilt addons
+          // for, in the prebuilds/<platform>-<arch>/*.node layout that
+          // prebuildify writes. node-gyp-build loads these at runtime, so
+          // they work without install scripts.
+          function prebuiltPlatforms(pkgDir) {
+            const prebuilds = path.join(pkgDir, 'prebuilds');
+            if (!fs.existsSync(prebuilds) || !fs.statSync(prebuilds).isDirectory()) return [];
+            return fs.readdirSync(prebuilds, { withFileTypes: true })
+              .filter((platform) => platform.isDirectory() &&
+                fs.readdirSync(path.join(prebuilds, platform.name), { withFileTypes: true })
+                  .some((f) => f.isFile() && f.name.endsWith('.node')))
+              .map((platform) => platform.name);
+          }
 
           function findNativeModules(dir) {
             if (!fs.existsSync(dir)) return;
@@ -1619,7 +1731,12 @@ jobs:
                 continue;
               }
               if (fs.existsSync(path.join(full, 'binding.gyp'))) {
-                nativeModules.push(entry);
+                const platforms = prebuiltPlatforms(full);
+                if (platforms.length > 0) {
+                  prebuiltModules.set(entry, platforms);
+                } else {
+                  nativeModules.push(entry);
+                }
               }
               const nested = path.join(full, 'node_modules');
               if (fs.existsSync(nested)) findNativeModules(nested);
@@ -1628,8 +1745,16 @@ jobs:
 
           findNativeModules(nmDir);
 
+          for (const [name, platforms] of prebuiltModules) {
+            console.log('::notice::' + name + ' is a native addon with prebuilt binaries for ' + platforms.join(', ') + '. They load without install scripts; on other platforms the addon is missing, so make sure the plugin copes with that.');
+          }
+
           if (nativeModules.length === 0) {
-            console.log('No native addons found — App Store install is safe');
+            console.log(
+              prebuiltModules.size > 0
+                ? 'Every native addon ships prebuilt binaries — App Store install is safe'
+                : 'No native addons found — App Store install is safe'
+            );
             process.exit(0);
           }
 

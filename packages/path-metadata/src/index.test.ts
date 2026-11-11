@@ -1,5 +1,11 @@
 import { expect } from 'chai'
-import { getMetadata, metadataRegistry } from './index'
+import {
+  getMetadata,
+  getStoredMetadata,
+  removeMetadataFields,
+  metadataRegistry,
+  updateContractForPath
+} from './index'
 
 // Callers always prefix the Signal K context, e.g. `vessels.self.<path>`.
 const self = (p: string) => `vessels.self.${p}`
@@ -48,6 +54,35 @@ describe('getMetadata', () => {
       // (v2.25) skipped bare-wildcard entries; the new registry matches
       // that so plugin paths alongside real buses are not mis-labelled.
       expect(getMetadata(self('electrical.ac.bus1'))).to.equal(undefined)
+    })
+  })
+
+  describe('AC phase entries', () => {
+    it('resolve each phase name under the groups that define them', () => {
+      for (const path of [
+        'electrical.ac.0.phase.single.current',
+        'electrical.ac.0.phase.A.current',
+        'electrical.generators.0.phase.B.current',
+        'electrical.inverters.0.ac.phase.C.current'
+      ]) {
+        expect(getMetadata(self(path))?.units, path).to.equal('A')
+      }
+    })
+
+    it('do not match paths outside those groups', () => {
+      for (const path of [
+        'made.up.path.A.current',
+        'electrical.chargers.0.phase.A.realPower',
+        'electrical.ac.0.phase.D.current'
+      ]) {
+        expect(getMetadata(self(path)), path).to.equal(undefined)
+      }
+    })
+
+    it('do not give a container description to an unknown leaf', () => {
+      expect(
+        getMetadata(self('electrical.ac.0.phase.single.nonsense'))
+      ).to.equal(undefined)
     })
   })
 
@@ -251,5 +286,260 @@ describe('getMetadata', () => {
       metadataRegistry.reset()
       expect(getMetadata(p)).to.equal(undefined)
     })
+  })
+
+  describe('runtime keys treat wildcards in delta paths literally', () => {
+    const MAX_LOOKUP_MS = 50
+
+    it('a meta delta path full of * does not stall later lookups', () => {
+      metadataRegistry.addMetaData('vessels.self', '*a'.repeat(15), {
+        units: 'm'
+      })
+      const started = Date.now()
+      expect(getMetadata(self('a'.repeat(60) + '!'))).to.equal(undefined)
+      expect(Date.now() - started).to.be.below(MAX_LOOKUP_MS)
+    })
+
+    it('a * in a runtime path matches only itself', () => {
+      metadataRegistry.addMetaData('vessels.self', 'plugin.*.path', {
+        units: 'm'
+      })
+      expect(getMetadata(self('plugin.*.path'))).to.deep.include({
+        units: 'm'
+      })
+      expect(getMetadata(self('plugin.other.path'))).to.equal(undefined)
+    })
+  })
+})
+
+describe('updateContract inheritance', () => {
+  const contractFor = (path: string) => getMetadata(path)?.updateContract
+
+  it('inherits a subtree contract on a path that has its own entry', () => {
+    expect(contractFor('vessels.self.navigation.anchor.position')).to.equal(
+      'event'
+    )
+  })
+
+  it('returns no metadata for an event-subtree path with no entry', () => {
+    // A stub would make REST and WS serve meta for branches such as
+    // navigation.course; the contract is still available by path.
+    expect(getMetadata('vessels.self.navigation.course')).to.equal(undefined)
+    expect(getMetadata('vessels.self.navigation.home')).to.equal(undefined)
+    expect(updateContractForPath('navigation.home')).to.equal('event')
+  })
+
+  it('removes a field through the stored entry of an event-subtree path', () => {
+    // getMetadata hands out a copy carrying the inherited contract, so a
+    // field cleared on it would never leave the registry.
+    const path = self('design.draft.maximum')
+    metadataRegistry.internalGetMetadata(path)
+    metadataRegistry.addMetaData('vessels.self', 'design.draft.maximum', {
+      displayName: 'Draft'
+    })
+    const stored = getStoredMetadata(path) as Record<string, unknown>
+    delete stored.displayName
+    expect(getMetadata(path)).to.not.have.property('displayName')
+    expect(getMetadata(path)?.updateContract).to.equal('event')
+  })
+
+  it('restores the spec value of a removed field', () => {
+    const path = self('sensors.gps.fromBow')
+    metadataRegistry.internalGetMetadata(path)
+    metadataRegistry.addMetaData('vessels.self', 'sensors.gps.fromBow', {
+      updateContract: 'periodic',
+      displayName: 'GPS offset'
+    })
+    removeMetadataFields(path, ['updateContract', 'displayName'])
+    const entry = getMetadata(path)
+    expect(entry?.updateContract).to.equal('event')
+    expect(entry).to.not.have.property('displayName')
+    expect(entry?.units).to.equal('m')
+  })
+
+  it('leaves a path no subtree covers unclassified', () => {
+    expect(contractFor('vessels.self.navigation.speedOverGround')).to.equal(
+      undefined
+    )
+  })
+
+  it('does not treat a longer path name as being inside the subtree', () => {
+    // navigation.course is event-driven; courseOverGroundTrue is not part of
+    // it despite sharing a prefix string.
+    expect(
+      contractFor('vessels.self.navigation.courseOverGroundTrue')
+    ).to.equal(undefined)
+  })
+
+  it('resolves the same contract under any context root', () => {
+    // A non-vessel root, so this shows the contract is keyed by path rather
+    // than resolved per context.
+    expect(
+      contractFor('aircraft.urn:mrn:imo:mmsi:123.notifications.mob')
+    ).to.equal('event')
+  })
+
+  it('lets an explicit contract on the path win over the subtree', () => {
+    // The per-path declaration is the more specific one: a path inside an
+    // event subtree can still be declared periodic.
+    metadataRegistry.addMetaData('vessels.self', 'notifications.mob', {
+      updateContract: 'periodic'
+    })
+    expect(getMetadata(self('notifications.mob'))?.updateContract).to.equal(
+      'periodic'
+    )
+  })
+
+  it('resolves contracts for the getAllMetadata view too', () => {
+    // The paths reference is served from getAllMetadata, so it has to show
+    // the same contract getMetadata resolves.
+    const all = metadataRegistry.getAllMetadata()
+    expect(
+      all['/vessels/*/navigation/anchor/position']?.updateContract
+    ).to.equal('event')
+    const sog = all['/vessels/*/navigation/speedOverGround']
+    if (!sog) throw new Error('speedOverGround missing from the /paths view')
+    expect(sog.updateContract).to.equal('periodic')
+  })
+
+  it('drops an unsupported contract set at runtime on an uncovered path', () => {
+    // No subtree covers speedOverGround, so nothing sanitises the value
+    // unless getMetadata does it.
+    metadataRegistry.addMetaData('vessels.self', 'navigation.speedOverGround', {
+      updateContract: 'manual'
+    })
+    const entry = getMetadata(self('navigation.speedOverGround'))
+    if (!entry) throw new Error('speedOverGround has no metadata entry')
+    expect(entry.updateContract).to.equal(undefined)
+  })
+
+  it('treats commanded autopilot paths as event-driven', () => {
+    // A command is an event: the latest one persists rather than going stale.
+    expect(contractFor(self('steering.autopilot.state'))).to.equal('event')
+    expect(contractFor(self('steering.autopilot.mode'))).to.equal('event')
+    expect(contractFor(self('steering.autopilot.target.headingTrue'))).to.equal(
+      'event'
+    )
+  })
+
+  it('treats the day/night mode as event-driven', () => {
+    // A night mode switched on by hand must not fall back to null after the
+    // timeout and undim every display.
+    expect(contractFor(self('environment.mode'))).to.equal('event')
+  })
+
+  it('treats resource announcements as event-driven', () => {
+    // Null on a resource path is a delete, so a timeout must never produce it.
+    expect(updateContractForPath('resources.charts.nautical-charts')).to.equal(
+      'event'
+    )
+    expect(updateContractForPath('resources.routes.a-route')).to.equal('event')
+  })
+
+  it('leaves a measured steering path periodic', () => {
+    // rudderAngle is outside the autopilot subtree: it reports where the
+    // rudder is, so silence there really is a dead sensor.
+    expect(contractFor(self('steering.rudderAngle'))).to.equal(undefined)
+  })
+
+  it('treats sensor antenna offsets as event-driven', () => {
+    // Installation geometry does not go stale between restatements, whether
+    // it comes from base data or an AIS static report.
+    expect(contractFor(self('sensors.gps.fromBow'))).to.equal('event')
+    expect(contractFor(self('sensors.gps.fromCenter'))).to.equal('event')
+    expect(contractFor(self('sensors.ais.fromBow'))).to.equal('event')
+    expect(contractFor(self('sensors.ais.fromCenter'))).to.equal('event')
+  })
+
+  it('leaves live sensor data periodic', () => {
+    expect(contractFor(self('sensors.gps.sensorData'))).to.equal(undefined)
+  })
+
+  it('leaves registry scaffolding unclassified in the /paths view', () => {
+    // /self and /vessels are not paths under a context, so a contract says
+    // nothing about them and staleness never applies.
+    const all = metadataRegistry.getAllMetadata()
+    expect(all['/self']?.updateContract).to.equal(undefined)
+    expect(all['/vessels']?.updateContract).to.equal(undefined)
+    // A container shape defines what a battery looks like; it is not a path
+    // that updates, so it must not be advertised as periodically updated.
+    expect(
+      all['/vessels/*/electrical/batteries/RegExp']?.updateContract
+    ).to.equal(undefined)
+  })
+
+  it('does not write the contract onto the shared template entry', () => {
+    const anchorPosition = 'vessels.self.navigation.anchor.position'
+    expect(getMetadata(anchorPosition)?.updateContract).to.equal('event')
+    expect(getStoredMetadata(anchorPosition)?.updateContract).to.equal(
+      undefined
+    )
+    const other = getMetadata('vessels.self.navigation.speedOverGround')
+    expect(other?.updateContract).to.equal(undefined)
+    expect(other?.units).to.equal('m/s')
+  })
+})
+
+describe('device and AIS paths the NMEA parsers write', () => {
+  const units = (p: string) =>
+    (getMetadata(p) as { units?: string } | undefined)?.units
+
+  it('resolves under any instance, with units', () => {
+    expect(
+      units(self('electrical.chargers.1.equalizationTimeRemaining'))
+    ).to.equal('s')
+    expect(
+      units(self('electrical.chargers.house.chargeCurrentLimit'))
+    ).to.equal('ratio')
+    expect(
+      units(self('electrical.inverters.2.loadSensePowerThreshold'))
+    ).to.equal('W')
+    expect(
+      units(self('electrical.ac.1c2.phase.B.breaker.ratedCurrent'))
+    ).to.equal('A')
+    expect(units(self('electrical.batteries.0.nominalVoltage'))).to.equal('V')
+    expect(
+      units(self('electrical.displays.raymarine.helm1.brightness'))
+    ).to.equal('ratio')
+    expect(units(self('propulsion.port.trip.fuelUsed'))).to.equal('m3')
+  })
+
+  it('gives the input fields to AC buses and the waveform to inverters', () => {
+    expect(
+      units(self('electrical.inverters.0.ac.phase.C.breaker.ratedCurrent'))
+    ).to.equal('A')
+    expect(
+      getMetadata(self('electrical.ac.0.phase.A.breaker.curveType'))?.enum
+    ).to.deep.equal(['B', 'C', 'D', 'K', 'Z'])
+    expect(
+      getMetadata(self('electrical.inverters.0.ac.breaker.curveType'))?.enum
+    ).to.include('C')
+    expect(
+      getMetadata(self('electrical.ac.0.phase.single.acceptability'))?.enum
+    ).to.include('being qualified')
+    expect(getMetadata(self('electrical.inverters.0.ac.phase.B.acceptability')))
+      .to.be.undefined
+    expect(
+      getMetadata(self('electrical.inverters.0.ac.phase.B.waveform'))?.enum
+    ).to.not.be.undefined
+    expect(getMetadata(self('electrical.ac.0.phase.B.waveform'))).to.be
+      .undefined
+  })
+
+  it('lists both the NMEA 2000 and the older charging modes', () => {
+    const modes = getMetadata(self('electrical.chargers.1.chargingMode'))?.enum
+    expect(modes).to.include.members(['absorption', 'acceptance', 'no float'])
+  })
+
+  it('tells satellites used from satellites in view', () => {
+    expect(getMetadata(self('navigation.gnss.satellites'))).to.not.deep.equal(
+      getMetadata(self('navigation.gnss.satellitesInView'))
+    )
+  })
+
+  it('resolves the AtoN fields under an AtoN', () => {
+    expect(
+      getMetadata('atons.urn:mrn:imo:mmsi:993672085.atonType')
+    ).to.not.equal(undefined)
   })
 })

@@ -40,6 +40,7 @@ import DeltaCache, { CachedContexts } from './deltacache'
 import { ToPreferredDelta } from './deltaPriority'
 import { StreamBundle, toDelta } from './streambundle'
 import { ContextMatcher } from './types'
+import { wildcardMatcher } from './wildcard'
 const debug = createDebug('signalk-server:subscriptionmanager')
 
 interface BusesMap {
@@ -362,7 +363,7 @@ function handleSubscribeRow(
   bootstrapFromCache?: boolean,
   trusted?: boolean
 ) {
-  const matcher = pathMatcher(subscribeRow.path)
+  const matcher = wildcardMatcher(subscribeRow.path ?? '*')
   // The set of cached contexts matching filter is invariant across this
   // row's synchronous bus sweep — enumerate it once, lazily, instead of
   // re-scanning the whole cache and re-running the filter per context
@@ -537,15 +538,6 @@ function handleSubscribeRow(
   })
 }
 
-function pathMatcher(path: string = '*') {
-  const pattern = path
-    .replace(/[\\^$+?()[\]{}|]/g, '\\$&')
-    .replace(/\./g, '\\.')
-    .replace(/\*/g, '.*')
-  const matcher = new RegExp('^' + pattern + '$')
-  return (aPath: string) => matcher.test(aPath)
-}
-
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value)
 }
@@ -623,13 +615,9 @@ function contextMatcher(
   debug.enabled && debug('subscribeCommand:' + JSON.stringify(subscribeCommand))
   if (subscribeCommand.context) {
     if (isString(subscribeCommand.context)) {
-      const pattern = subscribeCommand.context
-        .replace(/[\\^$+?()[\]{}|]/g, '\\$&')
-        .replace(/\./g, '\\.')
-        .replace(/\*/g, '.*')
-      const matcher = new RegExp('^' + pattern + '$')
+      const matches = wildcardMatcher(subscribeCommand.context)
       return (normalizedDeltaData: WithContext) =>
-        matcher.test(normalizedDeltaData.context) ||
+        matches(normalizedDeltaData.context) ||
         ((subscribeCommand.context === 'vessels.self' ||
           subscribeCommand.context === 'self') &&
           normalizedDeltaData.context === selfContext)

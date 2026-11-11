@@ -1,5 +1,9 @@
 import { expect } from 'chai'
-import CanboatJs from './canboatjs'
+import CanboatJs, {
+  cleanQuirks,
+  createParser,
+  createParserWith
+} from './canboatjs'
 import {
   createMockApp,
   collectStreamOutput,
@@ -96,5 +100,115 @@ describe('CanboatJs', () => {
 
     await outputPromise
     expect(unparsed).to.have.length(1)
+  })
+})
+
+describe('cleanQuirks', () => {
+  it('drops the empty entries a trailing space leaves', () => {
+    expect(cleanQuirks(['gps-rollover=4,1851:491603', '', ' '])).to.deep.equal([
+      'gps-rollover=4,1851:491603'
+    ])
+  })
+
+  it('takes a single string as a list of one', () => {
+    expect(cleanQuirks(' gps-rollover ')).to.deep.equal(['gps-rollover'])
+  })
+
+  it('leaves no quirks as none', () => {
+    expect(cleanQuirks(undefined)).to.equal(undefined)
+    expect(cleanQuirks([])).to.deep.equal([])
+  })
+})
+
+describe('createParser', () => {
+  class Accepts {
+    constructor(public options: object) {}
+  }
+  const refusing = (message: string) =>
+    class {
+      constructor() {
+        throw new Error(message)
+      }
+    }
+
+  it('creates the parser when there are no quirks', () => {
+    expect(createParser(Accepts, {}, false)).to.be.instanceOf(Accepts)
+    expect(createParser(Accepts, { quirks: [] }, false)).to.be.instanceOf(
+      Accepts
+    )
+  })
+
+  it('passes quirks to a canboatjs that supports them', () => {
+    const parser = createParser(Accepts, { quirks: ['gps-rollover'] }, true)
+    expect(parser.options).to.deep.equal({ quirks: ['gps-rollover'] })
+  })
+
+  it('refuses quirks that are not a list, whatever canboatjs supports', () => {
+    for (const supports of [false, true]) {
+      expect(() => createParser(Accepts, { quirks: 4 }, supports)).to.throw(
+        /^Invalid quirks option: expected a string or a list of strings$/
+      )
+    }
+  })
+
+  it('refuses quirks a canboatjs without quirk support would ignore', () => {
+    expect(() =>
+      createParser(Accepts, { quirks: ['gps-rollover'] }, false)
+    ).to.throw(/^Invalid quirks option: the installed @canboat\/canboatjs/)
+  })
+
+  it('names the quirks option when canboatjs does not', () => {
+    expect(() =>
+      createParser(
+        refusing("'vhf' is not a device"),
+        { quirks: ['gps-rollover=vhf'] },
+        true
+      )
+    ).to.throw("Invalid quirks option: 'vhf' is not a device")
+  })
+
+  it('does not name it twice when canboatjs already does', () => {
+    expect(() =>
+      createParser(
+        refusing("Invalid quirks option: 'vhf' is not a device"),
+        { quirks: ['gps-rollover=vhf'] },
+        true
+      )
+    ).to.throw(/^Invalid quirks option: 'vhf' is not a device$/)
+  })
+
+  it('leaves an error that has nothing to do with quirks alone', () => {
+    expect(() => createParser(refusing('boom'), {}, true)).to.throw(/^boom$/)
+  })
+})
+
+describe('createParserWith', () => {
+  // The YDWG-02 connections build canboatjs's Ydwg02, which makes its own
+  // parser and takes a second argument; the quirks check must still apply.
+  class TwoArgs {
+    constructor(
+      public options: object,
+      public kind: string
+    ) {}
+  }
+
+  it('builds the stream with its extra arguments', () => {
+    const stream = createParserWith(
+      (o) => new TwoArgs(o, 'network'),
+      { quirks: ['gps-rollover'] },
+      true
+    )
+    expect(stream.kind).to.equal('network')
+    expect(stream.options).to.deep.equal({ quirks: ['gps-rollover'] })
+  })
+
+  it('refuses quirks a canboatjs without quirk support would ignore', () => {
+    expect(() =>
+      createParserWith(
+        (o) => new TwoArgs(o, 'network'),
+        { quirks: ['gps-rollover=1851:841884'] },
+        false
+      )
+    ).to.throw(/^Invalid quirks option: the installed @canboat\/canboatjs/)
   })
 })

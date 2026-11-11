@@ -90,3 +90,51 @@ export function getNodeFetch(): typeof fetch {
     return cachedFetch
   }
 }
+
+/** Status reported for a request that got no HTTP response */
+export const FAILED_REQUEST_STATUS = 502
+
+/** The parts of a response as-fetch reads */
+export type AsFetchResponse = Pick<
+  Response,
+  'status' | 'redirected' | 'arrayBuffer'
+>
+
+const errorMessage = (error: unknown) =>
+  error instanceof Error ? error.message : String(error)
+
+/**
+ * Wrap a fetch implementation for as-fetch so that it never rejects.
+ *
+ * as-fetch resumes a plugin paused in `fetchSync`, and calls the plugin's
+ * response handler, only when the request and its body read succeed. A DNS
+ * or connection error, or a body cut off mid-transfer, would leave the
+ * plugin suspended for good, and a plugin suspended in `plugin_start` holds
+ * the start of every network plugin queued behind it. Such failures are
+ * answered with an empty body and FAILED_REQUEST_STATUS instead.
+ */
+export function resolveFailedRequests<A extends unknown[]>(
+  fetchImpl: (...args: A) => Promise<Response>
+): (...args: A) => Promise<AsFetchResponse> {
+  return async (...args) => {
+    try {
+      const response = await fetchImpl(...args)
+      return {
+        status: response.status,
+        redirected: response.redirected,
+        arrayBuffer: () =>
+          response.arrayBuffer().catch((error: unknown) => {
+            debug(`Reading response body failed: ${errorMessage(error)}`)
+            return new ArrayBuffer(0)
+          })
+      }
+    } catch (error) {
+      debug(`Request failed: ${errorMessage(error)}`)
+      return {
+        status: FAILED_REQUEST_STATUS,
+        redirected: false,
+        arrayBuffer: async () => new ArrayBuffer(0)
+      }
+    }
+  }
+}

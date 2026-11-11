@@ -125,6 +125,28 @@ export const propulsionMetadata: Record<string, PathMetadataEntry> = {
     description: 'Economy fuel rate of consumption',
     units: 'm3/s'
   },
+  '/vessels/*/propulsion/RegExp/trip': {
+    description: "Data about the engine's current trip"
+  },
+  '/vessels/*/propulsion/RegExp/trip/fuelUsed': {
+    description: 'Fuel used on this trip',
+    units: 'm3'
+  },
+  '/vessels/*/propulsion/RegExp/trip/fuelRate': {
+    description: 'Fuel rates of consumption on this trip'
+  },
+  '/vessels/*/propulsion/RegExp/trip/fuelRate/average': {
+    description: 'Average fuel rate of consumption on this trip',
+    units: 'm3/s'
+  },
+  '/vessels/*/propulsion/RegExp/trip/fuelRate/economy': {
+    description: 'Economy fuel rate of consumption on this trip',
+    units: 'm3/s'
+  },
+  '/vessels/*/propulsion/RegExp/trip/fuelRate/instantaneousEconomy': {
+    description: 'Instantaneous economy fuel rate of consumption',
+    units: 'm3/s'
+  },
   '/vessels/*/propulsion/RegExp/fuel/averageRate': {
     description: 'Average fuel rate of consumption',
     units: 'm3/s'

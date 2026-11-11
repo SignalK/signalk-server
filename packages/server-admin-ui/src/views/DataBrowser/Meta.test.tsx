@@ -1,6 +1,14 @@
-import { describe, it, expect, vi } from 'vitest'
+import { afterEach, describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
-import { CategorySelect, Zones } from './Meta'
+import { useStore } from '../../store'
+import VirtualizedMetaTable from './VirtualizedMetaTable'
+import Meta, {
+  CategorySelect,
+  saveMeta,
+  normalizeMetaForSave,
+  UpdateContractSelect,
+  Zones
+} from './Meta'
 import type { PresetDetails, UnitDefinitions } from '../../utils/unitConversion'
 
 const DEFINITIONS: UnitDefinitions = {
@@ -235,5 +243,361 @@ describe('Zones', () => {
   it('edits thresholds in the preset unit when there is no override', () => {
     renderZones()
     expect(screen.getByLabelText('Zone unit')).toHaveValue('kn')
+  })
+})
+
+describe('UpdateContractSelect', () => {
+  const renderContract = (
+    value: unknown,
+    setValue: (value: unknown) => void = () => {}
+  ) =>
+    render(
+      <UpdateContractSelect
+        disabled={false}
+        value={value}
+        setValue={setValue}
+        inputId="contract"
+      />
+    )
+
+  it('offers unset, periodic and event', () => {
+    renderContract(undefined)
+    const options = screen.getAllByRole('option').map((o) => o.textContent)
+    expect(options).to.deep.equal([
+      'Use the shipped classification',
+      'periodic: regular updates expected',
+      'event: emits only on change, never stale'
+    ])
+  })
+
+  it('shows the unset option when the path has no contract', () => {
+    renderContract(undefined)
+    expect((screen.getByRole('combobox') as HTMLSelectElement).value).to.equal(
+      ''
+    )
+  })
+
+  it('reflects a contract already set on the path', () => {
+    renderContract('event')
+    expect((screen.getByRole('combobox') as HTMLSelectElement).value).to.equal(
+      'event'
+    )
+  })
+
+  it('reports a chosen contract to the editor', () => {
+    const setValue = vi.fn()
+    renderContract(undefined, setValue)
+    fireEvent.change(screen.getByRole('combobox'), {
+      target: { value: 'event' }
+    })
+    expect(setValue).toHaveBeenCalledWith('event')
+  })
+
+  it('keeps the field as an empty string when reset', () => {
+    // undefined would drop the row from the open editor; '' keeps it, and
+    // normalizeMetaForSave leaves it out of the save.
+    const setValue = vi.fn()
+    renderContract('event', setValue)
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: '' } })
+    expect(setValue).toHaveBeenCalledWith('')
+  })
+})
+
+describe('normalizeMetaForSave', () => {
+  it('drops a contract the user never chose', () => {
+    // Add Field seeds '' — saving without touching the select must not
+    // persist that as the contract.
+    expect(
+      normalizeMetaForSave({ description: 'x', updateContract: '' })
+    ).to.deep.equal({ description: 'x' })
+  })
+
+  it('keeps periodic and event', () => {
+    expect(normalizeMetaForSave({ updateContract: 'periodic' })).to.deep.equal({
+      updateContract: 'periodic'
+    })
+    expect(normalizeMetaForSave({ updateContract: 'event' })).to.deep.equal({
+      updateContract: 'event'
+    })
+  })
+
+  it('drops a contract reset to the shipped classification', () => {
+    // A key left in place with no value must still be dropped, or
+    // handleSave would not count it as cleared.
+    expect(
+      normalizeMetaForSave({ description: 'x', updateContract: undefined })
+    ).to.deep.equal({ description: 'x' })
+  })
+
+  it('drops an unrecognised contract', () => {
+    expect(normalizeMetaForSave({ updateContract: 'sometimes' })).to.deep.equal(
+      {}
+    )
+  })
+
+  it('leaves metadata without a contract untouched', () => {
+    const meta = { description: 'x', timeout: 900 }
+    expect(normalizeMetaForSave(meta)).to.equal(meta)
+  })
+})
+
+describe('Meta save queue', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+    vi.unstubAllGlobals()
+    useStore.getState().clearData()
+  })
+
+  it('does not send a second PUT until the first has settled', async () => {
+    // The server responds before its write lands, so overlapping PUTs could
+    // otherwise be persisted out of order.
+    let releaseFirst: (value: { ok: boolean }) => void = () => {}
+    const first = new Promise<{ ok: boolean }>((resolve) => {
+      releaseFirst = resolve
+    })
+    const fetchMock = vi
+      .fn()
+      .mockReturnValueOnce(first)
+      .mockResolvedValue({ ok: true })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const a = saveMeta('navigation.state', { updateContract: 'event' })
+    const b = saveMeta('navigation.state', { updateContract: 'periodic' })
+    await new Promise((r) => setTimeout(r, 0))
+
+    expect(fetchMock.mock.calls).to.have.lengthOf(1)
+
+    releaseFirst({ ok: true })
+    await Promise.all([a, b])
+
+    expect(fetchMock.mock.calls).to.have.lengthOf(2)
+  })
+})
+
+describe('Meta save clears removed fields', () => {
+  const path = 'navigation.state'
+  const meta = { description: 'Navigational state', updateContract: 'event' }
+
+  const renderMeta = () =>
+    render(<Meta meta={meta} path={path} context="self" />)
+
+  const openEditorAndDeleteContract = async () => {
+    fireEvent.click(screen.getByRole('button', { name: /edit/i }))
+    const selects = screen
+      .getAllByRole('combobox')
+      .filter((s) =>
+        [...(s as HTMLSelectElement).options].some(
+          (o) => o.value === 'description'
+        )
+      )
+    const contractRow = selects.find(
+      (s) => (s as HTMLSelectElement).value === 'updateContract'
+    )
+    expect(contractRow).to.not.equal(undefined)
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Delete updateContract' })
+    )
+    fireEvent.click(screen.getByRole('button', { name: /save/i }))
+  }
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+    vi.unstubAllGlobals()
+    useStore.getState().clearData()
+  })
+
+  it('keeps the field locally when the save is rejected', async () => {
+    useStore.getState().updateMeta('self', path, meta)
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: false, status: 500 })
+    )
+
+    renderMeta()
+    await openEditorAndDeleteContract()
+    await new Promise((r) => setTimeout(r, 0))
+
+    expect(useStore.getState().getMeta('self', path)?.updateContract).to.equal(
+      'event'
+    )
+  })
+
+  it('drops the field when a newer save fails after it was accepted', async () => {
+    useStore.getState().updateMeta('self', path, meta)
+    let releaseFirst: (value: {
+      ok: boolean
+      status: number
+    }) => void = () => {}
+    const first = new Promise<{ ok: boolean; status: number }>((resolve) => {
+      releaseFirst = resolve
+    })
+    const putResponses = [first, Promise.resolve({ ok: false, status: 500 })]
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((_url: string, init?: RequestInit) =>
+        init?.method === 'PUT'
+          ? putResponses.shift()
+          : Promise.resolve({ ok: true, json: () => Promise.resolve({}) })
+      )
+    )
+
+    renderMeta()
+    await openEditorAndDeleteContract()
+    fireEvent.click(screen.getByRole('button', { name: /edit/i }))
+    fireEvent.click(screen.getByRole('button', { name: /save/i }))
+    releaseFirst({ ok: true, status: 200 })
+
+    await vi.waitFor(() =>
+      expect(
+        useStore.getState().getMeta('self', path)?.updateContract
+      ).to.equal(undefined)
+    )
+  })
+
+  it('keeps the contract row open when reset, and clears it on save', async () => {
+    useStore.getState().updateMeta('self', path, meta)
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200 })
+    vi.stubGlobal('fetch', fetchMock)
+
+    renderMeta()
+    fireEvent.click(screen.getByRole('button', { name: /edit/i }))
+    const contractSelect = screen
+      .getAllByRole('combobox')
+      .find((s) => (s as HTMLSelectElement).value === 'event')
+    expect(contractSelect).to.not.equal(undefined)
+    fireEvent.change(contractSelect!, { target: { value: '' } })
+
+    expect(
+      screen.getByRole('button', { name: 'Delete updateContract' })
+    ).to.not.equal(null)
+
+    fireEvent.click(screen.getByRole('button', { name: /save/i }))
+    await vi.waitFor(() =>
+      expect(
+        useStore.getState().getMeta('self', path)?.updateContract
+      ).to.equal(undefined)
+    )
+    const put = fetchMock.mock.calls.find(
+      ([, init]) => (init as RequestInit | undefined)?.method === 'PUT'
+    )
+    expect(JSON.parse(String((put![1] as RequestInit).body))).to.deep.equal({
+      value: { description: 'Navigational state' }
+    })
+  })
+
+  it('drops a field an earlier pending save added when a later one removes it', async () => {
+    const initial = { units: 'm', description: 'Depth' }
+    useStore.getState().updateMeta('self', path, initial)
+    let releaseFirst: (value: {
+      ok: boolean
+      status: number
+    }) => void = () => {}
+    const first = new Promise<{ ok: boolean; status: number }>((resolve) => {
+      releaseFirst = resolve
+    })
+    const putResponses = [
+      first,
+      Promise.resolve({ ok: true, status: 200 }),
+      Promise.resolve({ ok: false, status: 500 })
+    ]
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((_url: string, init?: RequestInit) =>
+        init?.method === 'PUT'
+          ? putResponses.shift()
+          : Promise.resolve({ ok: true, json: () => Promise.resolve({}) })
+      )
+    )
+
+    render(<Meta meta={initial} path={path} context="self" />)
+    fireEvent.click(screen.getByRole('button', { name: /edit/i }))
+    fireEvent.click(screen.getByRole('button', { name: /add field/i }))
+    fireEvent.change(screen.getByLabelText('displayName value'), {
+      target: { value: 'Bridge' }
+    })
+    fireEvent.click(screen.getByRole('button', { name: /save/i }))
+
+    fireEvent.click(screen.getByRole('button', { name: /edit/i }))
+    fireEvent.click(screen.getByRole('button', { name: 'Delete displayName' }))
+    fireEvent.click(screen.getByRole('button', { name: /save/i }))
+
+    fireEvent.click(screen.getByRole('button', { name: /edit/i }))
+    fireEvent.click(screen.getByRole('button', { name: /save/i }))
+
+    useStore.getState().updateMeta('self', path, { displayName: 'Bridge' })
+    releaseFirst({ ok: true, status: 200 })
+
+    await vi.waitFor(() => expect(putResponses).to.have.lengthOf(0))
+    await new Promise((r) => setTimeout(r, 0))
+    expect(useStore.getState().getMeta('self', path)?.displayName).to.equal(
+      undefined
+    )
+  })
+
+  it('drops the field locally once the save succeeds', async () => {
+    useStore.getState().updateMeta('self', path, meta)
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, status: 200 }))
+
+    renderMeta()
+    await openEditorAndDeleteContract()
+    await new Promise((r) => setTimeout(r, 0))
+
+    expect(useStore.getState().getMeta('self', path)?.updateContract).to.equal(
+      undefined
+    )
+  })
+})
+
+describe('Meta editing scope', () => {
+  it('offers no editing for a context other than self', () => {
+    render(
+      <Meta
+        meta={{ description: 'Depth' }}
+        path="environment.depth.belowTransducer"
+        context="vessels.urn:mrn:imo:mmsi:123456789"
+      />
+    )
+    expect(screen.queryByRole('button', { name: /edit/i })).to.equal(null)
+  })
+
+  it('offers editing for self', () => {
+    render(
+      <Meta
+        meta={{ description: 'Depth' }}
+        path="environment.depth.belowTransducer"
+        context="self"
+      />
+    )
+    expect(screen.getByRole('button', { name: /edit/i })).to.not.equal(null)
+  })
+
+  it('closes the editor and sends nothing when the context changes', () => {
+    const path = 'environment.depth.belowTransducer'
+    useStore.getState().updateMeta('self', path, { description: 'Depth' })
+    useStore.getState().updateMeta('vessels.urn:mrn:imo:mmsi:123456789', path, {
+      description: 'Depth'
+    })
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200 })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const { rerender } = render(
+      <VirtualizedMetaTable paths={[path]} context="self" />
+    )
+    fireEvent.click(screen.getByRole('button', { name: /edit/i }))
+    rerender(
+      <VirtualizedMetaTable
+        paths={[path]}
+        context="vessels.urn:mrn:imo:mmsi:123456789"
+      />
+    )
+
+    expect(screen.queryByRole('button', { name: /save/i })).to.equal(null)
+    expect(
+      fetchMock.mock.calls.filter(
+        ([, init]) => (init as RequestInit | undefined)?.method === 'PUT'
+      )
+    ).to.have.lengthOf(0)
+    vi.unstubAllGlobals()
+    useStore.getState().clearData()
   })
 })

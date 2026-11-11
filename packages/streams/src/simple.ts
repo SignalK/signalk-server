@@ -17,6 +17,10 @@ import Gpsd from './gpsd'
 import Nmea0183LinerFilter from './nmea0183-liner-filter'
 import PigpioSeatalk from './pigpio-seatalk'
 import GpiodSeatalk from './gpiod-seatalk'
+import {
+  canboatjsSupportsExcludePgns,
+  excludePgnsFromFilters
+} from './n2k-exclude-pgns'
 import type { CreateDebug, DeltaCache } from './types'
 
 // canboat exports are old-style constructor functions, not classes.
@@ -107,6 +111,8 @@ interface SubOptions {
   appendChecksum?: boolean
   filters?: Array<{ source?: string; pgn?: string }>
   filtersEnabled?: boolean
+  filtersBeforeDecoding?: boolean
+  excludePgns?: Array<number | string> | string | number
   useCanName?: boolean
   tcp?: boolean
   [key: string]: unknown
@@ -225,10 +231,20 @@ const dataTypeMapping: Record<string, PipelineFactory> = {
       Ydwg02: unknown
     }
     const Ydwg02Ctor = canboatjs.Ydwg02 as unknown as CanboatCtor
+    const { createParserWith, cleanQuirks, canboatjsSupportsQuirks } =
+      require('./canboatjs') as typeof import('./canboatjs')
+    const kind =
+      options.subOptions.type === 'ydwg02-usb-canboatjs' ? 'usb' : 'network'
+    // Ydwg02 makes its own canboatjs parser, so check the quirks here as
+    // the CanboatJs stream does for every other NMEA 2000 connection.
     const result: PipeElement[] = [
-      new Ydwg02Ctor(
-        { ...options.subOptions },
-        options.subOptions.type === 'ydwg02-usb-canboatjs' ? 'usb' : 'network'
+      createParserWith(
+        (o) => new Ydwg02Ctor(o, kind),
+        {
+          ...options.subOptions,
+          quirks: cleanQuirks(options.subOptions.quirks)
+        },
+        canboatjsSupportsQuirks
       )
     ]
     if (options.type === 'FileStream') {
@@ -605,6 +621,23 @@ export default class Simple extends Transform {
 
     opts.subOptions.app = options.app
 
+    // Hand the PGN-only filter rows to canboatjs, which then drops those
+    // messages before decoding them (in the kernel on SocketCAN). An older
+    // canboatjs would ignore excludePgns, so say why the switch does
+    // nothing there.
+    if (dataType.startsWith('NMEA2000')) {
+      const excludePgns = excludePgnsFromFilters(opts.subOptions)
+      if (excludePgns !== undefined) {
+        if (canboatjsSupportsExcludePgns()) {
+          opts.subOptions.excludePgns = excludePgns
+        } else if (opts.subOptions.filtersBeforeDecoding) {
+          console.warn(
+            `${options.providerId}: this canboatjs can't drop filtered PGNs before decoding; they are filtered after decoding`
+          )
+        }
+      }
+    }
+
     let mappingType = dataType
 
     if (options.type === 'NMEA2000' && opts.subOptions) {
@@ -649,15 +682,32 @@ export default class Simple extends Transform {
     const pipeStart = pipeStartByType[options.type]!
     const dataMapper = dataTypeMapping[mappingType]!
 
-    const pipeline: PipeElement[] = [
-      ...pipeStart(opts.subOptions, options.logging),
-      ...getLoggerPipeline(
-        options.app,
-        options.logging,
-        discriminatorByDataType[dataType]
-      ),
-      ...dataMapper(opts)
-    ]
+    // The input (a serial port, a socket) opens as it is made. If a later
+    // element cannot be made, for instance a parser that refuses its
+    // quirks, close the input again before the error is reported, so the
+    // port is not left open with nothing reading it.
+    const input = pipeStart(opts.subOptions, options.logging)
+    let pipeline: PipeElement[]
+    try {
+      pipeline = [
+        ...input,
+        ...getLoggerPipeline(
+          options.app,
+          options.logging,
+          discriminatorByDataType[dataType]
+        ),
+        ...dataMapper(opts)
+      ]
+    } catch (e) {
+      for (const element of input) {
+        try {
+          element.end()
+        } catch {
+          // Already closed, or never opened: the first error is the one to report.
+        }
+      }
+      throw e
+    }
 
     const dataReceivedEventName = `${opts.subOptions.providerId}-received`
 
