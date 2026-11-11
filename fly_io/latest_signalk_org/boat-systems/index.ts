@@ -403,6 +403,7 @@ export default function (app: ServerAPI): Plugin {
         {
           path: 'electrical.batteries.house.voltage',
           value: {
+            displayName: 'House battery',
             units: 'V',
             zones: [
               {
