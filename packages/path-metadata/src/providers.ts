@@ -1,7 +1,8 @@
 import type { PathMetadataEntry } from './types'
 
-// The status of the gateway a server connection (provider) reads the bus
-// through, as NMEA 2000 gateways report it in PGN 262400.
+// The status of a server connection (provider): its delta and write rates,
+// and the status of the gateway it reads the bus through, as NMEA 2000
+// gateways report it in PGN 262400.
 export const providersMetadata: Record<string, PathMetadataEntry> = {
   '/vessels/*/providers': {
     description:
@@ -9,6 +10,16 @@ export const providersMetadata: Record<string, PathMetadataEntry> = {
   },
   '/vessels/*/providers/RegExp': {
     description: 'One connection, named by its provider id in the server'
+  },
+  '/vessels/*/providers/RegExp/deltaRate': {
+    description:
+      'Deltas the connection delivers per second. The server writes it unless the connection writes it itself, at least every 15 s',
+    units: 'Hz'
+  },
+  '/vessels/*/providers/RegExp/writeRate': {
+    description:
+      'Messages written to the connection per second. The server writes it unless the connection writes it itself, at least every 15 s',
+    units: 'Hz'
   },
   '/vessels/*/providers/RegExp/canNetworkLoad': {
     description: 'Load of the NMEA 2000 bus the gateway is connected to',
