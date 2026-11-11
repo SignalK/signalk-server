@@ -1,5 +1,5 @@
 ARG SK_VERSION
-ARG MAYARA_VERSION=3.17.4
+ARG MAYARA_VERSION=3.17.5
 FROM ghcr.io/marineyachtradar/mayara-server:${MAYARA_VERSION} AS mayara
 
 FROM signalk/signalk-server:${SK_VERSION}
