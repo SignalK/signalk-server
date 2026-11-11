@@ -118,6 +118,7 @@ export default function (app: ServerAPI): Plugin {
   let autopilotSetting = ''
   let autopilotChangedAt = Date.now()
   let resuming = false
+  let nightSince: number | undefined
   let historyTimer: ReturnType<typeof setInterval> | undefined
   let historyStart: ReturnType<typeof setTimeout> | undefined
 
@@ -297,6 +298,23 @@ export default function (app: ServerAPI): Plugin {
     }
   }
 
+  // Night mode is one setting for every visitor, so one visitor's night
+  // would stay dark for everyone who comes after.
+  function returnToDayWhenIdle() {
+    if (app.getSelfPath('environment.mode.value') !== 'night') {
+      nightSince = undefined
+      return
+    }
+    nightSince ??= Date.now()
+    if (Date.now() - nightSince < VISITOR_IDLE_MS) return
+    nightSince = undefined
+    app.handleMessage(PLUGIN_ID, {
+      updates: [
+        { values: [{ path: 'environment.mode' as Path, value: 'day' }] }
+      ]
+    })
+  }
+
   function tick() {
     if (ticksSinceVariation >= VARIATION_EVERY_TICKS) publishVariation()
     ticksSinceVariation++
@@ -305,13 +323,14 @@ export default function (app: ServerAPI): Plugin {
     publishPolarPerformance()
     void turnRoundAtEnd()
     void returnToRouteWhenIdle()
+    returnToDayWhenIdle()
   }
 
   return {
     id: PLUGIN_ID,
     name: 'Demo director',
     description:
-      'Keeps the demo boat under way: publishes magnetic variation, the computer health and the polar performance, turns the active route round at its end, and takes the boat back to the route when visitors stop steering',
+      'Keeps the demo boat under way: publishes magnetic variation, the computer health and the polar performance, turns the active route round at its end, takes the boat back to the route when visitors stop steering, and switches back to day mode',
     schema: () => ({ type: 'object', properties: {} }),
     start: () => {
       ticksSinceVariation = VARIATION_EVERY_TICKS
