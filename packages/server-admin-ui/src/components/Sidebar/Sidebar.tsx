@@ -361,6 +361,13 @@ export default function Sidebar({ location }: SidebarProps) {
           ]
         }
       )
+    } else {
+      result.push({
+        name: 'Apps & Plugins',
+        url: '/apps',
+        icon: 'icon-basket',
+        children: [{ name: 'Store', url: '/apps/store' }]
+      })
     }
 
     if (isAdmin) {

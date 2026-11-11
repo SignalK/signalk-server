@@ -11,7 +11,12 @@ import React, {
   useDeferredValue
 } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { useAppStore, useAppstoreFilter, useStore } from '../../../store'
+import {
+  useAppStore,
+  useAppstoreFilter,
+  useIsAdmin,
+  useStore
+} from '../../../store'
 import { fetchAppStore } from '../../../dataFetching'
 import Button from 'react-bootstrap/Button'
 import ButtonGroup from 'react-bootstrap/ButtonGroup'
@@ -109,6 +114,9 @@ function writeString(key: string, value: string) {
 
 const Apps: React.FC = () => {
   const appStore = useAppStore() as AppStoreState
+  // The server tells read-only users nothing about what is installed here,
+  // so they browse the catalog without the install views and actions.
+  const readOnly = !useIsAdmin()
   const [searchParams, setSearchParams] = useSearchParams()
   // View, search and category live in the store so they survive the
   // unmount/remount when the user opens a plugin detail page and returns
@@ -326,51 +334,53 @@ const Apps: React.FC = () => {
         <Card.Header className="appstore__header">
           <div className="title__container">
             <Card.Title>Apps & Plugins</Card.Title>
-            <div className="button-wrapper">
-              <Button
-                variant={view === 'All' ? 'secondary' : 'light'}
-                onClick={() => setSelectedView('All')}
-              >
-                All
-              </Button>
-              <Button
-                variant={view === 'Installed' ? 'secondary' : 'light'}
-                onClick={() => setSelectedView('Installed')}
-              >
-                Installed
-              </Button>
-              <Button
-                variant={view === 'Updates' ? 'secondary' : 'light'}
-                onClick={() => setSelectedView('Updates')}
-              >
-                Updates
-                {appStore.updates.length > 0 && (
-                  <span className="badge__update">
-                    {appStore.updates.length}
-                  </span>
+            {!readOnly && (
+              <div className="button-wrapper">
+                <Button
+                  variant={view === 'All' ? 'secondary' : 'light'}
+                  onClick={() => setSelectedView('All')}
+                >
+                  All
+                </Button>
+                <Button
+                  variant={view === 'Installed' ? 'secondary' : 'light'}
+                  onClick={() => setSelectedView('Installed')}
+                >
+                  Installed
+                </Button>
+                <Button
+                  variant={view === 'Updates' ? 'secondary' : 'light'}
+                  onClick={() => setSelectedView('Updates')}
+                >
+                  Updates
+                  {appStore.updates.length > 0 && (
+                    <span className="badge__update">
+                      {appStore.updates.length}
+                    </span>
+                  )}
+                </Button>
+                {appStore.installing.length > 0 && (
+                  <>
+                    <Button
+                      variant={view === 'Installing' ? 'secondary' : 'light'}
+                      onClick={() => setSelectedView('Installing')}
+                    >
+                      Installs & Removes
+                      {installingCount(appStore) > 0 && (
+                        <span className="badge__update">
+                          {installingCount(appStore)}
+                        </span>
+                      )}
+                    </Button>
+                    {appStore.installing.length > 0 && '(Pending restart)'}
+                  </>
                 )}
-              </Button>
-              {appStore.installing.length > 0 && (
-                <>
-                  <Button
-                    variant={view === 'Installing' ? 'secondary' : 'light'}
-                    onClick={() => setSelectedView('Installing')}
-                  >
-                    Installs & Removes
-                    {installingCount(appStore) > 0 && (
-                      <span className="badge__update">
-                        {installingCount(appStore)}
-                      </span>
-                    )}
-                  </Button>
-                  {appStore.installing.length > 0 && '(Pending restart)'}
-                </>
-              )}
-            </div>
+              </div>
+            )}
           </div>
 
           <div className="action__container">
-            {view === 'Updates' && appStore.updates.length > 0 ? (
+            {!readOnly && view === 'Updates' && appStore.updates.length > 0 ? (
               <Button
                 variant="success"
                 onClick={handleUpdateAll}

@@ -32,6 +32,19 @@ let iconProbeLastRunAt = 0
 // reflects.
 let iconProbeGeneration = 0
 const ICON_PROBE_COOLDOWN_MS = 5 * 60 * 1000
+const INSTALL_STATE_FIELDS = [
+  'id',
+  'installedVersion',
+  'pendingVersion',
+  'isWaiting',
+  'isInstalling',
+  'isRemoving',
+  'isRemove',
+  'installFailed',
+  'updateDisabled',
+  'installedIconUrl',
+  'installedScreenshotUrls'
+]
 const _ = require('lodash')
 const semver = require('semver')
 const { gt } = semver
@@ -320,12 +333,13 @@ module.exports = function (app) {
             }
             scheduleInstalledDetailRefresh()
             scheduleIconProbe(plugins, webapps)
-            res.json(result)
+            res.json(seesInstalled(req) ? result : catalogOnly(result))
           })
           .catch((error) => {
             console.log(error.message)
             debug.enabled && debug(error.stack)
-            res.json(buildOfflineResponse(app, cache))
+            const offline = buildOfflineResponse(app, cache)
+            res.json(seesInstalled(req) ? offline : catalogOnly(offline))
           })
       })
 
@@ -350,13 +364,20 @@ module.exports = function (app) {
               })
               return
             }
-            res.json(detail)
+            res.json(seesInstalled(req) ? detail : withoutInstallState(detail))
           } catch (err) {
             console.log(err.message)
             debug.enabled && debug(err.stack)
             const cached = readDetailFromCache(cache, name)
             if (cached) {
-              res.json({ ...cached, storeAvailable: false, fromCache: true })
+              const offline = {
+                ...cached,
+                storeAvailable: false,
+                fromCache: true
+              }
+              res.json(
+                seesInstalled(req) ? offline : withoutInstallState(offline)
+              )
               return
             }
             res.status(503).json({
@@ -1399,6 +1420,42 @@ module.exports = function (app) {
 
       return result
     })
+  }
+
+  // Which plugins run here, and at which version, tells an attacker
+  // which known flaws to try, so only the admin learns it.
+  function seesInstalled(req) {
+    return (
+      app.securityStrategy.isDummy() || app.securityStrategy.allowConfigure(req)
+    )
+  }
+
+  function withoutInstallState(entry) {
+    const catalogEntry = { ...entry }
+    for (const field of INSTALL_STATE_FIELDS) {
+      delete catalogEntry[field]
+    }
+    for (const deps of ['requires', 'recommends']) {
+      if (Array.isArray(catalogEntry[deps])) {
+        catalogEntry[deps] = catalogEntry[deps].map(
+          ({ installed: _installed, ...dependency }) => dependency
+        )
+      }
+    }
+    return catalogEntry
+  }
+
+  function catalogOnly(appStore) {
+    const catalog = {
+      ...appStore,
+      available: appStore.available.map(withoutInstallState),
+      installed: [],
+      updates: [],
+      installing: [],
+      canUpdateServer: false
+    }
+    delete catalog.serverUpdate
+    return catalog
   }
 
   function addIfNotDuplicate(theArray, moduleInfo) {

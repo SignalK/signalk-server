@@ -134,6 +134,14 @@ export function useLoginStatus() {
   return useStore((s) => s.loginStatus)
 }
 
+export function useIsAdmin(): boolean {
+  return useStore(
+    (s) =>
+      s.loginStatus.authenticationRequired === false ||
+      s.loginStatus.userLevel === 'admin'
+  )
+}
+
 export function useAppStore() {
   return useStore((s) => s.appStore)
 }

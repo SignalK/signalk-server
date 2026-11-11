@@ -3,6 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { ROUTER_FUTURE_FLAGS } from '../../../routerFuture'
 import DetailView from './DetailView'
+import { useStore } from '../../../store'
 
 interface DetailPayload {
   name: string
@@ -77,6 +78,7 @@ let originalServerRoutesPrefix: string | undefined
 
 beforeEach(() => {
   vi.restoreAllMocks()
+  useStore.setState({ loginStatus: { authenticationRequired: false } })
   originalServerRoutesPrefix = (
     window as unknown as { serverRoutesPrefix?: string }
   ).serverRoutesPrefix
@@ -133,6 +135,24 @@ describe('DetailView', () => {
         screen.getByRole('button', { name: /Install required plugins/ })
       ).toBeDefined()
     })
+  })
+
+  it('offers no install actions to a read-only visitor', async () => {
+    useStore.setState({
+      loginStatus: {
+        authenticationRequired: true,
+        status: 'notLoggedIn',
+        readOnlyAccess: true
+      }
+    })
+    mockFetch(
+      samplePayload({
+        requires: [{ name: 'signalk-charts-plugin', installed: false }]
+      })
+    )
+    renderDetail('signalk-example')
+    await screen.findByText('Example Plugin')
+    expect(screen.queryByRole('button', { name: /Install/ })).toBeNull()
   })
 
   it('does not show bulk CTA when all required deps already installed', async () => {
