@@ -215,6 +215,65 @@ describe('demo director', () => {
     assert.deepEqual(activated, [])
   })
 
+  describe('when a visitor switches to night mode', () => {
+    const FIVE_MINUTES = 5 * 60 * 1000
+    const TICK = 5000
+
+    function modeDeltas(messages: unknown[]) {
+      return messages.filter((m) =>
+        JSON.stringify(m).includes('"environment.mode"')
+      )
+    }
+
+    it('switches back to day after five minutes', async () => {
+      mock.timers.enable({ apis: ['Date', 'setInterval'] })
+      const values: Record<string, unknown> = {
+        'environment.mode.value': 'night',
+        // a boat on its route needs no help from the director
+        'steering.autopilot.mode.value': 'route',
+        'steering.autopilot.engaged.value': true
+      }
+      const { app, messages } = fakeApp(
+        { pointIndex: 2, pointTotal: 5, reverse: false },
+        FAR_FROM_FINAL,
+        values
+      )
+      plugin = director(app)
+      await plugin.start({}, () => {})
+      mock.timers.tick(FIVE_MINUTES - TICK)
+      assert.equal(modeDeltas(messages).length, 0)
+      mock.timers.tick(TICK)
+      assert.deepEqual(modeDeltas(messages), [
+        {
+          updates: [{ values: [{ path: 'environment.mode', value: 'day' }] }]
+        }
+      ])
+    })
+
+    it('starts counting again after a switch to day', async () => {
+      mock.timers.enable({ apis: ['Date', 'setInterval'] })
+      const values: Record<string, unknown> = {
+        'environment.mode.value': 'night',
+        // a boat on its route needs no help from the director
+        'steering.autopilot.mode.value': 'route',
+        'steering.autopilot.engaged.value': true
+      }
+      const { app, messages } = fakeApp(
+        { pointIndex: 2, pointTotal: 5, reverse: false },
+        FAR_FROM_FINAL,
+        values
+      )
+      plugin = director(app)
+      await plugin.start({}, () => {})
+      mock.timers.tick(FIVE_MINUTES - TICK)
+      values['environment.mode.value'] = 'day'
+      mock.timers.tick(TICK)
+      values['environment.mode.value'] = 'night'
+      mock.timers.tick(FIVE_MINUTES - TICK)
+      assert.equal(modeDeltas(messages).length, 0)
+    })
+  })
+
   describe('when a visitor steers', () => {
     const FIVE_MINUTES = 5 * 60 * 1000
     const TICK = 5000
