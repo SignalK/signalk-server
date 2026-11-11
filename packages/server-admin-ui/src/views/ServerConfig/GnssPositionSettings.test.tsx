@@ -211,4 +211,39 @@ describe('GnssPositionSettings for a read-only visitor', () => {
     expect(useStore.getState().gnssSensorsData.saveState.dirty).toBe(false)
     expect((sideSelect() as HTMLSelectElement).value).toBe('starboard')
   })
+
+  it('keeps the edits when edit access returns before the saved layout', async () => {
+    let answer: (value: unknown) => void = () => {}
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string) =>
+        url.endsWith('/sensors/gnss')
+          ? new Promise((resolve) => {
+              answer = resolve
+            })
+          : Promise.resolve({ ok: false, status: 404, json: async () => ({}) })
+      )
+    )
+    useStore.setState((state) => ({
+      gnssSensorsData: {
+        ...state.gnssSensorsData,
+        saveState: { dirty: true, timeoutsOk: true }
+      }
+    }))
+    render(<GnssPositionSettings />)
+
+    act(() => {
+      useStore.setState({ loginStatus: { authenticationRequired: false } })
+    })
+    await act(async () => {
+      answer({
+        ok: true,
+        status: 200,
+        json: async () => ({ correction: 'off', sensors: [] })
+      })
+    })
+
+    expect(storedFromCenter()).toBe(-1.5)
+    expect(useStore.getState().gnssSensorsData.saveState.dirty).toBe(true)
+  })
 })

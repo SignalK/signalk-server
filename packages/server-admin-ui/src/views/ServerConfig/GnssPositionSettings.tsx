@@ -158,17 +158,23 @@ const GnssPositionSettings: React.FC = () => {
   const discardEdits = readOnly && saveState.dirty
   useEffect(() => {
     if (!discardEdits) return
+    // Logging back in during the request makes the saved layout stale.
+    let stale = false
     fetch(GNSS_API_PATH, { credentials: 'include' })
       .then((res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
         return res.json()
       })
       .then((data: unknown) => {
+        if (stale) return
         useStore.getState().setGnssSensors(sanitizeGnssConfig(data), true)
         setDrafts({})
         setSideChoices({})
       })
       .catch((err) => console.warn('Failed to reload GNSS sensors', err))
+    return () => {
+      stale = true
+    }
   }, [discardEdits])
 
   // Vessel reference point correction ('replace'/'both') needs the vessel
