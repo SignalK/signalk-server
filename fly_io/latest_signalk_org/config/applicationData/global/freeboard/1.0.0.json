@@ -41,7 +41,8 @@
         "restricted-areas-anchoring",
         "restricted-areas-entry"
       ]
-    }
+    },
+    "tidalCurrentsEnabled": true
   },
   "vessels": {
     "aisShowTrack": true,
