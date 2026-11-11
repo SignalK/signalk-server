@@ -5,7 +5,7 @@ import { join } from 'node:path'
 import { afterEach, describe, it, mock } from 'node:test'
 import type { Plugin, ServerAPI } from '@signalk/server-api'
 import { magvar } from 'magvar'
-import director, { DEMO_LOGIN } from './index.ts'
+import director, { DEMO_LOGIN, gustWind, nextGust } from './index.ts'
 
 const FINAL_WAYPOINT = { latitude: 53.296, longitude: 5.086 }
 // about 110 m south of the final waypoint
@@ -37,6 +37,7 @@ function fakeApp(
       puts.push({ path, value })
     },
     setPluginStatus: () => {},
+    registerDeltaInputHandler: () => {},
     getDataDirPath: () => join(configDir, 'plugin-config-data', 'director'),
     error: (msg: string) => assert.fail(msg),
     getCourse: async () => ({
@@ -380,5 +381,71 @@ describe('demo director', () => {
       await advance(FIVE_MINUTES)
       assert.equal(calls.length, 2)
     })
+  })
+})
+
+describe('wind gusts', () => {
+  const WIND = [
+    { path: 'environment.wind.speedTrue', value: 8 },
+    { path: 'environment.wind.directionTrue', value: Math.PI / 2 },
+    { path: 'environment.wind.angleTrueWater', value: 0 },
+    { path: 'environment.wind.speedApparent', value: 8 },
+    { path: 'environment.wind.angleApparent', value: 0 },
+    { path: 'navigation.headingTrue', value: 0 }
+  ]
+
+  function valueOf(values: { path: string; value: unknown }[], path: string) {
+    return values.find((v) => v.path === path)?.value as number
+  }
+
+  it('keeps the wind as it is without a gust', () => {
+    const gusted = gustWind(WIND, { speed: 0, direction: 0 }, 0, 0)
+    assert.equal(valueOf(gusted, 'environment.wind.speedTrue'), 8)
+    assert.equal(valueOf(gusted, 'environment.wind.directionTrue'), Math.PI / 2)
+    assert.equal(
+      valueOf(gusted, 'environment.wind.angleTrueWater'),
+      Math.PI / 2
+    )
+  })
+
+  it('gusts by at most 10 % and 10 degrees', () => {
+    const gusted = gustWind(WIND, { speed: 1, direction: -1 }, 0, 0)
+    assert.ok(
+      Math.abs(valueOf(gusted, 'environment.wind.speedTrue') - 8.8) < 1e-9
+    )
+    const direction = valueOf(gusted, 'environment.wind.directionTrue')
+    assert.ok(Math.abs(direction - (Math.PI / 2 - (10 * Math.PI) / 180)) < 1e-9)
+  })
+
+  it('derives the apparent wind from the gusting true wind', () => {
+    // wind from straight ahead, boat making 2 m/s into it
+    const ahead = [
+      { path: 'environment.wind.speedTrue', value: 5 },
+      { path: 'environment.wind.directionTrue', value: 0 },
+      { path: 'environment.wind.speedApparent', value: 0 },
+      { path: 'environment.wind.angleApparent', value: 0 }
+    ]
+    const gusted = gustWind(ahead, { speed: 0, direction: 0 }, 0, 2)
+    assert.ok(
+      Math.abs(valueOf(gusted, 'environment.wind.speedApparent') - 7) < 1e-9
+    )
+    assert.ok(
+      Math.abs(valueOf(gusted, 'environment.wind.angleApparent')) < 1e-9
+    )
+  })
+
+  it('leaves values without true wind alone', () => {
+    const other = [{ path: 'navigation.headingTrue', value: 1 }]
+    assert.deepEqual(gustWind(other, { speed: 1, direction: 1 }, 0, 0), other)
+  })
+
+  it('drifts back towards calm and stays within bounds', () => {
+    assert.ok(nextGust(1, 1, () => 0.5) < 1)
+    assert.ok(nextGust(-1, 1, () => 0.5) > -1)
+    let gust = 0
+    for (let i = 0; i < 1000; i++) {
+      gust = nextGust(gust, 1, () => 1)
+      assert.ok(gust <= 1)
+    }
   })
 })
