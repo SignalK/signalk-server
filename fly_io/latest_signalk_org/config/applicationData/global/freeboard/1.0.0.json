@@ -52,30 +52,93 @@
   "plotterExtensions": {
     "widgets": [
       {
-        "instanceId": "demo-tides",
-        "extension": "signalk-tides",
-        "widget": "tides",
-        "anchor": "tr",
-        "col": 2,
-        "row": 1
-      },
-      {
-        "instanceId": "demo-system-health",
-        "extension": "signalk-history-widgets",
-        "widget": "system-health",
-        "anchor": "tr",
-        "col": 1,
-        "row": 1
-      },
-      {
         "instanceId": "demo-polar-performance",
         "extension": "signalk-history-widgets",
         "widget": "polar-performance",
         "anchor": "tr",
         "col": 3,
         "row": 1
+      },
+      {
+        "instanceId": "demo-battery",
+        "extension": "signalk-history-widgets",
+        "widget": "battery-small",
+        "anchor": "tr",
+        "col": 2,
+        "row": 1
+      },
+      {
+        "instanceId": "demo-fuel",
+        "extension": "signalk-history-widgets",
+        "widget": "tank-small",
+        "anchor": "tr",
+        "col": 1,
+        "row": 1
+      },
+      {
+        "instanceId": "demo-fresh-water",
+        "extension": "signalk-history-widgets",
+        "widget": "tank-small",
+        "anchor": "tr",
+        "col": 0,
+        "row": 1
+      },
+      {
+        "instanceId": "demo-twa",
+        "extension": "signalk-history-widgets",
+        "widget": "strip",
+        "anchor": "br",
+        "col": 2,
+        "row": 0
+      },
+      {
+        "instanceId": "demo-tws",
+        "extension": "signalk-history-widgets",
+        "widget": "strip",
+        "anchor": "br",
+        "col": 3,
+        "row": 0
+      },
+      {
+        "instanceId": "demo-tides",
+        "extension": "signalk-tides",
+        "widget": "tides",
+        "anchor": "bl",
+        "col": 0,
+        "row": 1
       }
-    ]
+    ],
+    "state": {
+      "signalk-history-widgets": {
+        "instances": {
+          "demo-battery": {
+            "path": "electrical.batteries.house.capacity.stateOfCharge",
+            "style": "flat",
+            "label": "House"
+          },
+          "demo-fuel": {
+            "path": "tanks.fuel.0.currentLevel",
+            "style": "flat",
+            "label": "Diesel"
+          },
+          "demo-fresh-water": {
+            "path": "tanks.freshWater.0.currentLevel",
+            "style": "flat",
+            "label": "Fresh water"
+          },
+          "demo-twa": {
+            "path": "environment.wind.angleTrueWater",
+            "span": 30,
+            "spanUnit": "min"
+          },
+          "demo-tws": {
+            "path": "environment.wind.speedTrue",
+            "span": 30,
+            "spanUnit": "min"
+          }
+        }
+      }
+    }
   },
   "resources": {
     "paths": [
