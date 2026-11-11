@@ -19,6 +19,7 @@
     "signalk-distance-to-shore": "0.2.1",
     "signalk-espos-hmi-designer": "0.4.0",
     "signalk-espos-manager": "0.8.2",
+    "signalk-ext-companion-apps": "1.1.1",
     "signalk-flags": "1.1.3",
     "signalk-history-widgets": "0.7.0",
     "signalk-parquet": "1.0.1",
