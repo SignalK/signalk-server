@@ -5,6 +5,7 @@
   "dependencies": {
     "@halos-org/skip": "latest",
     "@marineyachtradar/signalk-plugin": "latest",
+    "@signalk/collision-alerts": "latest",
     "@signalk/freeboard-sk": ">=3.5.0-beta.0",
     "@signalk/open-meteo-provider": "latest",
     "@signalk/tracks-plugin": "latest",
@@ -13,7 +14,6 @@
     "signalk-autopilot-emulator-v2": "latest",
     "signalk-buddylist-plugin": "latest",
     "signalk-charts-provider-simple": "latest",
-    "signalk-collision-alerts": "latest",
     "signalk-demo-boat-systems": "file:../boat-systems",
     "signalk-demo-director": "file:../demo-director",
     "signalk-distance-to-shore": "latest",
