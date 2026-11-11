@@ -3,7 +3,7 @@
   "configuration": {
     "notifications": {
       "enableArrival": true,
-      "enablePerpendicular": false,
+      "enablePerpendicular": true,
       "sound": false
     },
     "calculations": {
