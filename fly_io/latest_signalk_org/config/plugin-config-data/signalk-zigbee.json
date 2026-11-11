@@ -1,0 +1,17 @@
+{
+  "enabled": true,
+  "configuration": {
+    "manageContainers": false,
+    "brokerUrl": "mqtt://127.0.0.1:1883",
+    "networks": [
+      { "id": "boat", "coordinator": "espos", "esposAddress": "192.168.8.41" }
+    ],
+    "devices": [
+      {
+        "ieeeAddress": "0x00124b002a5e1f01",
+        "basePath": "environment.inside.freezer"
+      },
+      { "ieeeAddress": "0x00158d0009c4e2b7", "basePath": "environment.outside" }
+    ]
+  }
+}
