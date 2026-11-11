@@ -315,11 +315,19 @@ async function convertEnc(configDir: string): Promise<void> {
     cpSync(join(cells, cell, 'raw'), join(ASSETS, 'enc-cells', cell), {
       recursive: true
     })
-    // the provider's ENC store, where signalk-underkeel reads the cells from
-    cpSync(join(cells, cell, 'raw'), join(ENC_STORE, ENC_SET, cell), {
-      recursive: true
-    })
   }
+  // The provider's ENC store, with its collection records, is where
+  // signalk-underkeel reads the cells from
+  cpSync(
+    join(
+      configDir,
+      'plugin-config-data',
+      'signalk-charts-provider-simple',
+      'enc-store'
+    ),
+    ENC_STORE,
+    { recursive: true }
+  )
 }
 
 function containerRuntime(): string {
