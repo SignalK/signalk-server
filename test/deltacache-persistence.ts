@@ -142,6 +142,24 @@ describe('delta cache persistence', function () {
     expect(after.deltaCache.lastModifieds[OTHER]).to.equal(Date.parse(recent))
   })
 
+  it('lets a vessel saved with a future timestamp age out', async function () {
+    const settings = { restoreOwnData: true, restoreOtherVessels: true }
+    const before = makeApp(settings)
+    const future = new Date(Date.now() + 365 * 24 * 3600 * 1000).toISOString()
+    before.deltaCache.ingestDelta(
+      valueDelta(OTHER, 'navigation.speedOverGround', 3.1, future)
+    )
+    await saveDeltaCache(before)
+
+    const after = makeApp(settings)
+    const restoredAt = Date.now()
+    restoreDeltaCache(after)
+    expect(after.deltaCache.lastModifieds[OTHER]).to.be.within(
+      restoredAt,
+      Date.now()
+    )
+  })
+
   it('reads the saved file only once', async function () {
     const before = makeApp({ restoreOwnData: true })
     before.deltaCache.ingestDelta(
@@ -272,6 +290,33 @@ describe('delta cache persistence', function () {
     expect(cachedPaths(app, SELF)).to.deep.equal([
       { path: 'environment.depth.belowKeel', value: 4.2 }
     ])
+  })
+
+  it('does not mark a vessel restored when none of its values are usable', function () {
+    fs.mkdirSync(path.dirname(deltaCacheFilePath(configPath)), {
+      recursive: true
+    })
+    fs.writeFileSync(
+      deltaCacheFilePath(configPath),
+      JSON.stringify([
+        {
+          context: OTHER,
+          updates: [
+            {
+              $source: 'can0.35',
+              timestamp: new Date().toISOString(),
+              values: [{ path: 'navigation.speedOverGround' }]
+            }
+          ]
+        }
+      ])
+    )
+    const app = makeApp({ restoreOwnData: true, restoreOtherVessels: true })
+    restoreDeltaCache(app)
+    expect(app.deltaCache.lastModifieds).to.not.have.property(OTHER)
+    expect(
+      (app.signalk as FullSignalK).retrieve().vessels
+    ).to.not.have.property('urn:mrn:imo:mmsi:230000002')
   })
 
   it('starts empty when the saved file is broken', function () {

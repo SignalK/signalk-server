@@ -129,10 +129,12 @@ export function restoreDeltaCache(app: DeltaCachePersistenceApp): void {
       continue
     }
     // Other vessels age out by their last real update, so a restored AIS
-    // target is pruned as if the server had never stopped.
-    const lastModified = isSelf ? now : timestampMs
-    app.deltaCache.restoreDelta(delta, lastModified)
-    app.signalk.restoreDelta(delta, lastModified)
+    // target is pruned as if the server had never stopped. A timestamp in
+    // the future is capped so that it cannot keep a target forever.
+    const lastModified = isSelf ? now : Math.min(timestampMs, now)
+    if (app.deltaCache.restoreDelta(delta, lastModified)) {
+      app.signalk.restoreDelta(delta, lastModified)
+    }
   }
   debug('Restored %d cached values', deltas.length)
 }
