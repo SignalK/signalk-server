@@ -19,11 +19,11 @@ export const steeringMetadata: Record<string, PathMetadataEntry> = {
   },
   '/vessels/*/steering/autopilot/state': {
     description:
-      'Autopilot state, such as enabled or disabled (standby). Which states are available depends on the autopilot; the Autopilot API lists them. The autopilot is also called the pilot or AP.'
+      'Autopilot state, such as standby, auto, wind or route. Which states are available depends on the autopilot; the Autopilot API lists them. The autopilot is also called the pilot or AP.'
   },
   '/vessels/*/steering/autopilot/mode': {
     description:
-      'Steering mode of the autopilot, such as compass, gps or wind. Which modes are available depends on the autopilot; the Autopilot API lists them.'
+      'Steering mode of the autopilot, such as compass, gps or wind, for an autopilot that reports it separately from state. Which modes are available depends on the autopilot; the Autopilot API lists them.'
   },
   '/vessels/*/steering/autopilot/target': {
     description: 'Autopilot target'
