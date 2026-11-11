@@ -23,6 +23,7 @@ import {
   rmSync,
   writeFileSync
 } from 'node:fs'
+import { createHash } from 'node:crypto'
 import { stripTypeScriptTypes } from 'node:module'
 import { join } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
@@ -53,6 +54,12 @@ const CHARTS_TOOLBOX_IMAGE =
 const SIGNALK_CONTAINER_VERSION = '1.36.1'
 // west, south, east, north
 const AREA = [4.6, 52.8, 5.95, 53.6] as const
+// The restricted areas are cut to a wider box than the chart, so zooming
+// out still shows the zones around the Wadden Sea
+const RESTRICTED_AREAS_BOX = [3.5, 52.5, 7.5, 54.0] as const
+const RESTRICTED_AREAS_RELEASE =
+  'https://github.com/dirkwa/restricted-areas-data/releases/latest/download'
+const RESTRICTED_AREAS_REGION = 'north-europe'
 
 const CONVERSION_TIMEOUT_MS = 60 * 60 * 1000
 const POLL_MS = 10_000
@@ -387,6 +394,68 @@ function extractLand(runtime: string): void {
   writeMayaraAsset('land.geojson', features)
 }
 
+interface RestrictedAreasManifest {
+  datasetDate: string
+  regions: { region: string; assets: { name: string; sha256: string }[] }[]
+}
+
+async function download(url: string): Promise<Buffer> {
+  const res = await fetch(url, { signal: AbortSignal.timeout(10 * 60 * 1000) })
+  if (!res.ok) throw new BuildFailure(`GET ${url}: ${res.status}`)
+  return Buffer.from(await res.arrayBuffer())
+}
+
+// The whole North Europe dataset takes 400 MB of memory in the plugin; cut
+// to the sailing area it is a few MB. The plugin serves the files it finds
+// in its data directory when its auto-update is off.
+async function extractRestrictedAreas(runtime: string): Promise<void> {
+  const manifestBytes = await download(
+    `${RESTRICTED_AREAS_RELEASE}/manifest.json`
+  )
+  const manifest = JSON.parse(
+    manifestBytes.toString('utf8')
+  ) as RestrictedAreasManifest
+  const name = `${RESTRICTED_AREAS_REGION}.display.fgb`
+  const asset = manifest.regions
+    .find((r) => r.region === RESTRICTED_AREAS_REGION)
+    ?.assets.find((a) => a.name === name)
+  if (!asset)
+    throw new BuildFailure(`the restricted areas release has no ${name}`)
+  const full = await download(`${RESTRICTED_AREAS_RELEASE}/${name}`)
+  if (createHash('sha256').update(full).digest('hex') !== asset.sha256)
+    throw new BuildFailure(`${name} does not match its manifest`)
+  writeFileSync(join(BUILD, name), full)
+  const target = join(
+    ASSETS,
+    'plugin-config-data',
+    'signalk-restricted-areas',
+    'restricted-areas'
+  )
+  mkdirSync(target, { recursive: true })
+  run(runtime, [
+    'run',
+    '--rm',
+    // writes as the build's own user, so the files can be read and removed
+    '--user',
+    `${process.getuid?.() ?? 0}:${process.getgid?.() ?? 0}`,
+    '-v',
+    `${BUILD}:/in:ro`,
+    '-v',
+    `${target}:/out`,
+    '--entrypoint',
+    'ogr2ogr',
+    CHARTS_TOOLBOX_IMAGE,
+    '-f',
+    'FlatGeobuf',
+    `/out/${name}`,
+    `/in/${name}`,
+    '-spat',
+    ...RESTRICTED_AREAS_BOX.map(String)
+  ])
+  // the dataset date shows in the plugin's status and configuration
+  writeFileSync(join(target, 'manifest.json'), manifestBytes)
+}
+
 const BUOYS = ['BOYLAT', 'BOYCAR', 'BOYSPP', 'BOYISD', 'BOYSAW']
 const BEACONS = ['BCNLAT', 'BCNCAR', 'BCNSPP', 'BCNISD', 'BCNSAW']
 // S-57 BCNSHP: a stake or pole, and a withy, return little of the radar
@@ -501,5 +570,6 @@ try {
 const runtime = containerRuntime()
 extractLand(runtime)
 extractMarks(runtime)
+await extractRestrictedAreas(runtime)
 rmSync(BUILD, { recursive: true, force: true })
 console.log(`assets ready in ${ASSETS}`)

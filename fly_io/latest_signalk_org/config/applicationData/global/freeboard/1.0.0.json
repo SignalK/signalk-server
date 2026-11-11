@@ -35,7 +35,13 @@
       "openseamap",
       "wadden-coastline",
       "Waddenzee"
-    ]
+    ],
+    "resourceSets": {
+      "restricted-areas": [
+        "restricted-areas-anchoring",
+        "restricted-areas-entry"
+      ]
+    }
   },
   "vessels": {
     "aisShowTrack": true,
@@ -67,6 +73,11 @@
         "col": 3,
         "row": 1
       }
+    ]
+  },
+  "resources": {
+    "paths": [
+      "restricted-areas"
     ]
   }
 }
