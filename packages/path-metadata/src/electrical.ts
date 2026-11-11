@@ -23,7 +23,8 @@ function acPhaseMetadata(parent: string): Record<string, PathMetadataEntry> {
       units: 'V'
     },
     [`${phase}/lineLineVoltage`]: {
-      description: 'Data should be of type number.',
+      description:
+        'RMS voltage between this line and the next: A to B, B to C or C to A in a three-phase system (for example 400 V), or between lines A and B in a split-phase system (for example 240 V).',
       units: 'V'
     },
     [`${phase}/current`]: {
@@ -218,12 +219,13 @@ export const electricalMetadata: Record<string, PathMetadataEntry> = {
     units: 'V'
   },
   '/vessels/*/electrical/batteries/RegExp/voltage/ripple': {
-    description: 'Data should be of type number.',
+    description:
+      'Ripple on the DC voltage: how much the voltage varies around its average, for example from a charger, alternator or inverter.',
     units: 'V'
   },
   '/vessels/*/electrical/batteries/RegExp/current': {
     description:
-      'Current flowing out (+ve) or in (-ve) to the device. Reversed for batteries (+ve = charging). Positive while the battery charges, negative while it discharges.',
+      'Current into or out of the battery. Positive while the battery charges, negative while it discharges.',
     units: 'A'
   },
   '/vessels/*/electrical/batteries/RegExp/temperature': {
@@ -380,12 +382,13 @@ export const electricalMetadata: Record<string, PathMetadataEntry> = {
     units: 'V'
   },
   '/vessels/*/electrical/inverters/RegExp/dc/voltage/ripple': {
-    description: 'Data should be of type number.',
+    description:
+      'Ripple on the DC voltage: how much the voltage varies around its average, for example from a charger, alternator or inverter.',
     units: 'V'
   },
   '/vessels/*/electrical/inverters/RegExp/dc/current': {
     description:
-      'Current flowing out (+ve) or in (-ve) to the device. Reversed for batteries (+ve = charging).',
+      'Current on the DC side of the inverter. Negative while it draws from the battery to invert; positive while an inverter/charger charges the battery.',
     units: 'A'
   },
   '/vessels/*/electrical/inverters/RegExp/dc/temperature': {
@@ -427,11 +430,12 @@ export const electricalMetadata: Record<string, PathMetadataEntry> = {
     units: 'V'
   },
   '/vessels/*/electrical/inverters/RegExp/ac/lineLineVoltage': {
-    description: 'Data should be of type number.',
+    description:
+      'RMS voltage between two lines at the AC output of the inverter.',
     units: 'V'
   },
   '/vessels/*/electrical/inverters/RegExp/ac/current': {
-    description: 'Data should be of type number.',
+    description: 'RMS current at the AC output of the inverter.',
     units: 'A'
   },
   '/vessels/*/electrical/inverters/RegExp/ac/frequency': {
@@ -535,12 +539,12 @@ export const electricalMetadata: Record<string, PathMetadataEntry> = {
     units: 'V'
   },
   '/vessels/*/electrical/chargers/RegExp/voltage/ripple': {
-    description: 'Data should be of type number.',
+    description:
+      'Ripple on the DC voltage: how much the voltage varies around its average, for example from a charger, alternator or inverter.',
     units: 'V'
   },
   '/vessels/*/electrical/chargers/RegExp/current': {
-    description:
-      'Current flowing out (+ve) or in (-ve) to the device. Reversed for batteries (+ve = charging). The battery charger current.',
+    description: 'Current the charger delivers to the battery.',
     units: 'A'
   },
   '/vessels/*/electrical/chargers/RegExp/temperature': {
@@ -647,12 +651,12 @@ export const electricalMetadata: Record<string, PathMetadataEntry> = {
     units: 'V'
   },
   '/vessels/*/electrical/alternators/RegExp/voltage/ripple': {
-    description: 'Data should be of type number.',
+    description:
+      'Ripple on the DC voltage: how much the voltage varies around its average, for example from a charger, alternator or inverter.',
     units: 'V'
   },
   '/vessels/*/electrical/alternators/RegExp/current': {
-    description:
-      'Current flowing out (+ve) or in (-ve) to the device. Reversed for batteries (+ve = charging). The alternator charging current.',
+    description: 'Current the alternator delivers to the battery.',
     units: 'A'
   },
   '/vessels/*/electrical/alternators/RegExp/temperature': {
@@ -741,16 +745,16 @@ export const electricalMetadata: Record<string, PathMetadataEntry> = {
   },
   '/vessels/*/electrical/solar/RegExp/voltage': {
     description:
-      'Voltage measured at or as close as possible to the device. The solar panel voltage.',
+      'Voltage at the DC output of the solar controller, usually the battery voltage. See panelVoltage for the voltage of the solar panels.',
     units: 'V'
   },
   '/vessels/*/electrical/solar/RegExp/voltage/ripple': {
-    description: 'Data should be of type number.',
+    description:
+      'Ripple on the DC voltage: how much the voltage varies around its average, for example from a charger, alternator or inverter.',
     units: 'V'
   },
   '/vessels/*/electrical/solar/RegExp/current': {
-    description:
-      'Current flowing out (+ve) or in (-ve) to the device. Reversed for batteries (+ve = charging). The solar charging current.',
+    description: 'Current the solar controller delivers to the battery.',
     units: 'A'
   },
   '/vessels/*/electrical/solar/RegExp/temperature': {
@@ -792,11 +796,11 @@ export const electricalMetadata: Record<string, PathMetadataEntry> = {
     description: 'The current state of the solar controller'
   },
   '/vessels/*/electrical/solar/RegExp/panelVoltage': {
-    description: 'Data should be of type number.',
+    description: 'Voltage of the solar panels at the input of the controller.',
     units: 'V'
   },
   '/vessels/*/electrical/solar/RegExp/panelCurrent': {
-    description: 'Data should be of type number.',
+    description: 'Current from the solar panels into the controller.',
     units: 'A'
   },
   '/vessels/*/electrical/solar/RegExp/panelPower': {
@@ -805,7 +809,7 @@ export const electricalMetadata: Record<string, PathMetadataEntry> = {
     units: 'W'
   },
   '/vessels/*/electrical/solar/RegExp/panelTemperature': {
-    description: 'Data should be of type number.',
+    description: 'Temperature of the solar panels.',
     units: 'K'
   },
   '/vessels/*/electrical/solar/RegExp/yieldToday': {
