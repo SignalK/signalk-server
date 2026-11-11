@@ -1,6 +1,6 @@
 {
   "units": {
-    "speed": "kn"
+    "useServerPrefs": true
   },
   "map": {
     "zoomLevel": 14,
