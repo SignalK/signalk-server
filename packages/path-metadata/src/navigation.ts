@@ -474,7 +474,7 @@ export const navigationMetadata: Record<string, PathMetadataEntry> = {
   },
   '/vessels/*/navigation/magneticVariation': {
     description:
-      'The magnetic variation (declination) at the current position that must be added to the magnetic heading to derive the true heading. Easterly variations are positive and Westerly variations are negative (in Radians). Also called declination.',
+      'The magnetic variation (declination) at the current position that must be added to the magnetic heading to derive the true heading. Easterly variations are positive and Westerly variations are negative (in Radians).',
     units: 'rad'
   },
   '/vessels/*/navigation/magneticVariationAgeOfService': {
@@ -538,12 +538,12 @@ export const navigationMetadata: Record<string, PathMetadataEntry> = {
   },
   '/vessels/*/navigation/headingMagnetic': {
     description:
-      "Current magnetic heading of the vessel, equals 'headingCompass adjusted for magneticDeviation'. The direction the bow points by the compass; commonly abbreviated HDG (magnetic).",
+      'Current magnetic heading of the vessel: headingCompass plus magneticDeviation. The direction the bow points relative to magnetic north; commonly abbreviated HDM.',
     units: 'rad'
   },
   '/vessels/*/navigation/magneticDeviation': {
     description:
-      'Magnetic deviation of the compass at the current headingCompass',
+      'Magnetic deviation of the compass at the current headingCompass, added to headingCompass to get headingMagnetic. Easterly deviation is positive, westerly negative.',
     units: 'rad'
   },
   '/vessels/*/navigation/headingCompass': {
@@ -553,7 +553,7 @@ export const navigationMetadata: Record<string, PathMetadataEntry> = {
   },
   '/vessels/*/navigation/headingTrue': {
     description:
-      "The current true north heading of the vessel, equals 'headingMagnetic adjusted for magneticVariation'. The direction the bow points; commonly abbreviated HDG.",
+      'Current true heading of the vessel: headingMagnetic plus magneticVariation. The direction the bow points relative to true north; commonly abbreviated HDG or HDT.',
     units: 'rad'
   },
   '/vessels/*/navigation/position': {
