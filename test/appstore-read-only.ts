@@ -13,12 +13,16 @@ const {
 
 const INSTALLED = 'readonlystoreinstalled'
 const NOT_INSTALLED = 'readonlystoreother'
+// Installed, but missing from the npm search, so only this server knows it.
+const INSTALLED_ONLY = 'readonlystoreinstalledonly'
+const DEPENDENCY = 'readonlystoredependency'
 
 interface AppInfo {
   name: string
   version?: string
   installedVersion?: string
   id?: string
+  requires?: unknown[]
 }
 
 interface AppStoreResponse {
@@ -48,7 +52,20 @@ function seedConfigDir(configDir: string) {
     JSON.stringify({
       name: 'signalk-server-config',
       version: '0.0.1',
-      dependencies: { [INSTALLED]: '^1.0.0' }
+      dependencies: { [INSTALLED]: '^1.0.0', [INSTALLED_ONLY]: '^1.0.0' }
+    })
+  )
+  // With the WASM runtime off the server registers the plugin without
+  // loading a binary.
+  const installedOnlyDir = path.join(configDir, 'node_modules', INSTALLED_ONLY)
+  fs.mkdirSync(installedOnlyDir, { recursive: true })
+  fs.writeFileSync(
+    path.join(installedOnlyDir, 'package.json'),
+    JSON.stringify({
+      name: INSTALLED_ONLY,
+      version: '1.0.0',
+      keywords: ['signalk-wasm-plugin'],
+      wasmManifest: 'plugin.wasm'
     })
   )
   fs.writeFileSync(
@@ -73,6 +90,7 @@ function stubNpm() {
             ? [INSTALLED, NOT_INSTALLED].map((name) => ({
                 package: {
                   ...packageJson(name, '2.0.0'),
+                  signalk: { requires: [DEPENDENCY] },
                   date: new Date().toISOString(),
                   links: {}
                 }
@@ -111,7 +129,7 @@ describe('appstore for read-only users', function () {
     server = await startServerP(
       port,
       true,
-      { settings: { interfaces: { plugins: true } } },
+      { settings: { interfaces: { plugins: true, wasm: false } } },
       { allow_readonly: true },
       configDir
     )
@@ -159,8 +177,15 @@ describe('appstore for read-only users', function () {
       expect(entry).to.exist
       expect(entry!.installedVersion).to.equal(undefined)
       expect(entry!.id).to.equal(undefined)
+      expect(store.available.map((a) => a.name)).to.not.include(INSTALLED_ONLY)
     })
   }
+
+  it('keeps the dependency names of a catalog entry', async function () {
+    const store = await getStore(readToken)
+    const entry = store.available.find((a) => a.name === NOT_INSTALLED)
+    expect(entry?.requires).to.deep.equal([DEPENDENCY])
+  })
 
   it('leaves install state out of a plugin detail for a read-only user', async function () {
     const res = await fetch(`${host}/skServer/appstore/plugin/${INSTALLED}`, {
@@ -186,6 +211,7 @@ describe('appstore for read-only users', function () {
     const installed = store.installed.find((a) => a.name === INSTALLED)
     expect(installed?.installedVersion).to.equal('1.0.0')
     expect(store.updates.map((a) => a.name)).to.include(INSTALLED)
+    expect(store.installed.map((a) => a.name)).to.include(INSTALLED_ONLY)
   })
 
   it('refuses installs, removals and installed-plugin details to non-admins', async function () {

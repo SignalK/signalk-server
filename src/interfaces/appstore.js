@@ -43,7 +43,11 @@ const INSTALL_STATE_FIELDS = [
   'installFailed',
   'updateDisabled',
   'installedIconUrl',
-  'installedScreenshotUrls'
+  'installedScreenshotUrls',
+  'installedOnly',
+  // Dist-tags are fetched only for installed packages, so a prerelease
+  // offer marks the package as installed.
+  'prereleaseVersion'
 ]
 const _ = require('lodash')
 const semver = require('semver')
@@ -1065,7 +1069,11 @@ module.exports = function (app) {
           (p) =>
             !listed.has(p.package.name) && isWasmPackage(p.package.keywords)
         )
-        .map((p) => ({ ...p, installedVersion: p.package.version }))
+        .map((p) => ({
+          ...p,
+          installedVersion: p.package.version,
+          installedOnly: true
+        }))
       // Discovery reads the dist-tags the store list last fetched instead of
       // waiting for npm; the store list applies the ones it fetches itself.
       const plugins = withPublishedVersions(
@@ -1271,6 +1279,7 @@ module.exports = function (app) {
       const pluginInfo = {
         name: name,
         version: version,
+        installedOnly: plugin.installedOnly,
         description: plugin.package.description,
         author: getAuthor(plugin.package),
         categories: getCategories(plugin.package),
@@ -1437,18 +1446,32 @@ module.exports = function (app) {
     }
     for (const deps of ['requires', 'recommends']) {
       if (Array.isArray(catalogEntry[deps])) {
-        catalogEntry[deps] = catalogEntry[deps].map(
-          ({ installed: _installed, ...dependency }) => dependency
-        )
+        // The catalog lists names, the plugin detail dependency objects.
+        catalogEntry[deps] = catalogEntry[deps].map((dependency) => {
+          if (typeof dependency !== 'object' || dependency === null) {
+            return dependency
+          }
+          const { installed: _installed, ...reference } = dependency
+          return reference
+        })
       }
     }
     return catalogEntry
   }
 
+  // Without npm and without a cached list, the offline answer lists what is
+  // installed as available.
+  function listsOnlyInstalled(appStore) {
+    return appStore.storeAvailable === false && appStore.fromCache === false
+  }
+
   function catalogOnly(appStore) {
+    const available = listsOnlyInstalled(appStore)
+      ? []
+      : appStore.available.filter((entry) => !entry.installedOnly)
     const catalog = {
       ...appStore,
-      available: appStore.available.map(withoutInstallState),
+      available: available.map(withoutInstallState),
       installed: [],
       updates: [],
       installing: [],
