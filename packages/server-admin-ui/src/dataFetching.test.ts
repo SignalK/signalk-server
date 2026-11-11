@@ -124,4 +124,27 @@ describe('authFetch 401 handling', () => {
     expect(loginStatusRequests(fetchMock)).toBe(1)
     expect(useStore.getState().loginStatus.status).toBe('notLoggedIn')
   })
+
+  it('keeps a login that happens while the session check is in flight', async () => {
+    let answerLoginStatus: (r: Response) => void = () => {}
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string) =>
+        url === LOGIN_STATUS_URL
+          ? new Promise<Response>((resolve) => {
+              answerLoginStatus = resolve
+            })
+          : Promise.resolve(response(401))
+      )
+    )
+    const pending = authFetch('/skServer/plugins')
+    await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(2))
+    useStore.setState({ loginStatus: { status: 'notLoggedIn' } })
+    useStore.setState({ loginStatus: { ...loggedIn, username: 'demo' } })
+    answerLoginStatus(response(200, sessionGone))
+    await pending
+    const ls = useStore.getState().loginStatus
+    expect(ls.status).toBe('loggedIn')
+    expect(ls.username).toBe('demo')
+  })
 })
