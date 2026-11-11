@@ -1,6 +1,7 @@
 {
   "enabled": true,
   "configuration": {
-    "recordVesselIdentity": false
+    "recordVesselIdentity": false,
+    "outputDirectory": "/home/node/history"
   }
 }
