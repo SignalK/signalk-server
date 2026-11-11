@@ -18,14 +18,6 @@
       {
         "enabled": true,
         "autostart": false,
-        "url": "/signalk-demo-director/",
-        "label": "Take the helm",
-        "icon": "/signalk-demo-director/helm.svg",
-        "color": ""
-      },
-      {
-        "enabled": true,
-        "autostart": false,
         "url": "/@marineyachtradar/signalk-plugin/",
         "label": "Radar",
         "icon": "/@marineyachtradar/signalk-plugin/assets/mayara_logo.png",
@@ -45,6 +37,14 @@
         "url": "/signalk-rules/",
         "label": "Rules",
         "icon": "/signalk-rules/icon.svg",
+        "color": ""
+      },
+      {
+        "enabled": true,
+        "autostart": false,
+        "url": "/signalk-demo-director/",
+        "label": "Take the helm",
+        "icon": "/signalk-demo-director/helm.svg",
         "color": ""
       },
       {
