@@ -63,6 +63,7 @@ export function switchPath(circuit: Pick<Circuit, 'bank' | 'channel'>) {
 const FRIDGE = switchPath({ bank: 13, channel: 4 })
 const FREEZER = switchPath({ bank: 13, channel: 5 })
 const WATER_PUMP = switchPath({ bank: 13, channel: 2 })
+const BILGE_PUMP = switchPath({ bank: 13, channel: 3 })
 
 // Parses what a PUT sends: apps send true/false, rules and N2K send 1/0
 export function parseSwitchValue(value: unknown): 0 | 1 | undefined {
@@ -166,6 +167,26 @@ export function engineRunning(epochSeconds: number) {
   return epochSeconds % ENGINE_CYCLE_S < ENGINE_RUN_S
 }
 
+// Now and then something goes on aboard for Alert Center to show: the bilge
+// pump runs for a while, and the galley's inverter pulls the house bank's
+// voltage down.
+const BILGE_CYCLE_S = 45 * 60
+const BILGE_RUN_S = 45
+const SURGE_CYCLE_S = 70 * 60
+const SURGE_RUN_S = 60
+const SURGE_OFFSET_S = 20 * 60
+const SURGE_A = 280
+
+export function bilgePumpDue(epochSeconds: number) {
+  return epochSeconds % BILGE_CYCLE_S < BILGE_RUN_S
+}
+
+export function inverterSurgeAmps(epochSeconds: number) {
+  return (epochSeconds + SURGE_OFFSET_S) % SURGE_CYCLE_S < SURGE_RUN_S
+    ? SURGE_A
+    : 0
+}
+
 interface Tank {
   path: string
   name: string
@@ -194,6 +215,7 @@ export default function (app: ServerAPI): Plugin {
   const pushpitGnss = new PushpitGnss(app)
   let freezerC = -18
   let fridgeC = 4
+  let bilgeWasDue: boolean | undefined
   const banks: Record<'house' | 'bowThruster' | 'starter', Bank> = {
     house: {
       id: 'house',
@@ -379,6 +401,45 @@ export default function (app: ServerAPI): Plugin {
           value: ratioZones(0.5, 0.3, 'Bow thruster bank')
         },
         {
+          path: 'electrical.batteries.house.voltage',
+          value: {
+            units: 'V',
+            zones: [
+              {
+                lower: 0,
+                upper: 11.8,
+                state: 'alarm',
+                message: 'House bank below 11.8 V'
+              },
+              {
+                lower: 11.8,
+                upper: 12.4,
+                state: 'warn',
+                message: 'House bank below 12.4 V'
+              },
+              {
+                lower: 14.6,
+                upper: 20,
+                state: 'warn',
+                message: 'House bank above 14.6 V'
+              }
+            ]
+          }
+        },
+        {
+          path: BILGE_PUMP,
+          value: {
+            zones: [
+              {
+                lower: 0.5,
+                upper: 1,
+                state: 'alert',
+                message: 'Bilge pump running'
+              }
+            ]
+          }
+        },
+        {
           path: 'electrical.batteries.starter.capacity.stateOfCharge',
           value: ratioZones(0.6, 0.4, 'Starter battery')
         },
@@ -456,6 +517,13 @@ export default function (app: ServerAPI): Plugin {
       ? sunElevation(new Date(now), position.latitude, position.longitude)
       : 0
     const engine = engineRunning(epochS)
+    // only a change of the cycle switches, so a visitor's own switching holds
+    const bilgeDue = bilgePumpDue(epochS)
+    if (bilgeWasDue !== undefined && bilgeDue !== bilgeWasDue) {
+      states.set(BILGE_PUMP, bilgeDue ? 1 : 0)
+      publishSwitch(BILGE_PUMP)
+    }
+    bilgeWasDue = bilgeDue
     const today = new Date(now).getUTCDate()
     if (today !== yieldDay) {
       yieldDay = today
@@ -496,6 +564,7 @@ export default function (app: ServerAPI): Plugin {
     const houseA =
       solarA -
       loadsA -
+      inverterSurgeAmps(epochS) -
       (orionThrusterA * 13.2) / houseV -
       (orionStarterA * 13.6) / houseV
 
