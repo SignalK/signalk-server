@@ -138,7 +138,7 @@ Updated function signatures to support async returns:
 
 ```typescript
 // Interface definition (line 124)
-start: (config: string) => number | Promise<number>
+start: (config: string) => number | (Promise<number>)
 
 // Plugin lifecycle (line 106)
 const result = await plugin.instance.exports.start(configJson)
