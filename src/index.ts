@@ -511,7 +511,7 @@ class Server {
       skVersion = SKVersion.v1
     ) => {
       if (data && Array.isArray(data.updates)) {
-        incDeltaStatistics(app, providerId)
+        incDeltaStatistics(app, providerId, data)
 
         if (
           typeof data.context === 'undefined' ||
