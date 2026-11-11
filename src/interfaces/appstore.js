@@ -535,26 +535,6 @@ module.exports = function (app) {
     // plugin's entry as fresh indefinitely, so without it a newly
     // published release would never reach the detail page.
     const cachedDetail = readDetailFromCache(cache, name)
-    const npmNotice =
-      typeof pkg.deprecated === 'string' ? pkg.deprecated.trim() : ''
-    // An entry cached while the README was unreachable is rebuilt once
-    // the installed copy can supply it, and so is an entry without
-    // isWasm, which the detail page needs for the WASM badge, and one
-    // whose npm deprecation notice is no longer the current one.
-    if (
-      cachedDetail &&
-      cachedDetail.version === pkg.version &&
-      typeof cachedDetail.isWasm === 'boolean' &&
-      !(
-        isInstalled &&
-        !cachedDetail.readme &&
-        installedReadmeFor(pkg)?.trim()
-      ) &&
-      (cachedDetail.deprecationMessage ?? '') === npmNotice
-    ) {
-      return cachedDetail
-    }
-    let pkgForEnrichment = pkg
     // Always try the npm registry first — it has the signalk.* key for
     // the LATEST available version, which is what the detail page
     // represents (header version, Update button target, changelog entries).
@@ -568,9 +548,35 @@ module.exports = function (app) {
     } catch (err) {
       debug.enabled && debug('npm metadata fetch for %s failed: %O', name, err)
     }
-    if (registryMeta && typeof registryMeta.deprecated === 'string') {
-      pkgForEnrichment = { ...pkg, deprecated: registryMeta.deprecated }
+    // The detail page shows the deprecation notice of the version it
+    // offers, which can differ from the installed one the list entry
+    // carries.
+    const npmNotice = registryMeta
+      ? typeof registryMeta.deprecated === 'string'
+        ? registryMeta.deprecated.trim()
+        : ''
+      : undefined
+    // An entry cached while the README was unreachable is rebuilt once
+    // the installed copy can supply it, and so is an entry without
+    // isWasm, which the detail page needs for the WASM badge, and one
+    // whose npm deprecation notice is no longer the current one.
+    if (
+      cachedDetail &&
+      cachedDetail.version === pkg.version &&
+      typeof cachedDetail.isWasm === 'boolean' &&
+      !(
+        isInstalled &&
+        !cachedDetail.readme &&
+        installedReadmeFor(pkg)?.trim()
+      ) &&
+      (npmNotice === undefined ||
+        (cachedDetail.deprecationMessage ?? '') === npmNotice)
+    ) {
+      return cachedDetail
     }
+    let pkgForEnrichment = registryMeta
+      ? { ...pkg, deprecated: registryMeta.deprecated }
+      : pkg
     if (registryMeta && registryMeta.signalk) {
       pkgForEnrichment = { ...pkgForEnrichment, signalk: registryMeta.signalk }
     } else if (isInstalled) {
@@ -1129,7 +1135,15 @@ module.exports = function (app) {
           p.package.name,
           p.package.version
         )
-        if (!deprecated && !isWasmPackage(p.package.keywords)) return undefined
+        // A deprecated latest release hides the package from the search
+        // just as a deprecated installed version does.
+        if (
+          !deprecated &&
+          !isWasmPackage(p.package.keywords) &&
+          !(await npmDeprecationOf(p.package.name, 'latest'))
+        ) {
+          return undefined
+        }
         const published = !deprecated && publicEntries?.get(p.package.name)
         if (published) return published
         return {
