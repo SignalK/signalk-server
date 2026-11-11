@@ -59,7 +59,7 @@ const SERVER_URL = 'http://127.0.0.1:3000'
 // it would stand still between polls. The director lets it gust around that
 // observation, by up to 10 % in speed and 10 degrees in direction, drifting
 // back over about 20 seconds like a real breeze.
-const SIMULATOR_ID = 'sailboat-simulator'
+const SIMULATOR_ID = 'signalk-sailboat-simulator'
 const GUST_SPEED_SHARE = 0.1
 const GUST_DIRECTION_RAD = degToRad(10)
 const GUST_RETURN_S = 20
