@@ -144,6 +144,6 @@
     "paths": [
       "restricted-areas"
     ],
-    "routeStyle": "chevrons"
+    "routeStyle": "chevrons-static"
   }
 }
