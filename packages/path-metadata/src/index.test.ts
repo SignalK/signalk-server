@@ -504,6 +504,32 @@ describe('device and AIS paths the NMEA parsers write', () => {
     expect(units(self('propulsion.port.trip.fuelUsed'))).to.equal('m3')
   })
 
+  it('gives AC buses and generators averages and totals over the phases', () => {
+    expect(
+      units(self('electrical.generators.16.average.lineLineVoltage'))
+    ).to.equal('V')
+    expect(units(self('electrical.ac.24.average.frequency'))).to.equal('Hz')
+    expect(units(self('electrical.ac.24.average.current'))).to.equal('A')
+    expect(units(self('electrical.generators.main.total.realPower'))).to.equal(
+      'W'
+    )
+    expect(units(self('electrical.ac.24.total.reactivePower'))).to.equal('VAR')
+    expect(units(self('electrical.ac.24.total.energyExport'))).to.equal('J')
+    expect(units(self('electrical.ac.24.total.powerFactor'))).to.equal('ratio')
+    expect(units(self('electrical.ac.24.phase.A.powerFactor'))).to.equal(
+      'ratio'
+    )
+    expect(units(self('electrical.inverters.0.ac.powerFactor'))).to.equal(
+      'ratio'
+    )
+    expect(
+      getMetadata(self('electrical.generators.1.total.powerFactorLagging'))
+        ?.enum
+    ).to.include('lagging')
+    expect(getMetadata(self('electrical.inverters.0.ac.total.realPower'))).to.be
+      .undefined
+  })
+
   it('gives the input fields to AC buses and the waveform to inverters', () => {
     expect(
       units(self('electrical.inverters.0.ac.phase.C.breaker.ratedCurrent'))

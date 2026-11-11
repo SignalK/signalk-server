@@ -38,7 +38,8 @@ function acPhaseMetadata(parent: string): Record<string, PathMetadataEntry> {
       units: 'VAR'
     },
     [`${phase}/powerFactor`]: {
-      description: 'Data should be of type number.'
+      description: 'Data should be of type number.',
+      units: 'ratio'
     },
     [`${phase}/powerFactorLagging`]: {
       description: 'Lead/lag status.',
@@ -63,6 +64,71 @@ function acPhaseMetadata(parent: string): Record<string, PathMetadataEntry> {
       description:
         'Trip curve of the breaker (IEC 60898-1 B, C or D, or K or Z)',
       enum: ['B', 'C', 'D', 'K', 'Z']
+    }
+  }
+}
+
+// The whole bus or generator: voltages, frequency and current averaged over
+// its phases, power and energy summed over them.
+function acAverageAndTotalMetadata(
+  parent: string
+): Record<string, PathMetadataEntry> {
+  const average = `${parent}/average`
+  const total = `${parent}/total`
+  return {
+    [average]: {
+      description: 'Voltage, frequency and current averaged over the phases'
+    },
+    [`${average}/lineNeutralVoltage`]: {
+      description:
+        'RMS voltage between phase and neutral, averaged over the phases',
+      units: 'V'
+    },
+    [`${average}/lineLineVoltage`]: {
+      description: 'RMS voltage between phases, averaged over the phases',
+      units: 'V'
+    },
+    [`${average}/frequency`]: {
+      description: 'AC frequency, averaged over the phases',
+      units: 'Hz'
+    },
+    [`${average}/current`]: {
+      description: 'RMS current, averaged over the phases',
+      units: 'A'
+    },
+    [total]: {
+      description: 'Power and energy summed over the phases'
+    },
+    [`${total}/realPower`]: {
+      description: 'Real power of all phases together',
+      units: 'W'
+    },
+    [`${total}/apparentPower`]: {
+      description: 'Apparent power of all phases together, in volt-amperes',
+      units: 'VA'
+    },
+    [`${total}/reactivePower`]: {
+      description:
+        'Reactive power of all phases together, in volt-amperes reactive',
+      units: 'VAR'
+    },
+    [`${total}/powerFactor`]: {
+      description: 'Power factor of all phases together',
+      units: 'ratio'
+    },
+    [`${total}/powerFactorLagging`]: {
+      description: 'Lead/lag status of all phases together',
+      enum: ['leading', 'lagging', 'error', 'not available']
+    },
+    [`${total}/energyExport`]: {
+      description:
+        'Energy exported, all phases together, since the counter was reset',
+      units: 'J'
+    },
+    [`${total}/energyImport`]: {
+      description:
+        'Energy imported, all phases together, since the counter was reset',
+      units: 'J'
     }
   }
 }
@@ -331,7 +397,8 @@ export const electricalMetadata: Record<string, PathMetadataEntry> = {
     units: 'VAR'
   },
   '/vessels/*/electrical/inverters/RegExp/ac/powerFactor': {
-    description: 'Data should be of type number.'
+    description: 'Data should be of type number.',
+    units: 'ratio'
   },
   '/vessels/*/electrical/inverters/RegExp/ac/powerFactorLagging': {
     description: 'Lead/lag status.',
@@ -774,6 +841,8 @@ export const electricalMetadata: Record<string, PathMetadataEntry> = {
   },
   ...acPhaseMetadata('/vessels/*/electrical/ac/RegExp'),
   ...acPhaseMetadata('/vessels/*/electrical/generators/RegExp'),
+  ...acAverageAndTotalMetadata('/vessels/*/electrical/ac/RegExp'),
+  ...acAverageAndTotalMetadata('/vessels/*/electrical/generators/RegExp'),
   // Lines 2 and 3 of a three-phase inverter output; see inverters/RegExp/ac
   ...acPhaseMetadata('/vessels/*/electrical/inverters/RegExp/ac'),
   [`/vessels/*/electrical/ac/RegExp/phase/${AC_PHASE_NAME}/acceptability`]: {
