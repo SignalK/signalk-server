@@ -191,6 +191,7 @@ export default function (app: ServerAPI): Plugin {
   let yieldDay = new Date().getUTCDate()
   let gateways = new GatewaySimulator(app, {})
   const zigbee = new ZigbeeSimulator(app)
+  const pushpitGnss = new PushpitGnss(app)
   let freezerC = -18
   let fridgeC = 4
   const banks: Record<'house' | 'bowThruster' | 'starter', Bank> = {
@@ -450,8 +451,7 @@ export default function (app: ServerAPI): Plugin {
     const epochS = now / 1000
     const hours = dtS / SECONDS_PER_HOUR
     const position = app.getSelfPath('navigation.position.value') as
-      | { latitude: number; longitude: number }
-      | undefined
+      { latitude: number; longitude: number } | undefined
     const elevation = position
       ? sunElevation(new Date(now), position.latitude, position.longitude)
       : 0
@@ -713,6 +713,7 @@ export default function (app: ServerAPI): Plugin {
         .catch((error: unknown) =>
           app.error(`Zigbee simulator: ${String(error)}`)
         )
+      pushpitGnss.start()
       registerSwitches()
       publishMeta()
       tick()
@@ -723,6 +724,7 @@ export default function (app: ServerAPI): Plugin {
       if (timer) clearInterval(timer)
       timer = undefined
       zigbee.stop()
+      pushpitGnss.stop()
     }
   }
 }
@@ -1462,4 +1464,111 @@ function zigbeeDirect(r: ZigbeeReading) {
       value: Math.round(r.pressureHpa * 100)
     }
   ]
+}
+
+// The simulator's position is the boat's centre on the centreline, the
+// reference point the server corrects GNSS antennas to. Two more receivers
+// on the stern pushpit report where their antennas really are, so the
+// GNSS preferences show a boat with several antennas, port and starboard,
+// all corrected back to the same position.
+export const SIMULATOR_SOURCE = 'signalk-sailboat-simulator'
+
+export interface Antenna {
+  $source: string
+  sensorId: string
+  fromBow: number
+  fromCenter: number
+}
+
+// Starboard is positive, as in the server's GNSS settings
+export const PUSHPIT_ANTENNAS: Antenna[] = [
+  { $source: 'gnss.port', sensorId: 'Port GPS', fromBow: 10.3, fromCenter: -1 },
+  {
+    $source: 'gnss.starboard',
+    sensorId: 'Stbd GPS',
+    fromBow: 10.3,
+    fromCenter: 1
+  }
+]
+
+const EARTH_RADIUS_M = 6371000
+const DEG = Math.PI / 180
+
+interface Position {
+  latitude: number
+  longitude: number
+}
+
+export function antennaPosition(
+  centre: Position,
+  headingTrue: number,
+  lengthOverall: number,
+  antenna: Pick<Antenna, 'fromBow' | 'fromCenter'>
+): Position {
+  const forward = lengthOverall / 2 - antenna.fromBow
+  const starboard = antenna.fromCenter
+  const north =
+    forward * Math.cos(headingTrue) - starboard * Math.sin(headingTrue)
+  const east =
+    forward * Math.sin(headingTrue) + starboard * Math.cos(headingTrue)
+  return {
+    latitude: centre.latitude + north / EARTH_RADIUS_M / DEG,
+    longitude:
+      centre.longitude +
+      east / (EARTH_RADIUS_M * Math.cos(centre.latitude * DEG)) / DEG
+  }
+}
+
+function isPosition(value: unknown): value is Position {
+  const p = value as Position | undefined
+  return Number.isFinite(p?.latitude) && Number.isFinite(p?.longitude)
+}
+
+export class PushpitGnss {
+  private readonly app: ServerAPI
+  private unsubscribe: (() => void) | undefined
+
+  constructor(app: ServerAPI) {
+    this.app = app
+  }
+
+  start() {
+    this.unsubscribe = this.app.streambundle
+      .getSelfBus('navigation.position' as Path)
+      .onValue((update) => {
+        if (update.$source === SIMULATOR_SOURCE) this.publish(update.value)
+      })
+  }
+
+  stop() {
+    this.unsubscribe?.()
+    this.unsubscribe = undefined
+  }
+
+  private publish(centre: unknown) {
+    const heading = this.app.getSelfPath('navigation.headingTrue.value')
+    const length = this.app.getSelfPath('design.length.value.overall')
+    if (
+      !isPosition(centre) ||
+      typeof heading !== 'number' ||
+      typeof length !== 'number'
+    ) {
+      return
+    }
+    for (const antenna of PUSHPIT_ANTENNAS) {
+      this.app.handleMessage(PLUGIN_ID, {
+        updates: [
+          {
+            $source: antenna.$source,
+            values: [
+              {
+                path: 'navigation.position' as Path,
+                value: antennaPosition(centre, heading, length, antenna)
+              }
+            ]
+          }
+        ]
+      } as Parameters<ServerAPI['handleMessage']>[1])
+    }
+  }
 }

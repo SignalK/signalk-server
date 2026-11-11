@@ -3,10 +3,14 @@ import { createDecipheriv } from 'node:crypto'
 import { afterEach, beforeEach, describe, it } from 'node:test'
 import type { Plugin, ServerAPI } from '@signalk/server-api'
 import boatSystems, {
+  antennaPosition,
   CHARGE_STATES,
   CIRCUITS,
   orionXsRecord,
   parseSwitchValue,
+  PUSHPIT_ANTENNAS,
+  PushpitGnss,
+  SIMULATOR_SOURCE,
   RECORD_ORION_XS,
   RECORD_SOLAR_CHARGER,
   solarChargerRecord,
@@ -33,6 +37,9 @@ function fakeApp() {
   const errors: string[] = []
   const app = {
     getSelfPath: () => ({ latitude: 53.3, longitude: 5.1 }),
+    streambundle: {
+      getSelfBus: () => ({ onValue: () => () => {} })
+    },
     handleMessage: (_id: string, delta: Delta) => {
       messages.push(delta)
     },
@@ -241,5 +248,60 @@ describe('simulated Zigbee network', () => {
       new Map([[ZIGBEE_SENSORS[0].ieee, 'Deep freezer']])
     )
     assert.equal(freezer.friendly_name, 'Deep freezer')
+  })
+})
+
+describe('pushpit GNSS antennas', () => {
+  const centre = { latitude: 53.2, longitude: 5.3 }
+  const length = 11
+  const aftStarboard = { fromBow: 10.5, fromCenter: 1 }
+
+  it('places an aft starboard antenna south-east of the centre when heading north', () => {
+    const p = antennaPosition(centre, 0, length, aftStarboard)
+    assert.ok(p.latitude < centre.latitude)
+    assert.ok(p.longitude > centre.longitude)
+  })
+
+  it('places the same antenna south-west of the centre when heading east', () => {
+    const p = antennaPosition(centre, Math.PI / 2, length, aftStarboard)
+    assert.ok(p.latitude < centre.latitude)
+    assert.ok(p.longitude < centre.longitude)
+  })
+
+  it('reports each antenna under its own source when the simulator moves', () => {
+    const deltas: {
+      updates: { $source?: string; values: { path: string }[] }[]
+    }[] = []
+    let onPosition: (u: { $source: string; value: unknown }) => void = () => {}
+    const app = {
+      streambundle: {
+        getSelfBus: () => ({
+          onValue: (cb: typeof onPosition) => {
+            onPosition = cb
+            return () => {}
+          }
+        })
+      },
+      getSelfPath: (path: string) =>
+        path === 'design.length.value.overall' ? length : 0.5,
+      handleMessage: (_id: string, delta: (typeof deltas)[number]) => {
+        deltas.push(delta)
+      }
+    } as unknown as ServerAPI
+    const gnss = new PushpitGnss(app)
+    gnss.start()
+
+    onPosition({ $source: 'gnss.port', value: centre })
+    assert.equal(deltas.length, 0)
+
+    onPosition({ $source: SIMULATOR_SOURCE, value: centre })
+    assert.deepEqual(
+      deltas.map((d) => d.updates[0].$source),
+      PUSHPIT_ANTENNAS.map((a) => a.$source)
+    )
+    assert.ok(
+      deltas.every((d) => d.updates[0].values[0].path === 'navigation.position')
+    )
+    gnss.stop()
   })
 })

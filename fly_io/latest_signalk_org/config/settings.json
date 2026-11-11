@@ -22,5 +22,26 @@
   "historyApi": {
     "defaultProvider": "signalk-parquet"
   },
-  "landingPage": "/@signalk/app-dock/"
+  "landingPage": "/@signalk/app-dock/",
+  "gnssCorrection": "replace",
+  "gnssSensors": [
+    {
+      "sensorId": "Salon GPS",
+      "$source": "signalk-sailboat-simulator",
+      "fromBow": 5.5,
+      "fromCenter": 0
+    },
+    {
+      "sensorId": "Port GPS",
+      "$source": "gnss.port",
+      "fromBow": 10.3,
+      "fromCenter": -1
+    },
+    {
+      "sensorId": "Stbd GPS",
+      "$source": "gnss.starboard",
+      "fromBow": 10.3,
+      "fromCenter": 1
+    }
+  ]
 }
