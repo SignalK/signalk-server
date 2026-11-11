@@ -1,4 +1,10 @@
-import type { Path, Plugin, ServerAPI, Timestamp } from '@signalk/server-api'
+import type {
+  Delta,
+  Path,
+  Plugin,
+  ServerAPI,
+  Timestamp
+} from '@signalk/server-api'
 import { rmSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { magvar } from 'magvar'
@@ -49,6 +55,15 @@ const POLAR_WANDER_PERIOD_MS = 7 * 60 * 1000
 const VISITOR_IDLE_MS = 5 * 60 * 1000
 export const DEMO_LOGIN = { username: 'demo', password: 'demo' }
 const SERVER_URL = 'http://127.0.0.1:3000'
+// The simulator's wind is a weather observation, refreshed once a minute, so
+// it would stand still between polls. The director lets it gust around that
+// observation, by up to 10 % in speed and 10 degrees in direction, drifting
+// back over about 20 seconds like a real breeze.
+const SIMULATOR_ID = 'sailboat-simulator'
+const GUST_SPEED_SHARE = 0.1
+const GUST_DIRECTION_RAD = degToRad(10)
+const GUST_RETURN_S = 20
+const GUST_STEP = 0.16
 const AUTOPILOT_PATHS = [
   'steering.autopilot.state',
   'steering.autopilot.mode',
@@ -64,6 +79,57 @@ const EARTH_RADIUS_M = 6371000
 
 function degToRad(deg: number) {
   return (deg * Math.PI) / 180
+}
+
+function wrapPi(angle: number) {
+  return Math.atan2(Math.sin(angle), Math.cos(angle))
+}
+
+// one step of a random walk pulled back towards 0, kept within [-1, 1]
+export function nextGust(gust: number, dtS: number, random = Math.random) {
+  const shove = (random() * 2 - 1) * GUST_STEP * Math.sqrt(3 * dtS)
+  const next = gust - (gust * dtS) / GUST_RETURN_S + shove
+  return Math.max(-1, Math.min(1, next))
+}
+
+export interface Gust {
+  speed: number
+  direction: number
+}
+
+// Applies a gust to the simulator's wind values. Apparent wind follows from
+// the gusting true wind, the heading and the speed through the water, so the
+// five paths stay consistent with each other.
+export function gustWind(
+  values: { path: string; value: unknown }[],
+  gust: Gust,
+  headingTrue: unknown,
+  speedThroughWater: unknown
+) {
+  const byPath = new Map(values.map((v) => [v.path, v.value]))
+  const speed = byPath.get('environment.wind.speedTrue')
+  const direction = byPath.get('environment.wind.directionTrue')
+  if (typeof speed !== 'number' || typeof direction !== 'number') return values
+  const speedTrue = speed * (1 + GUST_SPEED_SHARE * gust.speed)
+  const directionTrue =
+    (direction + GUST_DIRECTION_RAD * gust.direction + 2 * Math.PI) %
+    (2 * Math.PI)
+  const gusted: Record<string, number> = {
+    'environment.wind.speedTrue': speedTrue,
+    'environment.wind.directionTrue': directionTrue
+  }
+  if (typeof headingTrue === 'number') {
+    const angleTrue = wrapPi(directionTrue - headingTrue)
+    const stw = typeof speedThroughWater === 'number' ? speedThroughWater : 0
+    const forward = speedTrue * Math.cos(angleTrue) + stw
+    const starboard = speedTrue * Math.sin(angleTrue)
+    gusted['environment.wind.angleTrueWater'] = angleTrue
+    gusted['environment.wind.speedApparent'] = Math.hypot(forward, starboard)
+    gusted['environment.wind.angleApparent'] = Math.atan2(starboard, forward)
+  }
+  return values.map((v) =>
+    v.path in gusted ? { ...v, value: gusted[v.path] } : v
+  )
 }
 
 function distanceM(a: Position, b: Position) {
@@ -121,6 +187,31 @@ export default function (app: ServerAPI): Plugin {
   let nightSince: number | undefined
   let historyTimer: ReturnType<typeof setInterval> | undefined
   let historyStart: ReturnType<typeof setTimeout> | undefined
+  const gust: Gust = { speed: 0, direction: 0 }
+  let gustedAt = Date.now()
+
+  function letTheWindGust(delta: Delta, next: (delta: Delta) => void) {
+    for (const update of delta.updates) {
+      if (update.$source !== SIMULATOR_ID || !('values' in update)) continue
+      if (!update.values.some((v) => v.path === 'environment.wind.speedTrue'))
+        continue
+      const now = Date.now()
+      const dtS = Math.min((now - gustedAt) / 1000, GUST_RETURN_S)
+      gustedAt = now
+      gust.speed = nextGust(gust.speed, dtS)
+      gust.direction = nextGust(gust.direction, dtS)
+      const own = (path: string) =>
+        update.values.find((v) => v.path === path)?.value ??
+        app.getSelfPath(`${path}.value`)
+      update.values = gustWind(
+        update.values,
+        gust,
+        own('navigation.headingTrue'),
+        own('navigation.speedThroughWater')
+      ) as typeof update.values
+    }
+    next(delta)
+  }
 
   function selfPosition() {
     return app.getSelfPath('navigation.position.value') as Position | undefined
@@ -328,12 +419,14 @@ export default function (app: ServerAPI): Plugin {
     id: PLUGIN_ID,
     name: 'Demo director',
     description:
-      'Keeps the demo boat under way: publishes magnetic variation, the computer health and the polar performance, turns the active route round at its end, takes the boat back to the route when visitors stop steering, and switches back to day mode',
+      'Keeps the demo boat under way: publishes magnetic variation, the computer health and the polar performance, lets the simulated wind gust, turns the active route round at its end, takes the boat back to the route when visitors stop steering, and switches back to day mode',
     schema: () => ({ type: 'object', properties: {} }),
     start: () => {
       ticksSinceVariation = VARIATION_EVERY_TICKS
       startedAt = Date.now()
       autopilotChangedAt = Date.now()
+      gustedAt = Date.now()
+      app.registerDeltaInputHandler(letTheWindGust)
       tick()
       historyStart = setTimeout(startPiHistory, PI_HISTORY_DELAY_MS)
       timer = setInterval(tick, TICK_MS)
