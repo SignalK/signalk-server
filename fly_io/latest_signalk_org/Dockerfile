@@ -1,5 +1,5 @@
 ARG SK_VERSION
-ARG MAYARA_VERSION=3.17.5
+ARG MAYARA_VERSION=latest
 FROM ghcr.io/marineyachtradar/mayara-server:${MAYARA_VERSION} AS mayara
 
 FROM signalk/signalk-server:${SK_VERSION}
@@ -11,6 +11,9 @@ COPY --chown=node:node boat-systems /home/node/boat-systems
 COPY --chown=node:node config/ /home/node/.signalk/
 # Charts, ENC cells and tidal data made by build-assets.ts before the deploy
 COPY --chown=node:node assets/ /home/node/.signalk/
+# A new value per deploy keeps the builder from reusing an install made
+# before newer plugin releases came out.
+ARG DEMO_BUILD
 # --install-links copies the local demo packages instead of linking them,
 # so their own dependencies (magvar) are installed with them
 RUN cd /home/node/.signalk && npm install --omit=dev --install-links --no-audit --no-fund
