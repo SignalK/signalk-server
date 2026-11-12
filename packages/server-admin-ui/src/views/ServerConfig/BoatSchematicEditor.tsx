@@ -6,7 +6,8 @@ interface BoatSchematicEditorProps {
   vesselLength: number
   vesselBeam: number
   colors: string[]
-  onUpdateSensor: (index: number, updates: Partial<GnssSensorConfig>) => void
+  // Without it the antennas are shown but cannot be dragged.
+  onUpdateSensor?: (index: number, updates: Partial<GnssSensorConfig>) => void
 }
 
 const SVG_WIDTH = 200
@@ -111,7 +112,7 @@ const BoatSchematicEditor: React.FC<BoatSchematicEditorProps> = ({
 
   const handlePointerMove = useCallback(
     (e: React.PointerEvent) => {
-      if (dragging === null) return
+      if (dragging === null || !onUpdateSensor) return
       const svgPt = getSvgPoint(e)
       if (!svgPt) return
       const { fromBow, fromCenter } = toBoatCoords(svgPt.x, svgPt.y)
@@ -237,8 +238,10 @@ const BoatSchematicEditor: React.FC<BoatSchematicEditorProps> = ({
                 fill={color}
                 stroke="#fff"
                 strokeWidth={2}
-                cursor="grab"
-                onPointerDown={handlePointerDown(index)}
+                cursor={onUpdateSensor ? 'grab' : 'default'}
+                onPointerDown={
+                  onUpdateSensor ? handlePointerDown(index) : undefined
+                }
               />
               <text
                 x={x + DOT_RADIUS + 4}

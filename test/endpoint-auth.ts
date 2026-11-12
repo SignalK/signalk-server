@@ -162,6 +162,20 @@ describe('Endpoint authentication', function () {
     })
   })
 
+  describe('GNSS preferences endpoints answer read-only users', function () {
+    for (const path of ['/skServer/vessel', '/skServer/positionSources']) {
+      it(`GET ${path} rejects unauthenticated requests`, async function () {
+        const status = await fetchEndpoint('GET', path)
+        status.should.equal(401)
+      })
+
+      it(`GET ${path} accepts read-only users`, async function () {
+        const status = await fetchEndpoint('GET', path, readToken)
+        status.should.equal(200)
+      })
+    }
+  })
+
   describe('v2 notification endpoints require authentication', function () {
     const endpoints: Array<{
       method: string

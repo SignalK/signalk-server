@@ -40,18 +40,21 @@ const UnitPreferencesSettings: React.FC = () => {
   const [updateServerDefault, setUpdateServerDefault] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  // The chosen preset is saved as the user's application data, which the
+  // server lets only users with write access store.
+  const loggedIn = loginStatus.status === 'loggedIn'
+  const canChoose =
+    loginStatus.authenticationRequired === false ||
+    (loggedIn && loginStatus.userLevel !== 'readonly')
+
+  // Every logged-in user may read; the preset to show changes with the user.
+  const canRead = loggedIn || canChoose || loginStatus.readOnlyAccess
+  const username = loginStatus.username
   useEffect(() => {
-    if (
-      loginStatus.status === 'loggedIn' ||
-      loginStatus.authenticationRequired === false
-    ) {
+    if (canRead) {
       fetchUnitPreferences()
     }
-  }, [
-    fetchUnitPreferences,
-    loginStatus.status,
-    loginStatus.authenticationRequired
-  ])
+  }, [fetchUnitPreferences, canRead, username])
 
   const isAdmin =
     !loginStatus.authenticationRequired ||
@@ -280,6 +283,7 @@ const UnitPreferencesSettings: React.FC = () => {
                 onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
                   handlePresetChange(e.target.value)
                 }
+                disabled={!canChoose}
                 style={{ maxWidth: '300px' }}
               >
                 <optgroup label="Built-in">
@@ -310,6 +314,13 @@ const UnitPreferencesSettings: React.FC = () => {
                 </Button>
               )}
             </div>
+            {!canChoose && (
+              <Form.Text className="text-muted">
+                {loggedIn
+                  ? 'Only users with write access can choose their own display units.'
+                  : 'Log in to choose your own display units.'}
+              </Form.Text>
+            )}
             {isAdmin && (
               <div style={{ marginTop: '10px' }}>
                 <Form.Check

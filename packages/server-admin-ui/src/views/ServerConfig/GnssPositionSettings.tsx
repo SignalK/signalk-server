@@ -11,16 +11,22 @@ import { faFloppyDisk } from '@fortawesome/free-solid-svg-icons/faFloppyDisk'
 import { faSatelliteDish } from '@fortawesome/free-solid-svg-icons/faSatelliteDish'
 import {
   useStore,
+  useLoginStatus,
   useGnssSensorsData,
   usePositionSources,
   useUnconfiguredGnssSources,
   useSourcesData
 } from '../../store'
 import { useSourceAliases } from '../../hooks/useSourceAliases'
-import type { GnssCorrectionMode, GnssSensorConfig } from '../../store/types'
+import type {
+  GnssCorrectionMode,
+  GnssSensorConfig,
+  LoginStatus
+} from '../../store/types'
 import {
   EMPTY_GNSS_CONFIG,
-  GNSS_API_PATH
+  GNSS_API_PATH,
+  sanitizeGnssConfig
 } from '../../store/slices/gnssPositionSlice'
 import {
   type CenterlineSide,
@@ -60,12 +66,20 @@ const COLORS = ['#0d6efd', '#198754', '#dc3545', '#ffc107', '#0dcaf0']
 const SAVE_ERROR_CLEAR_MS = 8000
 const DEFAULT_SIDE: CenterlineSide = 'starboard'
 
+const isReadOnly = (loginStatus: LoginStatus) =>
+  loginStatus.authenticationRequired !== false &&
+  loginStatus.userLevel !== 'admin'
+
 const GnssPositionSettings: React.FC = () => {
   const gnssSensorsData = useGnssSensorsData()
   const positionSources = usePositionSources()
   const unconfiguredSources = useUnconfiguredGnssSources()
   const sourcesData = useSourcesData()
   const { getDisplayParts } = useSourceAliases()
+  const loginStatus = useLoginStatus()
+  // Read-only visitors see the antenna layout; the server refuses their
+  // writes, so the controls that would send one are locked or hidden.
+  const readOnly = isReadOnly(loginStatus)
 
   const updateGnssSensor = useStore((s) => s.updateGnssSensor)
   const addGnssSensor = useStore((s) => s.addGnssSensor)
@@ -145,6 +159,28 @@ const GnssPositionSettings: React.FC = () => {
 
   const { correction, sensors, saveState, status } = gnssSensorsData
 
+  // Edits an admin left unsaved before logging out would otherwise stay on
+  // screen, and the dirty guard would keep refusing the saved layout.
+  const discardEdits = readOnly && saveState.dirty
+  useEffect(() => {
+    if (!discardEdits) return
+    // The store outlives the page, so the reload lands even after the
+    // visitor navigates away, but not once edit access is back.
+    fetch(GNSS_API_PATH, { credentials: 'include' })
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        return res.json()
+      })
+      .then((data: unknown) => {
+        const state = useStore.getState()
+        if (!isReadOnly(state.loginStatus)) return
+        state.setGnssSensors(sanitizeGnssConfig(data), true)
+        setDrafts({})
+        setSideChoices({})
+      })
+      .catch((err) => console.warn('Failed to reload GNSS sensors', err))
+  }, [discardEdits])
+
   // Vessel reference point correction ('replace'/'both') needs the vessel
   // length to locate the CCRP; without it the server cannot correct. Disable
   // those choices and point the user at where length is set.
@@ -153,6 +189,7 @@ const GnssPositionSettings: React.FC = () => {
   // Save (PUT) and reset (DELETE) mutate the same GNSS config; disable both
   // while either is in flight so they cannot race on response order.
   const mutationBusy = saveState.isSaving || resetBusy
+  const locked = mutationBusy || readOnly
 
   const mergedRows = useMemo(() => {
     const activeSourceRefs = new Set(positionSources)
@@ -418,15 +455,17 @@ const GnssPositionSettings: React.FC = () => {
           <FontAwesomeIcon icon={faSatelliteDish} />{' '}
           <strong>GNSS Antenna Positions</strong>
         </span>
-        <Button
-          size="sm"
-          variant="outline-danger"
-          onClick={handleReset}
-          disabled={mutationBusy}
-          title="Remove all GNSS sensor rows; the server will stop applying vessel reference point correction to navigation.position"
-        >
-          {resetBusy ? 'Resetting…' : 'Reset all GNSS sensors'}
-        </Button>
+        {!readOnly && (
+          <Button
+            size="sm"
+            variant="outline-danger"
+            onClick={handleReset}
+            disabled={mutationBusy}
+            title="Remove all GNSS sensor rows; the server will stop applying vessel reference point correction to navigation.position"
+          >
+            {resetBusy ? 'Resetting…' : 'Reset all GNSS sensors'}
+          </Button>
+        )}
       </Card.Header>
       <Card.Body>
         {resetError && (
@@ -443,8 +482,10 @@ const GnssPositionSettings: React.FC = () => {
           Accurate antenna positions improve position data by accounting for the
           offset between GNSS receiver and vessel reference point (CCRP:
           Consistent Common Reference Point). &quot;From Center&quot; is the
-          distance from the centerline, to port or starboard. Configure a
-          detected source by editing one of its fields.
+          distance from the centerline, to port or starboard.{' '}
+          {readOnly
+            ? 'Only an administrator can change them.'
+            : 'Configure a detected source by editing one of its fields.'}
         </Alert>
 
         <Form.Group className="mb-3">
@@ -462,7 +503,7 @@ const GnssPositionSettings: React.FC = () => {
                 id={`gnss-correction-${opt.value}`}
                 name="gnss-correction"
                 checked={correction === opt.value}
-                disabled={disabled || mutationBusy}
+                disabled={disabled || locked}
                 onChange={() => setGnssCorrection(opt.value)}
                 label={
                   <>
@@ -479,11 +520,16 @@ const GnssPositionSettings: React.FC = () => {
           {(lengthMissing || status?.blocked === 'no-length') && (
             <Alert variant="info" className="mt-1 mb-0 py-1 px-2">
               <small className="d-block mt-1">
-                Position correction requires the vessel length.{' '}
-                <a href={VESSEL_SETTINGS_HASH}>
-                  Set it in Vessel Configuration
-                </a>
-                .
+                Position correction requires the vessel length.
+                {!readOnly && (
+                  <>
+                    {' '}
+                    <a href={VESSEL_SETTINGS_HASH}>
+                      Set it in Vessel Configuration
+                    </a>
+                    .
+                  </>
+                )}
               </small>
             </Alert>
           )}
@@ -518,7 +564,7 @@ const GnssPositionSettings: React.FC = () => {
                 <th>From Bow (m)</th>
                 <th>From Center (m)</th>
                 <th>Status</th>
-                <th>Actions</th>
+                {!readOnly && <th>Actions</th>}
               </tr>
             </thead>
             <tbody>
@@ -531,9 +577,10 @@ const GnssPositionSettings: React.FC = () => {
                 // Focusing any input of an unconfigured row starts its
                 // configuration: the row gets a sensor entry and the same
                 // input keeps focus, so "click and type" just works.
-                const configureOnFocus = isUnconfigured
-                  ? () => handleConfigure(row.$source)
-                  : undefined
+                const configureOnFocus =
+                  isUnconfigured && !readOnly
+                    ? () => handleConfigure(row.$source)
+                    : undefined
                 const fromCenter = row.sensor ? row.sensor.fromCenter : null
                 const side = sideOfFromCenter(
                   fromCenter,
@@ -589,7 +636,7 @@ const GnssPositionSettings: React.FC = () => {
                         aria-label={`Sensor label for ${row.$source}`}
                         value={row.sensor ? row.sensor.sensorId : ''}
                         placeholder="label"
-                        disabled={mutationBusy}
+                        disabled={locked}
                         onFocus={configureOnFocus}
                         onChange={(e) =>
                           row.sensor &&
@@ -617,7 +664,7 @@ const GnssPositionSettings: React.FC = () => {
                             ? row.sensor.fromBow
                             : '')
                         }
-                        disabled={mutationBusy}
+                        disabled={locked}
                         onFocus={configureOnFocus}
                         onChange={(e) =>
                           row.sensor &&
@@ -653,7 +700,7 @@ const GnssPositionSettings: React.FC = () => {
                           aria-describedby={
                             fromCenterInvalid ? fromCenterErrorId : undefined
                           }
-                          disabled={mutationBusy}
+                          disabled={locked}
                           onFocus={configureOnFocus}
                           onChange={(e) =>
                             row.sensor &&
@@ -672,7 +719,7 @@ const GnssPositionSettings: React.FC = () => {
                         <Form.Select
                           aria-label={`Side of the centerline for ${row.$source}`}
                           value={side}
-                          disabled={mutationBusy}
+                          disabled={locked}
                           onFocus={configureOnFocus}
                           onChange={(e) =>
                             row.sensor &&
@@ -708,20 +755,22 @@ const GnssPositionSettings: React.FC = () => {
                         <Badge bg="secondary">offline</Badge>
                       )}
                     </td>
-                    <td>
-                      {row.sensor && (
-                        <Button
-                          size="sm"
-                          variant="outline-secondary"
-                          disabled={mutationBusy}
-                          onClick={() => handleRemove(row.index, row.$source)}
-                          title="Clear this sensor's antenna configuration"
-                          aria-label={`Clear antenna configuration for ${row.sensor.sensorId || row.$source}`}
-                        >
-                          Clear
-                        </Button>
-                      )}
-                    </td>
+                    {!readOnly && (
+                      <td>
+                        {row.sensor && (
+                          <Button
+                            size="sm"
+                            variant="outline-secondary"
+                            disabled={mutationBusy}
+                            onClick={() => handleRemove(row.index, row.$source)}
+                            title="Clear this sensor's antenna configuration"
+                            aria-label={`Clear antenna configuration for ${row.sensor.sensorId || row.$source}`}
+                          >
+                            Clear
+                          </Button>
+                        )}
+                      </td>
+                    )}
                   </tr>
                 )
               })}
@@ -737,26 +786,28 @@ const GnssPositionSettings: React.FC = () => {
               vesselLength={vesselDimensions.length}
               vesselBeam={vesselDimensions.beam}
               colors={COLORS}
-              onUpdateSensor={updateGnssSensor}
+              onUpdateSensor={readOnly ? undefined : updateGnssSensor}
             />
           )}
       </Card.Body>
-      <Card.Footer>
-        <Button
-          size="sm"
-          variant="primary"
-          disabled={!saveState.dirty || mutationBusy}
-          onClick={handleSave}
-        >
-          <FontAwesomeIcon icon={faFloppyDisk} /> Save
-        </Button>
-        {saveState.saveFailed && (
-          <span className="text-danger ms-2">
-            {gnssSensorsData.saveError ||
-              'Saving GNSS sensor configuration failed!'}
-          </span>
-        )}
-      </Card.Footer>
+      {!readOnly && (
+        <Card.Footer>
+          <Button
+            size="sm"
+            variant="primary"
+            disabled={!saveState.dirty || mutationBusy}
+            onClick={handleSave}
+          >
+            <FontAwesomeIcon icon={faFloppyDisk} /> Save
+          </Button>
+          {saveState.saveFailed && (
+            <span className="text-danger ms-2">
+              {gnssSensorsData.saveError ||
+                'Saving GNSS sensor configuration failed!'}
+            </span>
+          )}
+        </Card.Footer>
+      )}
     </Card>
   )
 }

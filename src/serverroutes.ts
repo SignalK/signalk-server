@@ -2178,10 +2178,9 @@ module.exports = function (
 
   app.securityStrategy.addAdminWriteMiddleware(`${SERVERROUTESPREFIX}/debug`)
 
-  // Register middleware before the routes so every method picks up auth.
-  // Match the /priorities pattern: source topology is admin-only across
-  // the board. (GNSS antenna config has moved to the v2 sensors API.)
-  app.securityStrategy.addAdminMiddleware(
+  // The GNSS preferences page lists these for read-only users too; the
+  // same $source refs are already readable in the data model.
+  app.securityStrategy.addAdminWriteMiddleware(
     `${SERVERROUTESPREFIX}/positionSources`
   )
 

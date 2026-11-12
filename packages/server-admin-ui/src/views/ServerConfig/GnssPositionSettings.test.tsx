@@ -22,7 +22,8 @@ function setSensor(sensor: Partial<GnssSensorConfig>) {
       ],
       saveState: { dirty: false, timeoutsOk: true }
     },
-    positionSources: [SOURCE]
+    positionSources: [SOURCE],
+    loginStatus: { authenticationRequired: false }
   })
 }
 
@@ -140,5 +141,142 @@ describe('GnssPositionSettings From Center', () => {
     expect(distanceInput()).toHaveAccessibleDescription(
       'Enter the distance without a sign and pick the side.'
     )
+  })
+})
+
+describe('GnssPositionSettings for a read-only visitor', () => {
+  beforeEach(() => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({ ok: false, status: 404, json: async () => ({}) }))
+    )
+    setSensor({ fromCenter: -1.5 })
+    useStore.setState({
+      loginStatus: {
+        authenticationRequired: true,
+        status: 'notLoggedIn',
+        readOnlyAccess: true
+      }
+    })
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('shows the antenna positions without offering to change them', () => {
+    render(<GnssPositionSettings />)
+
+    expect((distanceInput() as HTMLInputElement).value).toBe('1.5')
+    expect((sideSelect() as HTMLSelectElement).value).toBe('port')
+    expect(distanceInput()).toHaveProperty('disabled', true)
+    expect(sideSelect()).toHaveProperty('disabled', true)
+    expect(screen.queryByText('Save')).toBeNull()
+    expect(screen.queryByText('Reset all GNSS sensors')).toBeNull()
+    expect(screen.queryByText('Clear')).toBeNull()
+  })
+
+  it('replaces edits an admin left unsaved with the saved layout', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) =>
+        url.endsWith('/sensors/gnss')
+          ? {
+              ok: true,
+              status: 200,
+              json: async () => ({
+                correction: 'off',
+                sensors: [
+                  {
+                    sensorId: 'gnss1',
+                    $source: SOURCE,
+                    fromBow: 5,
+                    fromCenter: 2
+                  }
+                ]
+              })
+            }
+          : { ok: false, status: 404, json: async () => ({}) }
+      )
+    )
+    useStore.setState((state) => ({
+      gnssSensorsData: {
+        ...state.gnssSensorsData,
+        saveState: { dirty: true, timeoutsOk: true }
+      }
+    }))
+    render(<GnssPositionSettings />)
+
+    await vi.waitFor(() => expect(storedFromCenter()).toBe(2))
+    expect(useStore.getState().gnssSensorsData.saveState.dirty).toBe(false)
+    expect((sideSelect() as HTMLSelectElement).value).toBe('starboard')
+  })
+
+  it('keeps the edits when edit access returns before the saved layout', async () => {
+    let answer: (value: unknown) => void = () => {}
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string) =>
+        url.endsWith('/sensors/gnss')
+          ? new Promise((resolve) => {
+              answer = resolve
+            })
+          : Promise.resolve({ ok: false, status: 404, json: async () => ({}) })
+      )
+    )
+    useStore.setState((state) => ({
+      gnssSensorsData: {
+        ...state.gnssSensorsData,
+        saveState: { dirty: true, timeoutsOk: true }
+      }
+    }))
+    render(<GnssPositionSettings />)
+
+    act(() => {
+      useStore.setState({ loginStatus: { authenticationRequired: false } })
+    })
+    await act(async () => {
+      answer({
+        ok: true,
+        status: 200,
+        json: async () => ({ correction: 'off', sensors: [] })
+      })
+    })
+
+    expect(storedFromCenter()).toBe(-1.5)
+    expect(useStore.getState().gnssSensorsData.saveState.dirty).toBe(true)
+  })
+
+  it('applies the saved layout even after the page is left', async () => {
+    let answer: (value: unknown) => void = () => {}
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string) =>
+        url.endsWith('/sensors/gnss')
+          ? new Promise((resolve) => {
+              answer = resolve
+            })
+          : Promise.resolve({ ok: false, status: 404, json: async () => ({}) })
+      )
+    )
+    useStore.setState((state) => ({
+      gnssSensorsData: {
+        ...state.gnssSensorsData,
+        saveState: { dirty: true, timeoutsOk: true }
+      }
+    }))
+    const { unmount } = render(<GnssPositionSettings />)
+
+    unmount()
+    await act(async () => {
+      answer({
+        ok: true,
+        status: 200,
+        json: async () => ({ correction: 'off', sensors: [] })
+      })
+    })
+
+    expect(useStore.getState().gnssSensorsData.sensors).toEqual([])
+    expect(useStore.getState().gnssSensorsData.saveState.dirty).toBe(false)
   })
 })
