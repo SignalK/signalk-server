@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { useStore } from './store'
-import { authFetch } from './dataFetching'
+import { authFetch, fetchAppStore } from './dataFetching'
 import type { LoginStatus } from './store/types'
 
 const LOGIN_STATUS_URL = '/skServer/loginStatus'
@@ -146,5 +146,47 @@ describe('authFetch 401 handling', () => {
     const ls = useStore.getState().loginStatus
     expect(ls.status).toBe('loggedIn')
     expect(ls.username).toBe('demo')
+  })
+})
+
+describe('fetchAppStore', () => {
+  beforeEach(() => {
+    window.serverRoutesPrefix = '/skServer'
+    useStore.setState({ loginStatus: { ...loggedIn } })
+    useStore.getState().setAppStore({
+      available: [],
+      installed: [],
+      updates: [],
+      installing: []
+    })
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('drops an answer requested before a logout', async () => {
+    let answer: (r: Response) => void = () => {}
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        () =>
+          new Promise<Response>((resolve) => {
+            answer = resolve
+          })
+      )
+    )
+    const pending = fetchAppStore()
+    useStore.setState({ loginStatus: { ...sessionGone } })
+    answer(
+      response(200, {
+        available: [],
+        installed: [{ name: 'installed-plugin', installedVersion: '1.0.0' }],
+        updates: [],
+        installing: []
+      })
+    )
+    await pending
+    expect(useStore.getState().appStore.installed).toEqual([])
   })
 })

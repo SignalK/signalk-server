@@ -1,6 +1,11 @@
 import { webSocketService } from './services/WebSocketService'
 import { useStore } from './store'
-import { authFetch, fetchAllData, fetchLoginStatus } from './dataFetching'
+import {
+  authFetch,
+  fetchAllData,
+  fetchAppStore,
+  fetchLoginStatus
+} from './dataFetching'
 
 export { fetchAllData, fetchLoginStatus }
 
@@ -18,6 +23,8 @@ export async function logoutAction(): Promise<void> {
   // Reconnect WebSocket so admin event subscriptions are dropped
   webSocketService.reconnect()
   await fetchLoginStatus()
+  // The store list held what is installed here, which only an admin sees.
+  await fetchAppStore()
 }
 
 export function restartAction(): void {
