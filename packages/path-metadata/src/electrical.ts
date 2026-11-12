@@ -279,7 +279,8 @@ export const electricalMetadata: Record<string, PathMetadataEntry> = {
     units: 'K'
   },
   '/vessels/*/electrical/batteries/RegExp/chemistry': {
-    description: 'Type of battery FLA, LiFePO4, etc.'
+    description:
+      'Chemistry of the battery, such as lead-acid or lithium. NMEA 2000 reports pb (lead), li, nicd, zno or nimh.'
   },
   '/vessels/*/electrical/batteries/RegExp/batteryType': {
     description: 'Construction of a lead-acid battery',
