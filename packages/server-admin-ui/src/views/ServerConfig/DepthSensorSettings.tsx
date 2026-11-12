@@ -197,7 +197,6 @@ const DepthSensorSettings: React.FC = () => {
     addDepthSensor($source)
   }
 
-  // Focusing an input of an unconfigured row starts its configuration.
   const configureOnFocus = (row: (typeof rows)[number]) =>
     row.sensor === null && !readOnly
       ? () => handleConfigure(row.$source)
@@ -333,8 +332,10 @@ const DepthSensorSettings: React.FC = () => {
         isInvalid={invalid}
         disabled={locked}
         onFocus={configureOnFocus(row)}
-        onChange={(e) =>
-          row.sensor &&
+        onChange={(e) => {
+          // A number input reports partial text such as "0." as an empty
+          // value; only an emptied field clears the stored distance.
+          if (!row.sensor || e.target.validity.badInput) return
           handleDistanceChange(
             row.index,
             row.$source,
@@ -342,7 +343,7 @@ const DepthSensorSettings: React.FC = () => {
             e.target.value,
             side
           )
-        }
+        }}
         onBlur={() => handleBlur(row.$source, field)}
         style={{ width: 80 }}
       />
@@ -545,9 +546,9 @@ const DepthSensorSettings: React.FC = () => {
           </Table>
         )}
 
-        {sensors.length > 0 && vessel.length !== null && (
+        {sensors.length > 0 && (
           <div className="d-flex flex-wrap justify-content-center align-items-start column-gap-4">
-            {vessel.beam !== null && (
+            {vessel.length !== null && vessel.beam !== null && (
               <div>
                 <BoatSchematicEditor
                   sensors={sensors}

@@ -9,7 +9,7 @@ export interface SideViewSensor {
 
 interface BoatSideViewEditorProps {
   sensors: readonly SideViewSensor[]
-  vesselLength: number
+  vesselLength: number | null
   draft: number
   colors: string[]
   // Without it the transducers are shown but cannot be dragged.
@@ -84,7 +84,8 @@ const BoatSideViewEditor: React.FC<BoatSideViewEditorProps> = ({
 
   const toSvgX = useCallback(
     (fromBow: number | null) => {
-      const along = fromBow === null ? 0.5 : fromBow / vesselLength
+      const along =
+        fromBow === null || vesselLength === null ? 0.5 : fromBow / vesselLength
       return HULL_LEFT + Math.max(0, Math.min(1, along)) * HULL_W
     },
     [vesselLength]

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import DepthSensorSettings from './DepthSensorSettings'
 import { useStore } from '../../store'
@@ -70,6 +70,36 @@ describe('DepthSensorSettings', () => {
         fromWaterline: 0.7
       }
     ])
+  })
+
+  it('keeps a stored distance while the input holds partial text', () => {
+    useStore.setState({
+      depthSensorsData: {
+        sensors: [
+          {
+            sensorId: 'keel',
+            $source: N2K,
+            fromBow: 5.5,
+            fromCenter: null,
+            fromWaterline: 0.7
+          }
+        ],
+        saveState: { dirty: false, timeoutsOk: true }
+      }
+    })
+    render(<DepthSensorSettings />)
+    const input = screen.getByLabelText(
+      `Below waterline in meters for ${N2K}`
+    ) as HTMLInputElement
+    Object.defineProperty(input, 'validity', {
+      value: { badInput: true }
+    })
+
+    fireEvent.change(input, { target: { value: '' } })
+    fireEvent.blur(input)
+
+    expect(stored()[0].fromWaterline).toBe(0.7)
+    expect(input.value).toBe('0.7')
   })
 
   it('saves the transducers to the sensors API', async () => {
@@ -178,6 +208,16 @@ describe('DepthSensorSettings', () => {
       ).toBeVisible()
       expect(screen.getByText('keel 0.7 m')).toBeVisible()
       expect(screen.getByText('Draft 1.7 m')).toBeVisible()
+    })
+
+    it('shows the side view when the vessel length is unknown', async () => {
+      vi.stubGlobal('fetch', vesselResponse({ draft: 1.7 }))
+      render(<DepthSensorSettings />)
+
+      expect(
+        await screen.findByRole('img', { name: /Side view of the vessel/ })
+      ).toBeVisible()
+      expect(screen.getByText('keel 0.7 m')).toBeVisible()
     })
 
     it('asks for the draft when none is set', async () => {
