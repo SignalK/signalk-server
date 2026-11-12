@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { ROUTER_FUTURE_FLAGS } from '../../../routerFuture'
 import DetailView from './DetailView'
@@ -153,6 +153,25 @@ describe('DetailView', () => {
     renderDetail('signalk-example')
     await screen.findByText('Example Plugin')
     expect(screen.queryByRole('button', { name: /Install/ })).toBeNull()
+  })
+
+  it('reloads the detail when the admin logs out', async () => {
+    mockFetch(samplePayload())
+    renderDetail('signalk-example')
+    await screen.findByText('Example Plugin')
+    expect(fetch).toHaveBeenCalledTimes(1)
+
+    act(() => {
+      useStore.setState({
+        loginStatus: {
+          authenticationRequired: true,
+          status: 'notLoggedIn',
+          readOnlyAccess: true
+        }
+      })
+    })
+
+    await waitFor(() => expect(fetch).toHaveBeenCalledTimes(2))
   })
 
   it('does not show bulk CTA when all required deps already installed', async () => {

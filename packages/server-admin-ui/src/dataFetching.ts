@@ -91,13 +91,17 @@ export async function fetchLoginStatus(): Promise<void> {
 // seconds later. Re-fetching when the user lands on /apps/store
 // surfaces those hydrated icons without needing a full page reload.
 export async function fetchAppStore(): Promise<void> {
+  // An answer for a session that logged in or out meanwhile carries the
+  // wrong install state.
+  const askedAs = useStore.getState().loginStatus
   try {
     const response = await authFetch(
       `${window.serverRoutesPrefix}/appstore/available`
     )
     if (response.status === 200) {
       const data = await response.json()
-      useStore.getState().setAppStore(data)
+      const { loginStatus, setAppStore } = useStore.getState()
+      if (loginStatus === askedAs) setAppStore(data)
     }
   } catch (error) {
     console.error('Failed to fetch /appstore/available:', error)

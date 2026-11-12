@@ -150,7 +150,9 @@ const DetailView: React.FC = () => {
     return () => {
       controller.abort()
     }
-  }, [decodedName])
+    // The detail holds install state only an admin may see, so a role
+    // change loads it again.
+  }, [decodedName, readOnly])
 
   if (!decodedName) {
     return (
