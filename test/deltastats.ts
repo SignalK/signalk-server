@@ -109,6 +109,20 @@ describe('provider rates', () => {
     ])
   })
 
+  it('ignores a rate in an update the server discards', () => {
+    const { app, sent } = fakeApp()
+    incDeltaStatistics(app, 'can0', {
+      updates: [
+        { values: [{ path: 'providers.can0.deltaRate', value: 1 }, null] }
+      ]
+    })
+    publishRates(app)
+    assert.deepEqual(Object.keys(published(sent)).sort(), [
+      'providers.can0.deltaRate',
+      'providers.can0.writeRate'
+    ])
+  })
+
   it('sends nothing without connections', () => {
     const { app, sent } = fakeApp()
     app.providers = []

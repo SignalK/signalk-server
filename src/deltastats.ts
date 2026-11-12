@@ -141,6 +141,16 @@ function noteOwnRates(
   const prefix = `providers.${providerId}.`
   for (const update of delta.updates) {
     if (!Array.isArray(update?.values)) continue
+    // handleMessage drops an update with an invalid entry, so it doesn't
+    // count as the connection writing its rate.
+    if (
+      update.values.some(
+        (pv: any) =>
+          pv === null || typeof pv !== 'object' || typeof pv.path !== 'string'
+      )
+    ) {
+      continue
+    }
     for (const pv of update.values) {
       const path = pv?.path
       if (typeof path !== 'string' || !path.startsWith(prefix)) continue

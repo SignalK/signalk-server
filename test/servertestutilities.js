@@ -85,6 +85,8 @@ WsPromiser.prototype.parsedMessages = function () {
 
 // The connection rates the server writes under providers.<id> every few
 // seconds; a test that counts messages isn't about them.
+const PROVIDER_RATE = /^providers\..+\.(deltaRate|writeRate)$/
+
 function isProviderRates(msgStr) {
   let msg
   try {
@@ -96,12 +98,13 @@ function isProviderRates(msgStr) {
     Array.isArray(msg.updates) &&
     msg.updates.length > 0 &&
     msg.updates.every((update) => {
-      const pvs = [...(update.values ?? []), ...(update.meta ?? [])]
+      const values = update.values ?? []
+      const pvs = [...values, ...(update.meta ?? [])]
       return (
         pvs.length > 0 &&
+        (values.length === 0 || update.$source === 'signalk-server') &&
         pvs.every(
-          (pv) =>
-            typeof pv.path === 'string' && pv.path.startsWith('providers.')
+          (pv) => typeof pv.path === 'string' && PROVIDER_RATE.test(pv.path)
         )
       )
     })
