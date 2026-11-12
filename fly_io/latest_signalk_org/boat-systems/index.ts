@@ -1080,7 +1080,9 @@ class GatewaySimulator {
     try {
       if (!this.token)
         await (this.loggingIn ??= this.logIn().finally(
-          () => (this.loggingIn = undefined)
+          () => {
+            this.loggingIn = undefined
+          }
         ))
       const token = this.token
       const res = await fetch(
