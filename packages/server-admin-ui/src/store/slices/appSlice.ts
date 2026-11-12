@@ -217,6 +217,10 @@ export interface AppSliceActions {
 
 export type AppSlice = AppSliceState & AppSliceActions
 
+export const isAdminStatus = (loginStatus: LoginStatus) =>
+  loginStatus.authenticationRequired === false ||
+  loginStatus.userLevel === 'admin'
+
 const initialAppState: AppSliceState = {
   plugins: [],
   webapps: [],
@@ -298,7 +302,13 @@ export const createAppSlice: StateCreator<AppSlice, [], [], AppSlice> = (
   },
 
   setLoginStatus: (loginStatus) => {
-    set({ loginStatus })
+    // What is installed here is for admins only; a store list loaded as
+    // admin must not outlive the role, even if reloading it fails.
+    if (isAdminStatus(get().loginStatus) && !isAdminStatus(loginStatus)) {
+      set({ loginStatus, appStore: initialAppState.appStore })
+    } else {
+      set({ loginStatus })
+    }
   },
 
   setServerSpecification: (serverSpecification) => {

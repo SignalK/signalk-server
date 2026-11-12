@@ -3,7 +3,7 @@ import { create } from 'zustand'
 import { subscribeWithSelector } from 'zustand/middleware'
 import { useShallow } from 'zustand/react/shallow'
 
-import { createAppSlice, type AppSlice } from './slices/appSlice'
+import { createAppSlice, isAdminStatus, type AppSlice } from './slices/appSlice'
 import { createWsSlice, type WsSlice } from './slices/wsSlice'
 import { createDataSlice, type DataSlice } from './slices/dataSlice'
 import {
@@ -135,11 +135,7 @@ export function useLoginStatus() {
 }
 
 export function useIsAdmin(): boolean {
-  return useStore(
-    (s) =>
-      s.loginStatus.authenticationRequired === false ||
-      s.loginStatus.userLevel === 'admin'
-  )
+  return useStore((s) => isAdminStatus(s.loginStatus))
 }
 
 export function useAppStore() {

@@ -101,6 +101,37 @@ describe('appSlice', () => {
 
       expect(useStore.getState().loginStatus).toEqual({})
     })
+
+    it('forgets what is installed when the admin logs out', () => {
+      const admin: LoginStatus = {
+        status: 'loggedIn',
+        authenticationRequired: true,
+        userLevel: 'admin'
+      }
+      const installed = { name: 'plugin-a', installedVersion: '1.0.0' }
+      useStore.getState().setLoginStatus(admin)
+      useStore.getState().setAppStore({
+        available: [installed],
+        installed: [installed],
+        updates: [installed],
+        installing: [],
+        canUpdateServer: true,
+        serverUpdate: '9.9.9'
+      })
+
+      useStore.getState().setLoginStatus({
+        status: 'notLoggedIn',
+        authenticationRequired: true,
+        readOnlyAccess: true
+      })
+
+      const { appStore } = useStore.getState()
+      expect(appStore.available).toEqual([])
+      expect(appStore.installed).toEqual([])
+      expect(appStore.updates).toEqual([])
+      expect(appStore.canUpdateServer).toBeUndefined()
+      expect(appStore.serverUpdate).toBeUndefined()
+    })
   })
 
   describe('setAppStore', () => {
