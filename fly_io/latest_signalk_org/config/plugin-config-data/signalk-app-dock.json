@@ -61,7 +61,7 @@
         "url": "/admin/#/webapps",
         "label": "More",
         "icon": "/@signalk/app-dock/icon-more.svg",
-        "color": "#78788c"
+        "color": ""
       }
     ]
   }
