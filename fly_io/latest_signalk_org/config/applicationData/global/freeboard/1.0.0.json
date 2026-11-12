@@ -73,7 +73,8 @@
         "widget": "tank-small",
         "anchor": "bl",
         "col": 3,
-        "row": 1
+        "row": 1,
+        "minScreen": "tablet"
       },
       {
         "instanceId": "demo-fresh-water",
@@ -81,7 +82,8 @@
         "widget": "tank-small",
         "anchor": "bl",
         "col": 2,
-        "row": 1
+        "row": 1,
+        "minScreen": "tablet"
       },
       {
         "instanceId": "demo-twa",
@@ -89,7 +91,8 @@
         "widget": "strip",
         "anchor": "br",
         "col": 2,
-        "row": 0
+        "row": 0,
+        "minScreen": "tablet"
       },
       {
         "instanceId": "demo-tws",
@@ -97,7 +100,8 @@
         "widget": "strip",
         "anchor": "br",
         "col": 3,
-        "row": 0
+        "row": 0,
+        "minScreen": "tablet"
       },
       {
         "instanceId": "demo-tides",
@@ -105,7 +109,8 @@
         "widget": "tides",
         "anchor": "bl",
         "col": 0,
-        "row": 1
+        "row": 1,
+        "minScreen": "tablet"
       }
     ],
     "state": {
@@ -144,5 +149,8 @@
     "paths": [
       "restricted-areas"
     ]
+  },
+  "display": {
+    "panelOpacity": 0.85
   }
 }
