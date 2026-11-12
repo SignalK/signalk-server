@@ -125,22 +125,30 @@ export default class SerialStream extends Transform {
       this.serial!.pipe(parser).pipe(this)
     })
 
+    // Closing the port in end() emits close, or "Port is not open" if it
+    // never opened, and neither means the device went away.
     this.serial.on('error', (x: Error) => {
+      if (!this.reconnectEnabled) {
+        return
+      }
       this.options.app.setProviderError(this.options.providerId, x.message)
       if (this.isFirstError) {
         console.log(x.message)
       }
       this.debug(x.message)
       this.isFirstError = false
-      this.scheduleReconnect()
+      this.scheduleReconnect(x.message)
     })
 
-    this.serial.on('close', () => {
+    this.serial.on('close', (err?: Error | null) => {
+      if (!this.reconnectEnabled) {
+        return
+      }
       this.options.app.setProviderError(
         this.options.providerId,
         'Closed, reconnecting...'
       )
-      this.scheduleReconnect()
+      this.scheduleReconnect(err?.message ?? 'Closed')
     })
   }
 
@@ -164,13 +172,15 @@ export default class SerialStream extends Transform {
     done()
   }
 
-  private scheduleReconnect(): void {
+  // The retry message is the last error before the port reopens, so it
+  // becomes Last Error on reconnect; it carries the cause to keep that useful.
+  private scheduleReconnect(cause: string): void {
     this.reconnectDelay *= this.reconnectDelay < 60 * 1000 ? 1.5 : 1
     const msg = `Not connected (retry delay ${(
       this.reconnectDelay / 1000
-    ).toFixed(0)} s)`
+    ).toFixed(0)} s): ${cause}`
     this.debug(msg)
-    this.options.app.setProviderStatus(this.options.providerId, msg)
+    this.options.app.setProviderError(this.options.providerId, msg)
     this.reconnectTimeout = setTimeout(() => this.start(), this.reconnectDelay)
   }
 }
