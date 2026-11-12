@@ -187,20 +187,20 @@ export const electricalMetadata: Record<string, PathMetadataEntry> = {
   },
   '/vessels/*/electrical/batteries/RegExp/capacity/nominal': {
     description: 'The capacity of battery as specified by the manufacturer',
-    units: 'J'
+    units: 'C'
   },
   '/vessels/*/electrical/batteries/RegExp/capacity/actual': {
     description:
       'The measured capacity of battery. This may change over time and will likely deviate from the nominal capacity.',
-    units: 'J'
+    units: 'C'
   },
   '/vessels/*/electrical/batteries/RegExp/capacity/remaining': {
     description: 'Capacity remaining in battery',
-    units: 'J'
+    units: 'C'
   },
   '/vessels/*/electrical/batteries/RegExp/capacity/dischargeLimit': {
     description: 'Minimum capacity to be left in the battery while discharging',
-    units: 'J'
+    units: 'C'
   },
   '/vessels/*/electrical/batteries/RegExp/capacity/stateOfCharge': {
     description: 'Data should be of type number.',
