@@ -313,8 +313,7 @@ export class MetadataRegistry {
    */
   removeMetaFields(path: string, fields: readonly string[]): void {
     const entry = this.getStoredMetadata(path) as
-      | Record<string, unknown>
-      | undefined
+      Record<string, unknown> | undefined
     if (!entry) return
     const lookupPath = toLookupPath(path)
     const spec = this.specEntries.find((e) => e.pattern.test(lookupPath))
