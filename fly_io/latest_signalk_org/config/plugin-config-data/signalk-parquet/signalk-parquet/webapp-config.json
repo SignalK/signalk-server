@@ -44,6 +44,12 @@
       "context": "vessels.self"
     },
     {
+      "path": "environment.wind.angleTrueWater",
+      "name": "True wind angle",
+      "enabled": true,
+      "context": "vessels.self"
+    },
+    {
       "path": "environment.wind.speedApparent",
       "name": "Apparent wind speed",
       "enabled": true,
