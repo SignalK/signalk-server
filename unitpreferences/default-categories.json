@@ -105,7 +105,8 @@
         "design.rigging.mast.height",
         "environment.heave",
         "navigation.anchor.maxRadius",
-        "navigation.anchor.currentRadius"
+        "navigation.anchor.currentRadius",
+        "environment.outside.precipitationVolume"
       ]
     },
     "angle": {
@@ -221,9 +222,7 @@
         "tanks.liveWell.*.currentVolume",
         "tanks.lubrication.*.capacity",
         "tanks.lubrication.*.currentVolume",
-        "propulsion.*.fuel.used",
-        "propulsion.*.trip.fuelUsed",
-        "environment.outside.precipitationVolume"
+        "propulsion.*.fuel.used"
       ]
     },
     "volumeRate": {
