@@ -513,8 +513,7 @@ export default function (app: ServerAPI): Plugin {
     const epochS = now / 1000
     const hours = dtS / SECONDS_PER_HOUR
     const position = app.getSelfPath('navigation.position.value') as
-      | { latitude: number; longitude: number }
-      | undefined
+      { latitude: number; longitude: number } | undefined
     const elevation = position
       ? sunElevation(new Date(now), position.latitude, position.longitude)
       : 0
