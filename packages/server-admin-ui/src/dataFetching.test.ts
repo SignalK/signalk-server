@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { useStore } from './store'
-import { authFetch, fetchAppStore } from './dataFetching'
+import { authFetch, fetchAllData, fetchAppStore } from './dataFetching'
 import type { LoginStatus } from './store/types'
 
 const LOGIN_STATUS_URL = '/skServer/loginStatus'
@@ -188,5 +188,47 @@ describe('fetchAppStore', () => {
     )
     await pending
     expect(useStore.getState().appStore.installed).toEqual([])
+  })
+})
+
+describe('fetchAllData', () => {
+  beforeEach(() => {
+    window.serverRoutesPrefix = '/skServer'
+    useStore.setState({ loginStatus: { ...sessionGone } })
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('keeps an admin store list that arrives before the login status', async () => {
+    let answerLoginStatus: (r: Response) => void = () => {}
+    const adminStore = {
+      available: [],
+      installed: [{ name: 'installed-plugin', installedVersion: '1.0.0' }],
+      updates: [],
+      installing: []
+    }
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string) => {
+        if (url === LOGIN_STATUS_URL) {
+          return new Promise<Response>((resolve) => {
+            answerLoginStatus = resolve
+          })
+        }
+        if (url === '/skServer/appstore/available') {
+          return Promise.resolve(response(200, adminStore))
+        }
+        return Promise.resolve(response(404))
+      })
+    )
+    const pending = fetchAllData()
+    await vi.waitFor(() =>
+      expect(fetch).toHaveBeenCalledWith(LOGIN_STATUS_URL, expect.anything())
+    )
+    answerLoginStatus(response(200, loggedIn))
+    await pending
+    expect(useStore.getState().appStore.installed).toHaveLength(1)
   })
 })
