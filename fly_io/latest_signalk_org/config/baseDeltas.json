@@ -119,5 +119,476 @@
         ]
       }
     ]
+  },
+  {
+    "context": "vessels.self",
+    "updates": [
+      {
+        "meta": [
+          {
+            "path": "electrical.switches.bank.10.1.state",
+            "value": {
+              "description": "Navigation lights",
+              "zones": [
+                {
+                  "lower": 0.5,
+                  "upper": 1.5,
+                  "state": "nominal",
+                  "message": "Navigation lights on"
+                }
+              ]
+            }
+          },
+          {
+            "path": "electrical.switches.bank.10.2.state",
+            "value": {
+              "description": "Stern light",
+              "zones": [
+                {
+                  "lower": 0.5,
+                  "upper": 1.5,
+                  "state": "nominal",
+                  "message": "Stern light on"
+                }
+              ]
+            }
+          },
+          {
+            "path": "electrical.switches.bank.10.3.state",
+            "value": {
+              "description": "Steaming light",
+              "zones": [
+                {
+                  "lower": 0.5,
+                  "upper": 1.5,
+                  "state": "nominal",
+                  "message": "Steaming light on"
+                }
+              ]
+            }
+          },
+          {
+            "path": "electrical.switches.bank.10.4.state",
+            "value": {
+              "description": "Tricolour",
+              "zones": [
+                {
+                  "lower": 0.5,
+                  "upper": 1.5,
+                  "state": "nominal",
+                  "message": "Tricolour on"
+                }
+              ]
+            }
+          },
+          {
+            "path": "electrical.switches.bank.10.5.state",
+            "value": {
+              "description": "Anchor light",
+              "zones": [
+                {
+                  "lower": 0.5,
+                  "upper": 1.5,
+                  "state": "nominal",
+                  "message": "Anchor light on"
+                }
+              ]
+            }
+          },
+          {
+            "path": "electrical.switches.bank.10.6.state",
+            "value": {
+              "description": "Deck light",
+              "zones": [
+                {
+                  "lower": 0.5,
+                  "upper": 1.5,
+                  "state": "nominal",
+                  "message": "Deck light on"
+                }
+              ]
+            }
+          },
+          {
+            "path": "electrical.switches.bank.13.1.state",
+            "value": {
+              "description": "Thruster",
+              "zones": [
+                {
+                  "lower": 0.5,
+                  "upper": 1.5,
+                  "state": "nominal",
+                  "message": "Bow thruster on"
+                }
+              ]
+            }
+          },
+          {
+            "path": "electrical.switches.bank.13.2.state",
+            "value": {
+              "description": "Water pump",
+              "zones": [
+                {
+                  "lower": 0.5,
+                  "upper": 1.5,
+                  "state": "nominal",
+                  "message": "Fresh water pump on"
+                }
+              ]
+            }
+          },
+          {
+            "path": "electrical.switches.bank.13.3.state",
+            "value": { "description": "Bilge pump" }
+          },
+          {
+            "path": "electrical.switches.bank.13.4.state",
+            "value": {
+              "description": "Fridge",
+              "warnMethod": [],
+              "zones": [
+                {
+                  "lower": -0.5,
+                  "upper": 0.5,
+                  "state": "warn",
+                  "message": "Fridge switched off"
+                },
+                {
+                  "lower": 0.5,
+                  "upper": 1.5,
+                  "state": "nominal",
+                  "message": "Fridge on"
+                }
+              ]
+            }
+          },
+          {
+            "path": "electrical.switches.bank.13.5.state",
+            "value": {
+              "description": "Freezer",
+              "warnMethod": [],
+              "zones": [
+                {
+                  "lower": -0.5,
+                  "upper": 0.5,
+                  "state": "warn",
+                  "message": "Freezer switched off"
+                },
+                {
+                  "lower": 0.5,
+                  "upper": 1.5,
+                  "state": "nominal",
+                  "message": "Freezer on"
+                }
+              ]
+            }
+          },
+          {
+            "path": "electrical.switches.bank.13.6.state",
+            "value": {
+              "description": "Saloon lights",
+              "zones": [
+                {
+                  "lower": 0.5,
+                  "upper": 1.5,
+                  "state": "nominal",
+                  "message": "Saloon lights on"
+                }
+              ]
+            }
+          },
+          {
+            "path": "electrical.switches.bank.13.7.state",
+            "value": {
+              "description": "Cabin lights",
+              "zones": [
+                {
+                  "lower": 0.5,
+                  "upper": 1.5,
+                  "state": "nominal",
+                  "message": "Cabin lights on"
+                }
+              ]
+            }
+          },
+          {
+            "path": "electrical.switches.bank.13.8.state",
+            "value": {
+              "description": "Instruments",
+              "zones": [
+                {
+                  "lower": 0.5,
+                  "upper": 1.5,
+                  "state": "nominal",
+                  "message": "Instruments on"
+                }
+              ]
+            }
+          },
+          {
+            "path": "electrical.switches.bank.12.1.state",
+            "value": {
+              "description": "Radio galley",
+              "zones": [
+                {
+                  "lower": 0.5,
+                  "upper": 1.5,
+                  "state": "nominal",
+                  "message": "Radio galley on"
+                }
+              ]
+            }
+          },
+          {
+            "path": "electrical.switches.bank.12.2.state",
+            "value": {
+              "description": "Nav instruments",
+              "zones": [
+                {
+                  "lower": 0.5,
+                  "upper": 1.5,
+                  "state": "nominal",
+                  "message": "Nav instruments on"
+                }
+              ]
+            }
+          },
+          {
+            "path": "electrical.switches.bank.12.3.state",
+            "value": {
+              "description": "AIS power",
+              "zones": [
+                {
+                  "lower": 0.5,
+                  "upper": 1.5,
+                  "state": "nominal",
+                  "message": "AIS power on"
+                }
+              ]
+            }
+          },
+          {
+            "path": "electrical.switches.bank.12.4.state",
+            "value": {
+              "description": "VHF power",
+              "zones": [
+                {
+                  "lower": 0.5,
+                  "upper": 1.5,
+                  "state": "nominal",
+                  "message": "VHF power on"
+                }
+              ]
+            }
+          },
+          {
+            "path": "electrical.switches.bank.12.5.state",
+            "value": {
+              "description": "Radio saloon",
+              "zones": [
+                {
+                  "lower": 0.5,
+                  "upper": 1.5,
+                  "state": "nominal",
+                  "message": "Radio saloon on"
+                }
+              ]
+            }
+          },
+          {
+            "path": "electrical.switches.bank.12.6.state",
+            "value": {
+              "description": "AIS silent",
+              "zones": [
+                {
+                  "lower": 0.5,
+                  "upper": 1.5,
+                  "state": "nominal",
+                  "message": "AIS silent on"
+                }
+              ]
+            }
+          },
+          {
+            "path": "electrical.switches.bank.11.1.state",
+            "value": {
+              "description": "Black water valve",
+              "zones": [
+                {
+                  "lower": 0.5,
+                  "upper": 1.5,
+                  "state": "nominal",
+                  "message": "Black water valve on"
+                }
+              ]
+            }
+          },
+          {
+            "path": "electrical.switches.bank.11.2.state",
+            "value": {
+              "description": "Cockpit alarm",
+              "zones": [
+                {
+                  "lower": 0.5,
+                  "upper": 1.5,
+                  "state": "nominal",
+                  "message": "Cockpit alarm on"
+                }
+              ]
+            }
+          },
+          {
+            "path": "electrical.switches.bank.11.3.state",
+            "value": {
+              "description": "Ambilight TV",
+              "zones": [
+                {
+                  "lower": 0.5,
+                  "upper": 1.5,
+                  "state": "nominal",
+                  "message": "Ambilight TV on"
+                }
+              ]
+            }
+          },
+          {
+            "path": "electrical.switches.bank.11.4.state",
+            "value": {
+              "description": "Fuel transfer",
+              "zones": [
+                {
+                  "lower": 0.5,
+                  "upper": 1.5,
+                  "state": "nominal",
+                  "message": "Fuel transfer on"
+                }
+              ]
+            }
+          },
+          {
+            "path": "electrical.switches.bank.11.5.state",
+            "value": {
+              "description": "Tender remote",
+              "zones": [
+                {
+                  "lower": 0.5,
+                  "upper": 1.5,
+                  "state": "nominal",
+                  "message": "Tender remote on"
+                }
+              ]
+            }
+          },
+          {
+            "path": "electrical.switches.bank.11.6.state",
+            "value": {
+              "description": "Deck wash pump",
+              "zones": [
+                {
+                  "lower": 0.5,
+                  "upper": 1.5,
+                  "state": "nominal",
+                  "message": "Deck wash pump on"
+                }
+              ]
+            }
+          },
+          {
+            "path": "electrical.batteries.house.current",
+            "value": {
+              "units": "A",
+              "warnMethod": [],
+              "alarmMethod": [],
+              "zones": [
+                {
+                  "lower": 100,
+                  "upper": 150,
+                  "state": "warn",
+                  "message": "House current above 100 A"
+                },
+                {
+                  "lower": 150,
+                  "upper": 1000,
+                  "state": "alarm",
+                  "message": "House current above 150 A"
+                }
+              ]
+            }
+          },
+          {
+            "path": "electrical.batteries.house.temperature",
+            "value": {
+              "units": "K",
+              "warnMethod": [],
+              "alarmMethod": [],
+              "zones": [
+                {
+                  "lower": 253.15,
+                  "upper": 278.15,
+                  "state": "warn",
+                  "message": "House battery below 5 °C"
+                },
+                {
+                  "lower": 308.15,
+                  "upper": 318.15,
+                  "state": "warn",
+                  "message": "House battery above 35 °C"
+                },
+                {
+                  "lower": 318.15,
+                  "upper": 353.15,
+                  "state": "alarm",
+                  "message": "House battery above 45 °C"
+                }
+              ]
+            }
+          },
+          {
+            "path": "electrical.batteries.starter.voltage",
+            "value": {
+              "units": "V",
+              "warnMethod": [],
+              "alarmMethod": [],
+              "zones": [
+                {
+                  "lower": 0,
+                  "upper": 11.8,
+                  "state": "alarm",
+                  "message": "Starter battery below 11.8 V"
+                },
+                {
+                  "lower": 11.8,
+                  "upper": 12.2,
+                  "state": "warn",
+                  "message": "Starter battery below 12.2 V"
+                }
+              ]
+            }
+          },
+          {
+            "path": "electrical.batteries.bowThruster.voltage",
+            "value": {
+              "units": "V",
+              "warnMethod": [],
+              "alarmMethod": [],
+              "zones": [
+                {
+                  "lower": 0,
+                  "upper": 11.8,
+                  "state": "alarm",
+                  "message": "Bow thruster bank below 11.8 V"
+                },
+                {
+                  "lower": 11.8,
+                  "upper": 12.2,
+                  "state": "warn",
+                  "message": "Bow thruster bank below 12.2 V"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ]
   }
 ]
