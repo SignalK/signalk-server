@@ -11,6 +11,7 @@ import { faFloppyDisk } from '@fortawesome/free-solid-svg-icons/faFloppyDisk'
 import { faWater } from '@fortawesome/free-solid-svg-icons/faWater'
 import {
   useStore,
+  useLoginStatus,
   useDepthSensorsData,
   useDepthSources,
   useGnssSensorsData,
@@ -21,8 +22,10 @@ import { useSourceAliases } from '../../hooks/useSourceAliases'
 import type { DepthSensorConfig } from '../../store/types'
 import {
   DEPTH_API_PATH,
-  EMPTY_DEPTH_CONFIG
+  EMPTY_DEPTH_CONFIG,
+  sanitizeDepthConfig
 } from '../../store/slices/depthSensorsSlice'
+import { isReadOnly } from '../../utils/editAccess'
 import {
   type CenterlineSide,
   fromCenterFor,
@@ -55,6 +58,7 @@ const DepthSensorSettings: React.FC = () => {
   const gnssSensors = useGnssSensorsData().sensors
   const sourcesData = useSourcesData()
   const { getDisplayParts } = useSourceAliases()
+  const readOnly = isReadOnly(useLoginStatus())
 
   const updateDepthSensor = useStore((s) => s.updateDepthSensor)
   const addDepthSensor = useStore((s) => s.addDepthSensor)
@@ -123,7 +127,28 @@ const DepthSensorSettings: React.FC = () => {
       })
   }, [])
 
+  // Edits an admin left unsaved before logging out would otherwise stay on
+  // screen, and the dirty guard would keep refusing the saved layout.
+  const discardEdits = readOnly && saveState.dirty
+  useEffect(() => {
+    if (!discardEdits) return
+    fetch(DEPTH_API_PATH, { credentials: 'include' })
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        return res.json()
+      })
+      .then((data: unknown) => {
+        const state = useStore.getState()
+        if (!isReadOnly(state.loginStatus)) return
+        state.setDepthSensors(sanitizeDepthConfig(data), true)
+        setDrafts({})
+        setSideChoices({})
+      })
+      .catch((err) => console.warn('Failed to reload depth sensors', err))
+  }, [discardEdits])
+
   const mutationBusy = saveState.isSaving || resetBusy
+  const locked = mutationBusy || readOnly
 
   // The inputs are disabled while a save or reset runs; a drag on either
   // view must be ignored then too, or a position the save never sent would
@@ -171,6 +196,12 @@ const DepthSensorSettings: React.FC = () => {
     clearEditState($source)
     addDepthSensor($source)
   }
+
+  // Focusing an input of an unconfigured row starts its configuration.
+  const configureOnFocus = (row: (typeof rows)[number]) =>
+    row.sensor === null && !readOnly
+      ? () => handleConfigure(row.$source)
+      : undefined
 
   const handleSave = useCallback(async () => {
     setDepthSaving()
@@ -300,10 +331,8 @@ const DepthSensorSettings: React.FC = () => {
         max={max ?? undefined}
         value={draft ?? (stored !== null ? Math.abs(stored) : '')}
         isInvalid={invalid}
-        disabled={mutationBusy}
-        onFocus={
-          row.sensor === null ? () => handleConfigure(row.$source) : undefined
-        }
+        disabled={locked}
+        onFocus={configureOnFocus(row)}
         onChange={(e) =>
           row.sensor &&
           handleDistanceChange(
@@ -327,14 +356,16 @@ const DepthSensorSettings: React.FC = () => {
           <FontAwesomeIcon icon={faWater} />{' '}
           <strong>Depth Transducer Positions</strong>
         </span>
-        <Button
-          size="sm"
-          variant="outline-danger"
-          onClick={handleReset}
-          disabled={mutationBusy}
-        >
-          {resetBusy ? 'Resetting…' : 'Reset all depth transducers'}
-        </Button>
+        {!readOnly && (
+          <Button
+            size="sm"
+            variant="outline-danger"
+            onClick={handleReset}
+            disabled={mutationBusy}
+          >
+            {resetBusy ? 'Resetting…' : 'Reset all depth transducers'}
+          </Button>
+        )}
       </Card.Header>
       <Card.Body>
         {resetError && (
@@ -350,8 +381,10 @@ const DepthSensorSettings: React.FC = () => {
           Configure where each depth transducer sits on your vessel. Every
           source reporting a depth gets a row, whether it is an NMEA 2000 or
           NMEA 0183 sounder or a plugin. &quot;Below Waterline&quot; is how deep
-          the transducer sits under the surface. Configure a detected source by
-          editing one of its fields.
+          the transducer sits under the surface.{' '}
+          {readOnly
+            ? 'Only an administrator can change them.'
+            : 'Configure a detected source by editing one of its fields.'}
         </Alert>
 
         {rows.length === 0 ? (
@@ -370,7 +403,7 @@ const DepthSensorSettings: React.FC = () => {
                 <th>From Center (m)</th>
                 <th>Below Waterline (m)</th>
                 <th>Status</th>
-                <th>Actions</th>
+                {!readOnly && <th>Actions</th>}
               </tr>
             </thead>
             <tbody>
@@ -419,12 +452,8 @@ const DepthSensorSettings: React.FC = () => {
                         aria-label={`Sensor label for ${row.$source}`}
                         value={row.sensor ? row.sensor.sensorId : ''}
                         placeholder="label"
-                        disabled={mutationBusy}
-                        onFocus={
-                          row.sensor === null
-                            ? () => handleConfigure(row.$source)
-                            : undefined
-                        }
+                        disabled={locked}
+                        onFocus={configureOnFocus(row)}
                         onChange={(e) =>
                           row.sensor &&
                           handleLabelChange(row.index, e.target.value)
@@ -455,12 +484,8 @@ const DepthSensorSettings: React.FC = () => {
                         <Form.Select
                           aria-label={`Side of the centerline for ${row.$source}`}
                           value={side}
-                          disabled={mutationBusy}
-                          onFocus={
-                            row.sensor === null
-                              ? () => handleConfigure(row.$source)
-                              : undefined
-                          }
+                          disabled={locked}
+                          onFocus={configureOnFocus(row)}
                           onChange={(e) =>
                             row.sensor &&
                             handleSideChange(
@@ -495,22 +520,24 @@ const DepthSensorSettings: React.FC = () => {
                         <Badge bg="secondary">offline</Badge>
                       )}
                     </td>
-                    <td>
-                      {row.sensor && (
-                        <Button
-                          size="sm"
-                          variant="outline-secondary"
-                          disabled={mutationBusy}
-                          onClick={() => {
-                            clearEditState(row.$source)
-                            removeDepthSensor(row.index)
-                          }}
-                          aria-label={`Clear transducer configuration for ${row.sensor.sensorId || row.$source}`}
-                        >
-                          Clear
-                        </Button>
-                      )}
-                    </td>
+                    {!readOnly && (
+                      <td>
+                        {row.sensor && (
+                          <Button
+                            size="sm"
+                            variant="outline-secondary"
+                            disabled={mutationBusy}
+                            onClick={() => {
+                              clearEditState(row.$source)
+                              removeDepthSensor(row.index)
+                            }}
+                            aria-label={`Clear transducer configuration for ${row.sensor.sensorId || row.$source}`}
+                          >
+                            Clear
+                          </Button>
+                        )}
+                      </td>
+                    )}
                   </tr>
                 )
               })}
@@ -527,7 +554,7 @@ const DepthSensorSettings: React.FC = () => {
                   vesselLength={vessel.length}
                   vesselBeam={vessel.beam}
                   colors={COLORS}
-                  onUpdateSensor={placeSensor}
+                  onUpdateSensor={readOnly ? undefined : placeSensor}
                   square
                   referenceSensors={gnssSensors}
                 />
@@ -546,13 +573,15 @@ const DepthSensorSettings: React.FC = () => {
                     vesselLength={vessel.length}
                     draft={vessel.draft}
                     colors={COLORS}
-                    onUpdateSensor={placeSensor}
+                    onUpdateSensor={readOnly ? undefined : placeSensor}
                   />
-                  <small className="d-block text-center text-muted">
-                    Drag a transducer up or down to set its depth.
-                  </small>
+                  {!readOnly && (
+                    <small className="d-block text-center text-muted">
+                      Drag a transducer up or down to set its depth.
+                    </small>
+                  )}
                 </>
-              ) : (
+              ) : readOnly ? null : (
                 <small className="text-muted">
                   Set the draft in{' '}
                   <a href="#/serverConfiguration/settings">
@@ -565,21 +594,23 @@ const DepthSensorSettings: React.FC = () => {
           </div>
         )}
       </Card.Body>
-      <Card.Footer>
-        <Button
-          size="sm"
-          variant="primary"
-          disabled={!saveState.dirty || mutationBusy}
-          onClick={handleSave}
-        >
-          <FontAwesomeIcon icon={faFloppyDisk} /> Save
-        </Button>
-        {saveState.saveFailed && (
-          <span className="text-danger ms-2">
-            {saveError || 'Saving depth transducer positions failed!'}
-          </span>
-        )}
-      </Card.Footer>
+      {!readOnly && (
+        <Card.Footer>
+          <Button
+            size="sm"
+            variant="primary"
+            disabled={!saveState.dirty || mutationBusy}
+            onClick={handleSave}
+          >
+            <FontAwesomeIcon icon={faFloppyDisk} /> Save
+          </Button>
+          {saveState.saveFailed && (
+            <span className="text-danger ms-2">
+              {saveError || 'Saving depth transducer positions failed!'}
+            </span>
+          )}
+        </Card.Footer>
+      )}
     </Card>
   )
 }

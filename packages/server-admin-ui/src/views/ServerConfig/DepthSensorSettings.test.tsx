@@ -24,7 +24,8 @@ describe('DepthSensorSettings', () => {
         sensors: [],
         saveState: { dirty: false, timeoutsOk: true }
       },
-      depthSources: [N2K, NMEA0183]
+      depthSources: [N2K, NMEA0183],
+      loginStatus: { authenticationRequired: false }
     })
   })
 
@@ -97,6 +98,47 @@ describe('DepthSensorSettings', () => {
       ]
     })
     expect(useStore.getState().depthSensorsData.saveState.dirty).toBe(false)
+  })
+
+  describe('for a read-only visitor', () => {
+    beforeEach(() => {
+      useStore.setState({
+        depthSensorsData: {
+          sensors: [
+            {
+              sensorId: 'keel',
+              $source: N2K,
+              fromBow: 5.5,
+              fromCenter: -0.4,
+              fromWaterline: 0.7
+            }
+          ],
+          saveState: { dirty: false, timeoutsOk: true }
+        },
+        loginStatus: {
+          authenticationRequired: true,
+          status: 'notLoggedIn',
+          readOnlyAccess: true
+        }
+      })
+    })
+
+    it('shows the transducer positions without offering to change them', () => {
+      render(<DepthSensorSettings />)
+
+      const fromBow = screen.getByLabelText(`From bow in meters for ${N2K}`)
+      expect((fromBow as HTMLInputElement).value).toBe('5.5')
+      expect(fromBow).toHaveProperty('disabled', true)
+      expect(
+        screen.getByLabelText(`Side of the centerline for ${N2K}`)
+      ).toHaveProperty('disabled', true)
+      expect(
+        screen.getByLabelText(`Sensor label for ${NMEA0183}`)
+      ).toHaveProperty('disabled', true)
+      expect(screen.queryByText('Save')).toBeNull()
+      expect(screen.queryByText('Reset all depth transducers')).toBeNull()
+      expect(screen.queryByText('Clear')).toBeNull()
+    })
   })
 
   describe('side view', () => {

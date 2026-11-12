@@ -2207,7 +2207,11 @@ module.exports = function (
     }
   )
 
-  app.securityStrategy.addAdminMiddleware(`${SERVERROUTESPREFIX}/depthSources`)
+  // Read-only users see the depth transducer card on the Preferences page;
+  // the same $source refs are already readable in the data model.
+  app.securityStrategy.addAdminWriteMiddleware(
+    `${SERVERROUTESPREFIX}/depthSources`
+  )
 
   app.get(
     `${SERVERROUTESPREFIX}/depthSources`,

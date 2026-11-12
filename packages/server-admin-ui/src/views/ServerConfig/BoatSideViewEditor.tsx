@@ -12,7 +12,8 @@ interface BoatSideViewEditorProps {
   vesselLength: number
   draft: number
   colors: string[]
-  onUpdateSensor: (index: number, updates: { fromWaterline: number }) => void
+  // Without it the transducers are shown but cannot be dragged.
+  onUpdateSensor?: (index: number, updates: { fromWaterline: number }) => void
 }
 
 const SVG_WIDTH = 380
@@ -108,7 +109,7 @@ const BoatSideViewEditor: React.FC<BoatSideViewEditorProps> = ({
 
   const handlePointerMove = useCallback(
     (e: React.PointerEvent) => {
-      if (dragging === null) return
+      if (dragging === null || !onUpdateSensor) return
       const svg = svgRef.current
       const ctm = svg?.getScreenCTM()
       if (!svg || !ctm) return
@@ -219,13 +220,19 @@ const BoatSideViewEditor: React.FC<BoatSideViewEditorProps> = ({
               fill={placed ? color : '#fff'}
               stroke={placed ? '#fff' : color}
               strokeWidth={2}
-              cursor="grab"
+              cursor={onUpdateSensor ? 'grab' : 'default'}
               aria-label={`Depth of ${sensor.sensorId} below the waterline`}
-              onPointerDown={(e) => {
-                e.preventDefault()
-                ;(e.currentTarget as SVGElement).setPointerCapture(e.pointerId)
-                setDragging(index)
-              }}
+              onPointerDown={
+                onUpdateSensor
+                  ? (e) => {
+                      e.preventDefault()
+                      ;(e.currentTarget as SVGElement).setPointerCapture(
+                        e.pointerId
+                      )
+                      setDragging(index)
+                    }
+                  : undefined
+              }
             />
             <text
               x={x + MARKER_SIZE / 2 + 4}
