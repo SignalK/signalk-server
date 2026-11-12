@@ -55,33 +55,33 @@
         "instanceId": "demo-polar-performance",
         "extension": "signalk-history-widgets",
         "widget": "polar-performance",
-        "anchor": "tr",
-        "col": 3,
-        "row": 0
+        "anchor": "br",
+        "col": 1,
+        "row": 1
       },
       {
         "instanceId": "demo-battery",
         "extension": "signalk-history-widgets",
         "widget": "battery-small",
-        "anchor": "tr",
-        "col": 2,
-        "row": 0
+        "anchor": "br",
+        "col": 0,
+        "row": 1
       },
       {
         "instanceId": "demo-fuel",
         "extension": "signalk-history-widgets",
         "widget": "tank-small",
-        "anchor": "tr",
-        "col": 1,
-        "row": 0
+        "anchor": "bl",
+        "col": 3,
+        "row": 1
       },
       {
         "instanceId": "demo-fresh-water",
         "extension": "signalk-history-widgets",
         "widget": "tank-small",
-        "anchor": "tr",
-        "col": 0,
-        "row": 0
+        "anchor": "bl",
+        "col": 2,
+        "row": 1
       },
       {
         "instanceId": "demo-twa",
