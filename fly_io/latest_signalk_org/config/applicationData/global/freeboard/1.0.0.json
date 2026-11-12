@@ -57,7 +57,7 @@
         "widget": "polar-performance",
         "anchor": "tr",
         "col": 3,
-        "row": 1
+        "row": 0
       },
       {
         "instanceId": "demo-battery",
@@ -65,7 +65,7 @@
         "widget": "battery-small",
         "anchor": "tr",
         "col": 2,
-        "row": 1
+        "row": 0
       },
       {
         "instanceId": "demo-fuel",
@@ -73,7 +73,7 @@
         "widget": "tank-small",
         "anchor": "tr",
         "col": 1,
-        "row": 1
+        "row": 0
       },
       {
         "instanceId": "demo-fresh-water",
@@ -81,7 +81,7 @@
         "widget": "tank-small",
         "anchor": "tr",
         "col": 0,
-        "row": 1
+        "row": 0
       },
       {
         "instanceId": "demo-twa",
