@@ -12,6 +12,10 @@ export const environmentMetadata: Record<string, PathMetadataEntry> = {
     description: 'Current outside air temperature',
     units: 'K'
   },
+  '/vessels/*/environment/outside/feelsLikeTemperature': {
+    description: 'Estimate of how the temperature actually feels on human skin',
+    units: 'K'
+  },
   '/vessels/*/environment/outside/dewPointTemperature': {
     description: 'Current outside dew point temperature',
     units: 'K'
@@ -36,9 +40,22 @@ export const environmentMetadata: Record<string, PathMetadataEntry> = {
     description: 'DEPRECATED: use relativeHumidity',
     units: 'ratio'
   },
+  '/vessels/*/environment/outside/precipitationVolume': {
+    description: 'Current outside precipitation volume.',
+    units: 'm'
+  },
   '/vessels/*/environment/outside/relativeHumidity': {
     description: 'Current outside air relative humidity',
     units: 'ratio'
+  },
+  '/vessels/*/environment/outside/cloudCover': {
+    description: 'Level of cloud cover',
+    units: 'ratio'
+  },
+  '/vessels/*/environment/outside/horizontalVisibility': {
+    description:
+      'Maximum distance at which an object can be clearly identified',
+    units: 'm'
   },
   '/vessels/*/environment/outside/airDensity': {
     description: 'Current outside air density',
@@ -130,6 +147,35 @@ export const environmentMetadata: Record<string, PathMetadataEntry> = {
   '/vessels/*/environment/water/salinity': {
     description: 'Water salinity',
     units: 'ratio'
+  },
+  '/vessels/*/environment/water/level': {
+    description: 'Water surface level relative to a hydrographic datum',
+    units: 'm'
+  },
+  '/vessels/*/environment/water/swell/directionTrue': {
+    description: 'Direction the swell comes from, relative to true north',
+    units: 'rad'
+  },
+  '/vessels/*/environment/water/swell/height': {
+    description: 'Height of the swell',
+    units: 'm'
+  },
+  '/vessels/*/environment/water/swell/period': {
+    description: 'Swell period',
+    units: 's'
+  },
+  '/vessels/*/environment/water/waves/directionTrue': {
+    description: 'Direction the waves come from, relative to true north',
+    units: 'rad'
+  },
+  '/vessels/*/environment/water/waves/period': {
+    description: 'Wave period',
+    units: 's'
+  },
+  '/vessels/*/environment/water/waves/significantHeight': {
+    description:
+      'Significant wave height: the mean height of the highest third of the waves',
+    units: 'm'
   },
   '/vessels/*/environment/depth': {
     description: 'Depth related data'
@@ -235,6 +281,10 @@ export const environmentMetadata: Record<string, PathMetadataEntry> = {
     description: 'The wind direction relative to true north',
     units: 'rad'
   },
+  '/vessels/*/environment/wind/gustDirectionTrue': {
+    description: 'The wind gust direction relative to true north',
+    units: 'rad'
+  },
   '/vessels/*/environment/wind/directionMagnetic': {
     description: 'The wind direction relative to magnetic north',
     units: 'rad'
@@ -242,6 +292,14 @@ export const environmentMetadata: Record<string, PathMetadataEntry> = {
   '/vessels/*/environment/wind/speedTrue': {
     description:
       "Wind speed over water (as calculated from speedApparent and vessel's speed through water)",
+    units: 'm/s'
+  },
+  '/vessels/*/environment/wind/averageSpeed': {
+    description: 'Average true wind speed',
+    units: 'm/s'
+  },
+  '/vessels/*/environment/wind/gust': {
+    description: 'Speed of the strongest wind gust',
     units: 'm/s'
   },
   '/vessels/*/environment/wind/speedOverGround': {

@@ -9,6 +9,8 @@
         "environment.wind.speedTrue",
         "environment.wind.speedOverGround",
         "environment.wind.speedThroughWater",
+        "environment.wind.averageSpeed",
+        "environment.wind.gust",
         "navigation.speedOverGround",
         "navigation.speedThroughWater",
         "navigation.speedThroughWaterTransverse",
@@ -27,6 +29,7 @@
       "paths": [
         "environment.outside.temperature",
         "environment.outside.dewPointTemperature",
+        "environment.outside.feelsLikeTemperature",
         "environment.outside.apparentWindChillTemperature",
         "environment.outside.theoreticalWindChillTemperature",
         "environment.outside.heatIndexTemperature",
@@ -69,7 +72,10 @@
         "environment.depth.surfaceToTransducer",
         "environment.tide.heightHigh",
         "environment.tide.heightNow",
-        "environment.tide.heightLow"
+        "environment.tide.heightLow",
+        "environment.water.level",
+        "environment.water.waves.significantHeight",
+        "environment.water.swell.height"
       ]
     },
     "distance": {
@@ -81,7 +87,8 @@
         "navigation.courseGreatCircle.nextPoint.distance",
         "navigation.racing.distanceStartline",
         "navigation.racing.distanceLayline",
-        "navigation.closestApproach.distance"
+        "navigation.closestApproach.distance",
+        "environment.outside.horizontalVisibility"
       ]
     },
     "length": {
@@ -98,7 +105,8 @@
         "design.rigging.mast.height",
         "environment.heave",
         "navigation.anchor.maxRadius",
-        "navigation.anchor.currentRadius"
+        "navigation.anchor.currentRadius",
+        "environment.outside.precipitationVolume"
       ]
     },
     "angle": {
@@ -109,6 +117,9 @@
         "environment.wind.angleTrueWater",
         "environment.wind.directionTrue",
         "environment.wind.directionMagnetic",
+        "environment.wind.gustDirectionTrue",
+        "environment.water.waves.directionTrue",
+        "environment.water.swell.directionTrue",
         "navigation.courseOverGroundTrue",
         "navigation.courseOverGroundMagnetic",
         "navigation.headingTrue",
@@ -211,8 +222,7 @@
         "tanks.liveWell.*.currentVolume",
         "tanks.lubrication.*.capacity",
         "tanks.lubrication.*.currentVolume",
-        "propulsion.*.fuel.used",
-        "propulsion.*.trip.fuelUsed"
+        "propulsion.*.fuel.used"
       ]
     },
     "volumeRate": {
@@ -232,6 +242,7 @@
       "siUnit": "ratio",
       "paths": [
         "environment.outside.relativeHumidity",
+        "environment.outside.cloudCover",
         "environment.inside.relativeHumidity",
         "environment.inside.engineRoom.relativeHumidity",
         "electrical.batteries.*.capacity.stateOfCharge",
@@ -264,7 +275,9 @@
         "navigation.closestApproach.timeTo",
         "electrical.chargers.*.equalizationTimeRemaining",
         "electrical.chargers.*.equalizeTime",
-        "electrical.inverters.*.loadSenseInterval"
+        "electrical.inverters.*.loadSenseInterval",
+        "environment.water.waves.period",
+        "environment.water.swell.period"
       ]
     }
   }

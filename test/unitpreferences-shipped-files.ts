@@ -2,7 +2,7 @@ import { expect } from 'chai'
 import fs from 'fs'
 import path from 'path'
 import { compile } from 'mathjs'
-import { getMetadata } from '@signalk/path-metadata'
+import { getMetadata, metadataRegistry } from '@signalk/path-metadata'
 import type { UnitDefinitions } from '../src/unitpreferences/types'
 
 const UNITPREFS_DIR = path.join(__dirname, '../unitpreferences')
@@ -51,6 +51,9 @@ function specifiedUnits(skPath: string): string | undefined {
 }
 
 describe('Shipped unit preference files', function () {
+  before(function () {
+    metadataRegistry.reset()
+  })
   it('has conversion formulas a client can evaluate', function () {
     for (const file of DEFINITION_FILES) {
       const definitions = readShipped(file) as UnitDefinitions
