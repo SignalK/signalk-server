@@ -513,7 +513,8 @@ export default function (app: ServerAPI): Plugin {
     const epochS = now / 1000
     const hours = dtS / SECONDS_PER_HOUR
     const position = app.getSelfPath('navigation.position.value') as
-      { latitude: number; longitude: number } | undefined
+      | { latitude: number; longitude: number }
+      | undefined
     const elevation = position
       ? sunElevation(new Date(now), position.latitude, position.longitude)
       : 0
@@ -1079,11 +1080,9 @@ class GatewaySimulator {
   private async post(body: object) {
     try {
       if (!this.token)
-        await (this.loggingIn ??= this.logIn().finally(
-          () => {
-            this.loggingIn = undefined
-          }
-        ))
+        await (this.loggingIn ??= this.logIn().finally(() => {
+          this.loggingIn = undefined
+        }))
       const token = this.token
       const res = await fetch(
         `${SERVER_URL}/signalk/v2/api/ble/gateway/advertisements`,
