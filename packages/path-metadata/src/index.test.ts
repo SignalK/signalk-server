@@ -480,6 +480,22 @@ describe('updateContract inheritance', () => {
   })
 })
 
+describe('connection status', () => {
+  const units = (p: string) =>
+    (getMetadata(p) as { units?: string } | undefined)?.units
+
+  it('resolves under any provider id', () => {
+    expect(units(self('providers.ikonvert.canNetworkLoad'))).to.equal('ratio')
+    expect(units(self('providers.can0-n2k.uptime'))).to.equal('s')
+    expect(units(self('providers.can0-n2k.deltaRate'))).to.equal('Hz')
+    expect(units(self('providers.ngt1.writeRate'))).to.equal('Hz')
+    expect(getMetadata(self('providers.ngt1.deviceCount'))).to.not.equal(
+      undefined
+    )
+    expect(getMetadata(self('providers.ngt1.serialId'))).to.equal(undefined)
+  })
+})
+
 describe('device and AIS paths the NMEA parsers write', () => {
   const units = (p: string) =>
     (getMetadata(p) as { units?: string } | undefined)?.units

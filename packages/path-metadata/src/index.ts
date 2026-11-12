@@ -22,6 +22,7 @@ import { registrationsMetadata } from './registrations'
 import { communicationMetadata } from './communication'
 import { sensorsMetadata } from './sensors'
 import { notificationsMetadata } from './notifications'
+import { providersMetadata } from './providers'
 
 export type { PathMetadataEntry, UpdateContract } from './types'
 export { updateContracts, updateContractForPath } from './updateContracts'
@@ -41,6 +42,7 @@ const vesselMetadata: Record<string, PathMetadataEntry> = {
   ...registrationsMetadata,
   ...communicationMetadata,
   ...sensorsMetadata,
+  ...providersMetadata,
   ...notificationsMetadata
 }
 
