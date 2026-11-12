@@ -132,6 +132,34 @@ describe('appSlice', () => {
       expect(appStore.canUpdateServer).toBeUndefined()
       expect(appStore.serverUpdate).toBeUndefined()
     })
+
+    it('ignores an admin store list that arrives after the logout', () => {
+      useStore.getState().setLoginStatus({
+        status: 'notLoggedIn',
+        authenticationRequired: true,
+        readOnlyAccess: true
+      })
+      const installed = { name: 'plugin-a', installedVersion: '1.0.0' }
+      useStore.getState().setAppStore({
+        available: [installed],
+        installed: [installed],
+        updates: [],
+        installing: []
+      })
+
+      expect(useStore.getState().appStore.installed).toEqual([])
+      expect(useStore.getState().appStore.available).toEqual([])
+
+      useStore.getState().setAppStore({
+        available: [{ name: 'plugin-a' }],
+        installed: [],
+        updates: [],
+        installing: []
+      })
+      expect(useStore.getState().appStore.available).toEqual([
+        { name: 'plugin-a' }
+      ])
+    })
   })
 
   describe('setAppStore', () => {
