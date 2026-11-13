@@ -18,6 +18,7 @@ import {
   type DeviceStateEvent,
   userAgentOf
 } from '../src/deviceTracker'
+import { parseDeviceInfo } from '../src/security'
 
 const expect = chai.expect
 
@@ -954,6 +955,14 @@ describe('Device identity', function () {
       body: JSON.stringify({ softwareVersion: 'x'.repeat(129) })
     })
     expect(result.status).to.equal(400)
+  })
+
+  it('measures device fields in characters, as the API schema does', function () {
+    const emoji = '\u{1F6A2}'
+    expect(parseDeviceInfo({ software: emoji.repeat(128) })).to.deep.equal({
+      software: emoji.repeat(128)
+    })
+    expect(parseDeviceInfo({ software: emoji.repeat(129) })).to.be.undefined
   })
 
   it('lets only devices report device info', async function () {

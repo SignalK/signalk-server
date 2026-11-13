@@ -150,7 +150,8 @@ export function parseDeviceInfo(value: unknown): DeviceInfo | undefined {
     }
     if (
       typeof fieldValue !== 'string' ||
-      fieldValue.length > DEVICE_INFO_MAX_LENGTH
+      // Counted in code points, as JSON Schema's maxLength counts them
+      [...fieldValue].length > DEVICE_INFO_MAX_LENGTH
     ) {
       return undefined
     }
