@@ -51,4 +51,15 @@ describe('Access log', function () {
       '/dashboard/?layout=helm&token=REDACTED&theme=night'
     )
   })
+
+  it('redacts a token whose parameter name is percent-encoded', async function () {
+    const line = await logLine(
+      'combined',
+      `/dashboard/?%74oken=${TOKEN}&theme=night`,
+      `http://boat.local/?TOKEN=${TOKEN}`
+    )
+    expect(line).to.not.include(TOKEN)
+    expect(line).to.include('/dashboard/?%74oken=REDACTED&theme=night')
+    expect(line).to.include('http://boat.local/?TOKEN=REDACTED')
+  })
 })

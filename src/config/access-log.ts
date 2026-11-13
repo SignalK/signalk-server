@@ -20,11 +20,24 @@ interface Morgan {
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const morgan: Morgan = require('morgan')
 
-const TOKEN_QUERY_VALUE = /([?&]token=)[^&#]*/gi
+const QUERY_PARAMETER = /([?&])([^=&#]*)=([^&#]*)/g
 const REDACTED = 'REDACTED'
 
+// The server reads the parameter name decoded, so %74oken is a token too.
+function isTokenName(name: string): boolean {
+  try {
+    return decodeURIComponent(name).toLowerCase() === 'token'
+  } catch {
+    return false
+  }
+}
+
 function redactTokenQuery(url: string | undefined): string | undefined {
-  return url?.replace(TOKEN_QUERY_VALUE, `$1${REDACTED}`)
+  return url?.replace(
+    QUERY_PARAMETER,
+    (parameter: string, separator: string, name: string) =>
+      isTokenName(name) ? `${separator}${name}=${REDACTED}` : parameter
+  )
 }
 
 // A token query parameter is a credential, and browsers send the page URL
