@@ -280,6 +280,14 @@ function tokenSecurityFactory(
     return entries
   }
 
+  function isReservedPluginPath(pluginId: string, requestPath: string) {
+    const prefix = `/plugins/${pluginId}`
+    return (
+      requestPath.startsWith(prefix) &&
+      RESERVED_PLUGIN_PATHS.includes(requestPath.slice(prefix.length) || '/')
+    )
+  }
+
   strategy.registerPluginRoutePermissions = function (
     pluginId: string,
     permissions: RoutePermission[]
@@ -681,7 +689,9 @@ function tokenSecurityFactory(
         (entry) => entry.method === req.method && entry.regex.test(requestPath)
       )
 
-      if (match) {
+      // A declared pattern such as /:name also matches the server's own
+      // routes for the plugin, which stay admin-only.
+      if (match && !isReservedPluginPath(match.pluginId, requestPath)) {
         if (match.permission === 'readonly') {
           const skReq = req as SKRequest
           if (skReq.skIsAuthenticated) {
