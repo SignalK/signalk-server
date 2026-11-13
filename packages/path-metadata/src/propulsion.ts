@@ -16,19 +16,19 @@ export const propulsionMetadata: Record<string, PathMetadataEntry> = {
     description: 'The current state of the engine'
   },
   '/vessels/*/propulsion/RegExp/revolutions': {
-    description: 'Engine revolutions (x60 for RPM)',
+    description: 'Engine speed.',
     units: 'Hz'
   },
   '/vessels/*/propulsion/RegExp/temperature': {
-    description: 'Engine temperature',
+    description: 'Engine temperature, usually the coolant temperature.',
     units: 'K'
   },
   '/vessels/*/propulsion/RegExp/oilTemperature': {
-    description: 'Oil temperature',
+    description: 'Engine oil temperature.',
     units: 'K'
   },
   '/vessels/*/propulsion/RegExp/oilPressure': {
-    description: 'Oil pressure',
+    description: 'Engine oil pressure.',
     units: 'Pa'
   },
   '/vessels/*/propulsion/RegExp/alternatorVoltage': {
@@ -36,11 +36,12 @@ export const propulsionMetadata: Record<string, PathMetadataEntry> = {
     units: 'V'
   },
   '/vessels/*/propulsion/RegExp/runTime': {
-    description: 'Total running time for engine (Engine Hours in seconds)',
+    description: 'Total running time of the engine.',
     units: 's'
   },
   '/vessels/*/propulsion/RegExp/coolantTemperature': {
-    description: 'Coolant temperature',
+    description:
+      'Coolant temperature. Commonly read as the engine temperature.',
     units: 'K'
   },
   '/vessels/*/propulsion/RegExp/coolantPressure': {
@@ -75,11 +76,11 @@ export const propulsionMetadata: Record<string, PathMetadataEntry> = {
     units: 'ratio'
   },
   '/vessels/*/propulsion/RegExp/transmission/oilTemperature': {
-    description: 'Oil temperature',
+    description: 'Transmission oil temperature.',
     units: 'K'
   },
   '/vessels/*/propulsion/RegExp/transmission/oilPressure': {
-    description: 'Oil pressure',
+    description: 'Transmission oil pressure.',
     units: 'Pa'
   },
   '/vessels/*/propulsion/RegExp/drive': {
@@ -118,7 +119,7 @@ export const propulsionMetadata: Record<string, PathMetadataEntry> = {
     units: 'Pa'
   },
   '/vessels/*/propulsion/RegExp/fuel/rate': {
-    description: 'Fuel rate of consumption',
+    description: 'Rate of fuel consumption.',
     units: 'm3/s'
   },
   '/vessels/*/propulsion/RegExp/fuel/economyRate': {

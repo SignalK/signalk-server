@@ -573,6 +573,16 @@ describe('device and AIS paths the NMEA parsers write', () => {
     expect(modes).to.include.members(['absorption', 'acceptance', 'no float'])
   })
 
+  it('gives alternators and solar controllers the charger modes', () => {
+    const modes = getMetadata(self('electrical.chargers.1.chargingMode'))?.enum
+    for (const path of [
+      'electrical.alternators.1.chargingMode',
+      'electrical.solar.1.chargingMode'
+    ]) {
+      expect(getMetadata(self(path))?.enum, path).to.deep.equal(modes)
+    }
+  })
+
   it('tells satellites used from satellites in view', () => {
     expect(getMetadata(self('navigation.gnss.satellites'))).to.not.deep.equal(
       getMetadata(self('navigation.gnss.satellitesInView'))

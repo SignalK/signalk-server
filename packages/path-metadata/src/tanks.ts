@@ -38,27 +38,28 @@ export const tanksMetadata: Record<string, PathMetadataEntry> = {
     enum: [...TANK_TYPE_ENUM]
   },
   '/vessels/*/tanks/freshWater/RegExp/capacity': {
-    description: 'Data should be of type number.',
+    description: 'Total volume of the fresh water tank when full.',
     units: 'm3'
   },
   '/vessels/*/tanks/freshWater/RegExp/currentLevel': {
-    description: 'Data should be of type number.',
+    description:
+      'Fill level of the fresh water tank, from 0 (empty) to 1 (full).',
     units: 'ratio'
   },
   '/vessels/*/tanks/freshWater/RegExp/currentVolume': {
-    description: 'Data should be of type number.',
+    description: 'Volume of fluid currently in the fresh water tank.',
     units: 'm3'
   },
   '/vessels/*/tanks/freshWater/RegExp/pressure': {
-    description: 'Data should be of type number.',
+    description: 'Pressure of the fluid in the tank.',
     units: 'Pa'
   },
   '/vessels/*/tanks/freshWater/RegExp/temperature': {
-    description: 'Data should be of type number.',
+    description: 'Temperature of the fluid in the tank.',
     units: 'K'
   },
   '/vessels/*/tanks/freshWater/RegExp/viscosity': {
-    description: 'Data should be of type number.',
+    description: 'Viscosity of the fluid in the tank.',
     units: 'Pa.s'
   },
   '/vessels/*/tanks/freshWater/RegExp/extinguishant': {
@@ -79,27 +80,28 @@ export const tanksMetadata: Record<string, PathMetadataEntry> = {
     enum: [...TANK_TYPE_ENUM]
   },
   '/vessels/*/tanks/wasteWater/RegExp/capacity': {
-    description: 'Data should be of type number.',
+    description: 'Total volume of the waste (grey) water tank when full.',
     units: 'm3'
   },
   '/vessels/*/tanks/wasteWater/RegExp/currentLevel': {
-    description: 'Data should be of type number.',
+    description:
+      'Fill level of the waste water tank, from 0 (empty) to 1 (full). Also called the grey water tank.',
     units: 'ratio'
   },
   '/vessels/*/tanks/wasteWater/RegExp/currentVolume': {
-    description: 'Data should be of type number.',
+    description: 'Volume of fluid currently in the waste (grey) water tank.',
     units: 'm3'
   },
   '/vessels/*/tanks/wasteWater/RegExp/pressure': {
-    description: 'Data should be of type number.',
+    description: 'Pressure of the fluid in the tank.',
     units: 'Pa'
   },
   '/vessels/*/tanks/wasteWater/RegExp/temperature': {
-    description: 'Data should be of type number.',
+    description: 'Temperature of the fluid in the tank.',
     units: 'K'
   },
   '/vessels/*/tanks/wasteWater/RegExp/viscosity': {
-    description: 'Data should be of type number.',
+    description: 'Viscosity of the fluid in the tank.',
     units: 'Pa.s'
   },
   '/vessels/*/tanks/wasteWater/RegExp/extinguishant': {
@@ -120,27 +122,28 @@ export const tanksMetadata: Record<string, PathMetadataEntry> = {
     enum: [...TANK_TYPE_ENUM]
   },
   '/vessels/*/tanks/blackWater/RegExp/capacity': {
-    description: 'Data should be of type number.',
+    description: 'Total volume of the black water (sewage) tank when full.',
     units: 'm3'
   },
   '/vessels/*/tanks/blackWater/RegExp/currentLevel': {
-    description: 'Data should be of type number.',
+    description:
+      'Fill level of the black water (sewage) tank, from 0 (empty) to 1 (full). Also called the holding tank.',
     units: 'ratio'
   },
   '/vessels/*/tanks/blackWater/RegExp/currentVolume': {
-    description: 'Data should be of type number.',
+    description: 'Volume of fluid currently in the black water (sewage) tank.',
     units: 'm3'
   },
   '/vessels/*/tanks/blackWater/RegExp/pressure': {
-    description: 'Data should be of type number.',
+    description: 'Pressure of the fluid in the tank.',
     units: 'Pa'
   },
   '/vessels/*/tanks/blackWater/RegExp/temperature': {
-    description: 'Data should be of type number.',
+    description: 'Temperature of the fluid in the tank.',
     units: 'K'
   },
   '/vessels/*/tanks/blackWater/RegExp/viscosity': {
-    description: 'Data should be of type number.',
+    description: 'Viscosity of the fluid in the tank.',
     units: 'Pa.s'
   },
   '/vessels/*/tanks/blackWater/RegExp/extinguishant': {
@@ -161,27 +164,27 @@ export const tanksMetadata: Record<string, PathMetadataEntry> = {
     enum: [...TANK_TYPE_ENUM]
   },
   '/vessels/*/tanks/fuel/RegExp/capacity': {
-    description: 'Data should be of type number.',
+    description: 'Total volume of the fuel tank when full.',
     units: 'm3'
   },
   '/vessels/*/tanks/fuel/RegExp/currentLevel': {
-    description: 'Data should be of type number.',
+    description: 'Fill level of the fuel tank, from 0 (empty) to 1 (full).',
     units: 'ratio'
   },
   '/vessels/*/tanks/fuel/RegExp/currentVolume': {
-    description: 'Data should be of type number.',
+    description: 'Volume of fluid currently in the fuel tank.',
     units: 'm3'
   },
   '/vessels/*/tanks/fuel/RegExp/pressure': {
-    description: 'Data should be of type number.',
+    description: 'Pressure of the fluid in the tank.',
     units: 'Pa'
   },
   '/vessels/*/tanks/fuel/RegExp/temperature': {
-    description: 'Data should be of type number.',
+    description: 'Temperature of the fluid in the tank.',
     units: 'K'
   },
   '/vessels/*/tanks/fuel/RegExp/viscosity': {
-    description: 'Data should be of type number.',
+    description: 'Viscosity of the fluid in the tank.',
     units: 'Pa.s'
   },
   '/vessels/*/tanks/fuel/RegExp/extinguishant': {
@@ -202,27 +205,30 @@ export const tanksMetadata: Record<string, PathMetadataEntry> = {
     enum: [...TANK_TYPE_ENUM]
   },
   '/vessels/*/tanks/lubrication/RegExp/capacity': {
-    description: 'Data should be of type number.',
+    description:
+      'Total volume of the lubricant tank (oil reservoir) when full.',
     units: 'm3'
   },
   '/vessels/*/tanks/lubrication/RegExp/currentLevel': {
-    description: 'Data should be of type number.',
+    description:
+      'Fill level of the lubricant tank (oil reservoir), from 0 (empty) to 1 (full).',
     units: 'ratio'
   },
   '/vessels/*/tanks/lubrication/RegExp/currentVolume': {
-    description: 'Data should be of type number.',
+    description:
+      'Volume of lubricant currently in the lubricant tank (oil reservoir).',
     units: 'm3'
   },
   '/vessels/*/tanks/lubrication/RegExp/pressure': {
-    description: 'Data should be of type number.',
+    description: 'Pressure of the fluid in the tank.',
     units: 'Pa'
   },
   '/vessels/*/tanks/lubrication/RegExp/temperature': {
-    description: 'Data should be of type number.',
+    description: 'Temperature of the fluid in the tank.',
     units: 'K'
   },
   '/vessels/*/tanks/lubrication/RegExp/viscosity': {
-    description: 'Data should be of type number.',
+    description: 'Viscosity of the fluid in the tank.',
     units: 'Pa.s'
   },
   '/vessels/*/tanks/lubrication/RegExp/extinguishant': {
@@ -243,27 +249,30 @@ export const tanksMetadata: Record<string, PathMetadataEntry> = {
     enum: [...TANK_TYPE_ENUM]
   },
   '/vessels/*/tanks/liveWell/RegExp/capacity': {
-    description: 'Data should be of type number.',
+    description:
+      'Total volume of the livewell when full: the tank that keeps caught fish alive in oxygenated water.',
     units: 'm3'
   },
   '/vessels/*/tanks/liveWell/RegExp/currentLevel': {
-    description: 'Data should be of type number.',
+    description:
+      'Fill level of the livewell, the tank that keeps caught fish alive, from 0 (empty) to 1 (full).',
     units: 'ratio'
   },
   '/vessels/*/tanks/liveWell/RegExp/currentVolume': {
-    description: 'Data should be of type number.',
+    description:
+      'Volume of water currently in the livewell, the tank that keeps caught fish alive.',
     units: 'm3'
   },
   '/vessels/*/tanks/liveWell/RegExp/pressure': {
-    description: 'Data should be of type number.',
+    description: 'Pressure of the fluid in the tank.',
     units: 'Pa'
   },
   '/vessels/*/tanks/liveWell/RegExp/temperature': {
-    description: 'Data should be of type number.',
+    description: 'Temperature of the fluid in the tank.',
     units: 'K'
   },
   '/vessels/*/tanks/liveWell/RegExp/viscosity': {
-    description: 'Data should be of type number.',
+    description: 'Viscosity of the fluid in the tank.',
     units: 'Pa.s'
   },
   '/vessels/*/tanks/liveWell/RegExp/extinguishant': {
@@ -284,27 +293,30 @@ export const tanksMetadata: Record<string, PathMetadataEntry> = {
     enum: [...TANK_TYPE_ENUM]
   },
   '/vessels/*/tanks/baitWell/RegExp/capacity': {
-    description: 'Data should be of type number.',
+    description:
+      'Total volume of the baitwell when full: the tank that keeps live bait, such as shrimp or small fish, alive.',
     units: 'm3'
   },
   '/vessels/*/tanks/baitWell/RegExp/currentLevel': {
-    description: 'Data should be of type number.',
+    description:
+      'Fill level of the baitwell, the tank that keeps live bait alive, from 0 (empty) to 1 (full).',
     units: 'ratio'
   },
   '/vessels/*/tanks/baitWell/RegExp/currentVolume': {
-    description: 'Data should be of type number.',
+    description:
+      'Volume of water currently in the baitwell, the tank that keeps live bait alive.',
     units: 'm3'
   },
   '/vessels/*/tanks/baitWell/RegExp/pressure': {
-    description: 'Data should be of type number.',
+    description: 'Pressure of the fluid in the tank.',
     units: 'Pa'
   },
   '/vessels/*/tanks/baitWell/RegExp/temperature': {
-    description: 'Data should be of type number.',
+    description: 'Temperature of the fluid in the tank.',
     units: 'K'
   },
   '/vessels/*/tanks/baitWell/RegExp/viscosity': {
-    description: 'Data should be of type number.',
+    description: 'Viscosity of the fluid in the tank.',
     units: 'Pa.s'
   },
   '/vessels/*/tanks/baitWell/RegExp/extinguishant': {
@@ -325,27 +337,28 @@ export const tanksMetadata: Record<string, PathMetadataEntry> = {
     enum: [...TANK_TYPE_ENUM]
   },
   '/vessels/*/tanks/gas/RegExp/capacity': {
-    description: 'Data should be of type number.',
+    description: 'Total volume of the gas tank when full.',
     units: 'm3'
   },
   '/vessels/*/tanks/gas/RegExp/currentLevel': {
-    description: 'Data should be of type number.',
+    description:
+      'Fill level of the gas tank, from 0 (empty) to 1 (full). For liquefied gas such as LPG, the level of the liquid.',
     units: 'ratio'
   },
   '/vessels/*/tanks/gas/RegExp/currentVolume': {
-    description: 'Data should be of type number.',
+    description: 'Volume of fluid currently in the gas tank.',
     units: 'm3'
   },
   '/vessels/*/tanks/gas/RegExp/pressure': {
-    description: 'Data should be of type number.',
+    description: 'Pressure of the fluid in the tank.',
     units: 'Pa'
   },
   '/vessels/*/tanks/gas/RegExp/temperature': {
-    description: 'Data should be of type number.',
+    description: 'Temperature of the fluid in the tank.',
     units: 'K'
   },
   '/vessels/*/tanks/gas/RegExp/viscosity': {
-    description: 'Data should be of type number.',
+    description: 'Viscosity of the fluid in the tank.',
     units: 'Pa.s'
   },
   '/vessels/*/tanks/gas/RegExp/extinguishant': {
@@ -366,27 +379,27 @@ export const tanksMetadata: Record<string, PathMetadataEntry> = {
     enum: [...TANK_TYPE_ENUM]
   },
   '/vessels/*/tanks/ballast/RegExp/capacity': {
-    description: 'Data should be of type number.',
+    description: 'Total volume of the ballast tank when full.',
     units: 'm3'
   },
   '/vessels/*/tanks/ballast/RegExp/currentLevel': {
-    description: 'Data should be of type number.',
+    description: 'Fill level of the ballast tank, from 0 (empty) to 1 (full).',
     units: 'ratio'
   },
   '/vessels/*/tanks/ballast/RegExp/currentVolume': {
-    description: 'Data should be of type number.',
+    description: 'Volume of fluid currently in the ballast tank.',
     units: 'm3'
   },
   '/vessels/*/tanks/ballast/RegExp/pressure': {
-    description: 'Data should be of type number.',
+    description: 'Pressure of the fluid in the tank.',
     units: 'Pa'
   },
   '/vessels/*/tanks/ballast/RegExp/temperature': {
-    description: 'Data should be of type number.',
+    description: 'Temperature of the fluid in the tank.',
     units: 'K'
   },
   '/vessels/*/tanks/ballast/RegExp/viscosity': {
-    description: 'Data should be of type number.',
+    description: 'Viscosity of the fluid in the tank.',
     units: 'Pa.s'
   },
   '/vessels/*/tanks/ballast/RegExp/extinguishant': {

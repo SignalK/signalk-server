@@ -9,7 +9,8 @@ export const environmentMetadata: Record<string, PathMetadataEntry> = {
     description: "Environmental conditions outside of the vessel's hull"
   },
   '/vessels/*/environment/outside/temperature': {
-    description: 'Current outside air temperature',
+    description:
+      'Current outside air temperature. Also called air temperature.',
     units: 'K'
   },
   '/vessels/*/environment/outside/feelsLikeTemperature': {
@@ -17,7 +18,8 @@ export const environmentMetadata: Record<string, PathMetadataEntry> = {
     units: 'K'
   },
   '/vessels/*/environment/outside/dewPointTemperature': {
-    description: 'Current outside dew point temperature',
+    description:
+      'Current outside dew point temperature. Also called the dew point.',
     units: 'K'
   },
   '/vessels/*/environment/outside/apparentWindChillTemperature': {
@@ -33,7 +35,8 @@ export const environmentMetadata: Record<string, PathMetadataEntry> = {
     units: 'K'
   },
   '/vessels/*/environment/outside/pressure': {
-    description: 'Current outside air ambient pressure',
+    description:
+      'Current outside air ambient pressure. Also called barometric pressure, as read on a barometer.',
     units: 'Pa'
   },
   '/vessels/*/environment/outside/humidity': {
@@ -45,7 +48,7 @@ export const environmentMetadata: Record<string, PathMetadataEntry> = {
     units: 'm'
   },
   '/vessels/*/environment/outside/relativeHumidity': {
-    description: 'Current outside air relative humidity',
+    description: 'Current outside air relative humidity. Also called humidity.',
     units: 'ratio'
   },
   '/vessels/*/environment/outside/cloudCover': {
@@ -69,7 +72,7 @@ export const environmentMetadata: Record<string, PathMetadataEntry> = {
     description: "Environmental conditions inside the vessel's hull"
   },
   '/vessels/*/environment/inside/temperature': {
-    description: 'Temperature',
+    description: 'Air temperature inside the vessel.',
     units: 'K'
   },
   '/vessels/*/environment/inside/heatIndexTemperature': {
@@ -105,7 +108,8 @@ export const environmentMetadata: Record<string, PathMetadataEntry> = {
       'This regex pattern is used for validation of the identifier for the environmental zone, eg. engineRoom, mainCabin, refrigerator'
   },
   '/vessels/*/environment/inside/[A-Za-z0-9]+/temperature': {
-    description: 'Temperature',
+    description:
+      'Temperature in a named space or appliance inside the vessel, such as a cabin or saloon, the engine room (engine compartment), a refrigerator (fridge) or a freezer.',
     units: 'K'
   },
   '/vessels/*/environment/inside/[A-Za-z0-9]+/heatIndexTemperature': {
@@ -141,7 +145,7 @@ export const environmentMetadata: Record<string, PathMetadataEntry> = {
       'Environmental conditions of the water that the vessel is sailing in'
   },
   '/vessels/*/environment/water/temperature': {
-    description: 'Current water temperature',
+    description: 'Current water temperature. Also called sea temperature.',
     units: 'K'
   },
   '/vessels/*/environment/water/salinity': {
@@ -181,15 +185,17 @@ export const environmentMetadata: Record<string, PathMetadataEntry> = {
     description: 'Depth related data'
   },
   '/vessels/*/environment/depth/belowKeel': {
-    description: 'Depth below keel',
+    description:
+      'Depth below keel. Commonly abbreviated DBK; the water left under the keel.',
     units: 'm'
   },
   '/vessels/*/environment/depth/belowTransducer': {
-    description: 'Depth below Transducer',
+    description: 'Depth below Transducer. Commonly abbreviated DBT.',
     units: 'm'
   },
   '/vessels/*/environment/depth/belowSurface': {
-    description: 'Depth from surface',
+    description:
+      'Depth from surface. Commonly abbreviated DBS; the total water depth.',
     units: 'm'
   },
   '/vessels/*/environment/depth/transducerToKeel': {
@@ -197,11 +203,13 @@ export const environmentMetadata: Record<string, PathMetadataEntry> = {
     units: 'm'
   },
   '/vessels/*/environment/depth/surfaceToTransducer': {
-    description: 'Depth transducer is below the water surface',
+    description:
+      'Distance from the water surface to the transducer. This is a depth-sounder offset, not a water depth.',
     units: 'm'
   },
   '/vessels/*/environment/current': {
-    description: 'Direction and strength of current affecting the vessel',
+    description:
+      'Direction and strength of current affecting the vessel. Given as set (direction) and drift (speed).',
     properties: {
       drift: {
         type: 'number',
@@ -261,7 +269,8 @@ export const environmentMetadata: Record<string, PathMetadataEntry> = {
     description: 'Wind data.'
   },
   '/vessels/*/environment/wind/angleApparent': {
-    description: 'Apparent wind angle, negative to port',
+    description:
+      'Apparent wind angle, negative to port. Commonly abbreviated AWA.',
     units: 'rad'
   },
   '/vessels/*/environment/wind/angleTrueGround': {
@@ -270,7 +279,7 @@ export const environmentMetadata: Record<string, PathMetadataEntry> = {
   },
   '/vessels/*/environment/wind/angleTrueWater': {
     description:
-      'True wind angle based on speed through water, negative to port',
+      'True wind angle based on speed through water, negative to port. Commonly abbreviated TWA.',
     units: 'rad'
   },
   '/vessels/*/environment/wind/directionChangeAlarm': {
@@ -278,7 +287,8 @@ export const environmentMetadata: Record<string, PathMetadataEntry> = {
     units: 'rad'
   },
   '/vessels/*/environment/wind/directionTrue': {
-    description: 'The wind direction relative to true north',
+    description:
+      'The wind direction relative to true north. Commonly abbreviated TWD; the direction the wind comes from.',
     units: 'rad'
   },
   '/vessels/*/environment/wind/gustDirectionTrue': {
@@ -291,7 +301,7 @@ export const environmentMetadata: Record<string, PathMetadataEntry> = {
   },
   '/vessels/*/environment/wind/speedTrue': {
     description:
-      "Wind speed over water (as calculated from speedApparent and vessel's speed through water)",
+      "Wind speed over water (as calculated from speedApparent and vessel's speed through water). Commonly abbreviated TWS.",
     units: 'm/s'
   },
   '/vessels/*/environment/wind/averageSpeed': {
@@ -308,26 +318,27 @@ export const environmentMetadata: Record<string, PathMetadataEntry> = {
     units: 'm/s'
   },
   '/vessels/*/environment/wind/speedApparent': {
-    description: 'Apparent wind speed',
+    description: 'Apparent wind speed. Commonly abbreviated AWS.',
     units: 'm/s'
   },
   '/vessels/*/environment/time': {
     description:
-      'A time reference for the vessel. All clocks on the vessel dispaying local time should use the timezone offset here. If a timezoneRegion is supplied the timezone must also be supplied. If timezoneRegion is supplied that should be displayed by UIs in preference to simply timezone. ie 12:05 (Europe/London) should be displayed in preference to 12:05 (UTC+01:00)'
+      "A time reference for the vessel. All clocks on the vessel displaying local time should use the timezone offset here. If a timezoneRegion is supplied the timezoneOffset must also be supplied. If timezoneRegion is supplied that should be displayed by UIs in preference to simply timezoneOffset. ie 12:05 (Europe/London) should be displayed in preference to 12:05 (UTC+01:00). Gives the vessel's time zone and local time."
   },
   '/vessels/*/environment/time/millis': {
-    description: 'Milliseconds since the UNIX epoch (1970-01-01 00:00:00)'
+    description:
+      'Current time as milliseconds since the Unix epoch (1970-01-01 00:00:00 UTC), so independent of the timezone.'
   },
   '/vessels/*/environment/time/timezoneOffset': {
     description:
-      'Onboard timezone offset from UTC in hours and minutes (-)hhmm. +ve means east of Greenwich. For use by UIs'
+      'Onboard timezone offset from UTC in hours and minutes, as (-)hhmm. Positive east of Greenwich. For use by UIs.'
   },
   '/vessels/*/environment/time/timezoneRegion': {
     description:
-      'Onboard timezone offset as listed in the IANA timezone database (tz database)'
+      'Onboard timezone as named in the IANA timezone database (tz database), for example Europe/Amsterdam.'
   },
   '/vessels/*/environment/mode': {
     description:
-      'Mode of the vessel based on the current conditions. Can be combined with navigation.state to control vessel signals eg switch to night mode for instrumentation and lights, or make sound signals for fog.'
+      'Mode of the vessel based on the current conditions. Can be combined with navigation.state to control vessel signals eg switch to night mode for instrumentation and lights, or make sound signals for fog. For example day, night or restricted visibility, for instrument displays.'
   }
 }
