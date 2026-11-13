@@ -1187,6 +1187,15 @@ describe('DeviceTracker', function () {
     expect(events).to.have.lengthOf(3)
     expect(events[2].data.userAgent).to.equal('SensESP/3.7.0')
 
+    tracker.onActivity('device-ua', '10.0.0.2', 'SensESP/3.7.0')
+    expect(events, 'a changed address is reported').to.have.lengthOf(4)
+    expect(events[3].data.ip).to.equal('10.0.0.2')
+    tracker.onConnect('device-ua', '10.0.0.3', 'SensESP/3.7.0')
+    expect(events).to.have.lengthOf(5)
+    expect(events[4].data.ip).to.equal('10.0.0.3')
+    tracker.onConnect('device-ua', '10.0.0.3', 'SensESP/3.7.0')
+    expect(events, 'an unchanged address is not').to.have.lengthOf(5)
+
     expect(userAgentOf({ 'user-agent': 'a'.repeat(300) })).to.have.lengthOf(256)
     expect(userAgentOf({})).to.be.undefined
 
