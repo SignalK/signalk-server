@@ -1,0 +1,181 @@
+import { expect } from 'chai'
+import fs from 'fs'
+import os from 'os'
+import path from 'path'
+import { getNodeModulesNextToApp, modulesWithKeyword } from '../src/modules'
+import { Config } from '../src/config/config'
+
+const KEYWORD = 'signalk-node-server-plugin'
+
+/**
+ * A package.json alone is a complete fixture: plugin discovery reads nothing
+ * else from a package directory.
+ */
+function writePackage(dir: string, name: string, pkg: object = {}) {
+  fs.mkdirSync(path.join(dir, name), { recursive: true })
+  fs.writeFileSync(
+    path.join(dir, name, 'package.json'),
+    JSON.stringify({ name, version: '1.0.0', ...pkg })
+  )
+}
+
+describe('modulesWithKeyword with the server installed as a dependency', () => {
+  let tempDir: string
+  let nodeModules: string
+  let config: Config
+
+  beforeEach(() => {
+    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), '_skservertest_modules'))
+    nodeModules = path.join(tempDir, 'node_modules')
+    writePackage(nodeModules, 'signalk-server', {
+      dependencies: {
+        'bundled-plugin': '^1.0.0',
+        'broken-plugin': '^1.0.0',
+        'tarball-plugin': 'file:tarball-plugin-1.0.0.tgz'
+      },
+      optionalDependencies: {
+        '@scope/bundled-plugin': '^1.0.0',
+        'missing-plugin': '^1.0.0'
+      }
+    })
+    config = {
+      appPath: path.join(nodeModules, 'signalk-server/'),
+      configPath: path.join(tempDir, 'config')
+    } as Config
+  })
+
+  afterEach(() => {
+    fs.rmSync(tempDir, { recursive: true, force: true })
+  })
+
+  it('finds the bundled plugins npm hoisted next to the server', () => {
+    writePackage(nodeModules, 'bundled-plugin', { keywords: [KEYWORD] })
+    writePackage(nodeModules, '@scope/bundled-plugin', { keywords: [KEYWORD] })
+    writePackage(nodeModules, 'unrelated-plugin', { keywords: [KEYWORD] })
+
+    const moduleList = modulesWithKeyword(config, KEYWORD)
+
+    expect(moduleList.map((m) => m.module)).to.have.members([
+      'bundled-plugin',
+      '@scope/bundled-plugin'
+    ])
+    expect(moduleList.map((m) => m.location)).to.eql([
+      path.join(nodeModules, '/'),
+      path.join(nodeModules, '/')
+    ])
+  })
+
+  it('skips a hoisted package outside the declared version range', () => {
+    writePackage(nodeModules, 'bundled-plugin', {
+      version: '2.0.0',
+      keywords: [KEYWORD]
+    })
+    writePackage(nodeModules, '@scope/bundled-plugin', {
+      version: '1.1.0-beta.1',
+      keywords: [KEYWORD]
+    })
+    writePackage(nodeModules, 'tarball-plugin', { keywords: [KEYWORD] })
+
+    const moduleList = modulesWithKeyword(config, KEYWORD)
+
+    expect(moduleList.map((m) => m.module)).to.have.members([
+      '@scope/bundled-plugin',
+      'tarball-plugin'
+    ])
+  })
+
+  it('looks next to the real directory of a linked server', () => {
+    const store = path.join(tempDir, 'store', 'node_modules')
+    fs.mkdirSync(store, { recursive: true })
+    fs.renameSync(
+      path.join(nodeModules, 'signalk-server'),
+      path.join(store, 'signalk-server')
+    )
+    fs.symlinkSync(
+      path.join(store, 'signalk-server'),
+      path.join(nodeModules, 'signalk-server'),
+      'junction'
+    )
+    writePackage(store, 'bundled-plugin', { keywords: [KEYWORD] })
+
+    const moduleList = modulesWithKeyword(config, KEYWORD)
+
+    expect(moduleList.map((m) => m.module)).to.eql(['bundled-plugin'])
+    expect(moduleList.map((m) => m.location)).to.eql([
+      fs.realpathSync(store) + path.sep
+    ])
+  })
+
+  it('prefers a copy installed in the config dir', () => {
+    writePackage(nodeModules, 'bundled-plugin', { keywords: [KEYWORD] })
+    const configNodeModules = path.join(config.configPath, 'node_modules')
+    writePackage(configNodeModules, 'bundled-plugin', { keywords: [KEYWORD] })
+
+    const moduleList = modulesWithKeyword(config, KEYWORD)
+
+    expect(moduleList.map((m) => m.location)).to.eql([
+      path.join(configNodeModules, '/')
+    ])
+  })
+
+  it('skips a bundled package whose package.json cannot be read', () => {
+    writePackage(nodeModules, 'bundled-plugin', { keywords: [KEYWORD] })
+    fs.mkdirSync(path.join(nodeModules, 'broken-plugin'))
+    fs.writeFileSync(
+      path.join(nodeModules, 'broken-plugin', 'package.json'),
+      '{ not json'
+    )
+
+    const moduleList = modulesWithKeyword(config, KEYWORD)
+
+    expect(moduleList.map((m) => m.module)).to.eql(['bundled-plugin'])
+  })
+
+  it('skips a bundled package with an invalid package.json', () => {
+    writePackage(nodeModules, 'bundled-plugin', { keywords: [KEYWORD] })
+    writePackage(nodeModules, 'broken-plugin', { keywords: 1 })
+    writePackage(nodeModules, 'missing-plugin', { keywords: KEYWORD })
+    fs.mkdirSync(path.join(nodeModules, '@scope/bundled-plugin'), {
+      recursive: true
+    })
+    fs.writeFileSync(
+      path.join(nodeModules, '@scope/bundled-plugin', 'package.json'),
+      'null'
+    )
+
+    const moduleList = modulesWithKeyword(config, KEYWORD)
+
+    expect(moduleList.map((m) => m.module)).to.eql(['bundled-plugin'])
+  })
+
+  it('resolves a relative appPath against the working directory', () => {
+    writePackage(nodeModules, 'bundled-plugin', { keywords: [KEYWORD] })
+    const cwd = process.cwd()
+    process.chdir(tempDir)
+    try {
+      const moduleList = modulesWithKeyword(
+        { ...config, appPath: 'node_modules/signalk-server/' },
+        KEYWORD
+      )
+
+      expect(moduleList.map((m) => m.module)).to.eql(['bundled-plugin'])
+    } finally {
+      process.chdir(cwd)
+    }
+  })
+
+  it('reports where npm hoisted the bundled packages', () => {
+    writePackage(nodeModules, 'bundled-plugin', { keywords: [KEYWORD] })
+
+    const [bundled] = modulesWithKeyword(config, KEYWORD)
+
+    expect(getNodeModulesNextToApp(config.appPath)).to.equal(bundled.location)
+  })
+
+  it('reports no hoisted packages for a server that is not a dependency', () => {
+    const checkout = path.join(tempDir, 'signalk-server')
+    fs.mkdirSync(checkout)
+
+    expect(getNodeModulesNextToApp(checkout)).to.be.undefined
+  })
+})
