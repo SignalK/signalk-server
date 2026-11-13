@@ -1,6 +1,11 @@
 import { expect } from 'chai'
 import Simple from './simple'
-import { createMockApp, createDebugStub } from './test-helpers'
+import {
+  createMockApp,
+  createDebugStub,
+  decoderOptions,
+  withCanboatjsExports
+} from './test-helpers'
 
 // A connection's input opens as it is made. When a later element of the
 // pipeline cannot be made, the input must be closed again, or a serial
@@ -66,8 +71,6 @@ describe('Simple: a pipeline that cannot be built', () => {
 // The PGN-only filter rows reach canboatjs as excludePgns, so it drops
 // those messages before decoding them.
 describe('Simple: filters before decoding', () => {
-  const canboatjsPath = require.resolve('@canboat/canboatjs')
-
   function build(extra: object) {
     return new Simple({
       app: createMockApp(),
@@ -88,28 +91,15 @@ describe('Simple: filters before decoding', () => {
   }
 
   // The excludePgns the decoder was made with.
-  function decoderExcludePgns(simple: Simple): unknown {
-    const pipeline = (simple as unknown as { pipeline: object[] }).pipeline
-    const decoder = pipeline.find((e) => 'fromPgn' in e) as {
-      fromPgn: { options: { excludePgns?: unknown } }
-    }
-    return decoder.fromPgn.options.excludePgns
-  }
+  const decoderExcludePgns = (simple: Simple) =>
+    decoderOptions(simple).excludePgns
 
   // canboatjs with or without parseExcludePgns, whichever is installed.
-  function withCanboatjs<T>(supports: boolean, run: () => T): T {
-    const real = require.cache[canboatjsPath]!
-    const exports = {
-      ...real.exports,
-      parseExcludePgns: supports ? () => [] : undefined
-    }
-    require.cache[canboatjsPath] = { ...real, exports } as NodeModule
-    try {
-      return run()
-    } finally {
-      require.cache[canboatjsPath] = real
-    }
-  }
+  const withCanboatjs = <T>(supports: boolean, run: () => T): T =>
+    withCanboatjsExports(
+      { parseExcludePgns: supports ? () => [] : undefined },
+      run
+    )
 
   it('hands the PGN-only filter rows to canboatjs when the switch is on', () => {
     const simple = withCanboatjs(true, () =>

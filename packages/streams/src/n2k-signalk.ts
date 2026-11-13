@@ -18,6 +18,7 @@ import { EventEmitter } from 'events'
 import { Transform, TransformCallback } from 'stream'
 import { N2kMapper } from '@signalk/n2k-signalk'
 import type { DeltaCache } from './types'
+import { manufacturerCodeOf, manufacturerPasses } from './n2k-manufacturers'
 
 interface N2kFilter {
   source?: string
@@ -39,6 +40,9 @@ interface N2kToSignalKOptions {
   filtersEnabled?: boolean
   useCanName?: boolean
   canNameWarmupMs?: number
+  // Set by Simple when canboatjs filters this connection by manufacturer.
+  allowManufacturers?: string[]
+  denyManufacturers?: string[]
   [key: string]: unknown
 }
 
@@ -106,6 +110,14 @@ export default class N2kToSignalK extends Transform {
   private readonly filters?: N2kFilter[]
   private readonly n2kMapper: N2kMapper & EventEmitter
   private readonly canNameWarmupMs: number
+  // Whether a device with this manufacturer code passes the manufacturer
+  // filter, and the code of each address's device as its claim gives it.
+  private readonly manufacturerPasses: (code: number | undefined) => boolean
+  private readonly manufacturerOf: (
+    meta: Record<string, unknown>
+  ) => number | undefined
+  private readonly manufacturerCodes: Record<number, number> = {}
+  private readonly filteringByManufacturer: boolean
   // Set on the first frame; src-only deltas are held back until this time
   // to give the canName time to resolve. Undefined until traffic starts.
   private warmupUntil?: number
@@ -121,6 +133,39 @@ export default class N2kToSignalK extends Transform {
         (f) => (f.source && f.source.length) || (f.pgn && f.pgn.length)
       )
     }
+
+    // canboatjs drops a filtered device's data, but still passes on its
+    // address claim and product information: leave it out of the sources.
+    const byManufacturer = options.allowManufacturers
+      ? { allowManufacturers: options.allowManufacturers }
+      : options.denyManufacturers
+        ? { denyManufacturers: options.denyManufacturers }
+        : undefined
+    const parseManufacturers = (names: string[]) =>
+      (
+        require('@canboat/canboatjs') as {
+          parseManufacturers: (names: string[]) => number[]
+        }
+      ).parseManufacturers(names)
+    let codes: number[] | undefined
+    const codesOf = (names: string[]) => {
+      if (codes === undefined) {
+        codes = parseManufacturers(names)
+      }
+      return codes
+    }
+    const codeOfName = (name: string) => {
+      try {
+        return parseManufacturers([name])[0]
+      } catch {
+        return undefined
+      }
+    }
+    this.manufacturerPasses = (code) =>
+      manufacturerPasses(code, byManufacturer, codesOf)
+    this.filteringByManufacturer = byManufacturer !== undefined
+    this.manufacturerOf = (meta) =>
+      byManufacturer ? manufacturerCodeOf(meta, codeOfName) : undefined
 
     this.n2kMapper = new N2kMapper({
       ...options,
@@ -143,6 +188,17 @@ export default class N2kToSignalK extends Transform {
         // but we don't want to surface a "254" identity in the server tree.
         if (src === 254) return
         const existing = this.sourceMeta[src] ?? {}
+        // A device the manufacturer filter drops is left out of the
+        // sources: by its claim, which later metadata (product
+        // information) doesn't repeat, so remember the claim's.
+        const code = this.manufacturerOf(meta)
+        if (code !== undefined) {
+          this.manufacturerCodes[src] = code
+        }
+        if (!this.manufacturerPasses(this.manufacturerCodes[src])) {
+          delete this.sourceMeta[src]
+          return
+        }
         const prevCanName =
           typeof existing.canName === 'string' ? existing.canName : undefined
         const newCanName =
@@ -167,6 +223,15 @@ export default class N2kToSignalK extends Transform {
           const oldRef = `${this.options.providerId}.${n2k.src}`
           const newRef = `${this.options.providerId}.${newCanName}`
           this.app.emit('sourceRefChanged', { oldRef, newRef, src })
+        }
+        // As canboatjs passes nothing else from a device until its
+        // manufacturer is known, it isn't a source until then either: its
+        // ISO Requests can come before its claim.
+        if (
+          this.filteringByManufacturer &&
+          this.manufacturerCodes[src] === undefined
+        ) {
+          return
         }
         const delta = {
           context: this.app.selfContext,
@@ -211,6 +276,7 @@ export default class N2kToSignalK extends Transform {
         if (this.sourceMeta[srcNum]) {
           delete this.sourceMeta[srcNum]
         }
+        delete this.manufacturerCodes[srcNum]
         // Notify server so persistent settings can be migrated
         const oldRef = `${this.options.providerId}.${from}`
         const newRef = `${this.options.providerId}.${to}`
