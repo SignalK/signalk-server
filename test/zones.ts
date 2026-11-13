@@ -1,7 +1,13 @@
 import type { Delta, Notification, Path, Zone } from '@signalk/server-api'
 import { ALARM_METHOD, ALARM_STATE, hasValues } from '@signalk/server-api'
 import { expect } from 'chai'
-import { getMethod, zoneIndexOf, Zones } from '../dist/zones.js'
+import { metadataRegistry, removeMetadataFields } from '@signalk/path-metadata'
+import {
+  defaultZoneMessage,
+  getMethod,
+  zoneIndexOf,
+  Zones
+} from '../dist/zones.js'
 import * as Bacon from 'baconjs'
 
 interface MockStreambundle {
@@ -371,6 +377,90 @@ describe('Zones', () => {
           ALARM_STATE.normal
         )
       }
+    })
+  })
+
+  describe('default message', () => {
+    const zoneWithoutMessage = (lower?: number, upper?: number): Zone => ({
+      lower,
+      upper,
+      state: ALARM_STATE.alert,
+      message: ''
+    })
+
+    const PATH = 'tanks.freshWater.0.currentLevel' as Path
+
+    afterEach(() => metadataRegistry.reset())
+
+    // the display name as the server keeps it, merged from any meta update
+    const setDisplayName = (displayName: unknown) =>
+      metadataRegistry.addMetaData('vessels.self', PATH, { displayName })
+
+    const watch = () => {
+      const mockBus = new Bacon.Bus()
+      const valueStream = new Bacon.Bus()
+      const mockStreambundle: MockStreambundle = {
+        getSelfMetaBus: () => mockBus,
+        getSelfStream: (_path: Path) => valueStream
+      }
+      const deltas: Delta[] = []
+      new Zones(mockStreambundle as never, (delta: Delta) => deltas.push(delta))
+      mockBus.push({
+        path: PATH,
+        value: { zones: [zoneWithoutMessage(0.08, 0.2)] }
+      })
+      // leave the zone and enter it again, so a message is written each time
+      return (value = 0.1) => {
+        valueStream.push(0.3)
+        valueStream.push(value)
+        const update = deltas[deltas.length - 1].updates[0]
+        return hasValues(update)
+          ? asNotification(update.values[0].value).message
+          : undefined
+      }
+    }
+
+    it('names the value by its display name', () => {
+      setDisplayName('Fresh water')
+      expect(watch()()).to.equal('Fresh water between 0.08 and 0.2')
+    })
+
+    it('names the value by its path without a display name', () => {
+      const byPath = `${PATH} between 0.08 and 0.2`
+      const enter = watch()
+      expect(enter()).to.equal(byPath)
+      setDisplayName('')
+      expect(enter()).to.equal(byPath)
+      setDisplayName(null)
+      expect(enter()).to.equal(byPath)
+    })
+
+    it('follows a display name set, changed or removed apart from the zones', () => {
+      const enter = watch()
+
+      setDisplayName('Fresh water')
+      expect(enter()).to.equal('Fresh water between 0.08 and 0.2')
+
+      setDisplayName('Fresh water port')
+      expect(enter()).to.equal('Fresh water port between 0.08 and 0.2')
+
+      removeMetadataFields(`vessels.self.${PATH}`, ['displayName'])
+      expect(enter()).to.equal(`${PATH} between 0.08 and 0.2`)
+    })
+
+    it('states an open or a single-value range as such', () => {
+      expect(defaultZoneMessage('Bilge', zoneWithoutMessage(1, 1))).to.equal(
+        'Bilge at 1'
+      )
+      expect(
+        defaultZoneMessage('Voltage', zoneWithoutMessage(14.4, undefined))
+      ).to.equal('Voltage at or above 14.4')
+      expect(
+        defaultZoneMessage('Voltage', zoneWithoutMessage(undefined, 11.8))
+      ).to.equal('Voltage at or below 11.8')
+      expect(
+        defaultZoneMessage('Voltage', zoneWithoutMessage(undefined, undefined))
+      ).to.equal('Voltage')
     })
   })
 
