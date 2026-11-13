@@ -8,6 +8,8 @@
       "regions": true,
       "charts": true
     },
-    "custom": []
+    "custom": [
+      { "name": "groups", "description": "Freeboard resource groups." }
+    ]
   }
 }
