@@ -82,6 +82,13 @@ export function callBufferAbi(
     }
 
     const needed = -first.written
+    // Not a request for a larger buffer, so an error code: a second call
+    // would only run the export, and any side effects, again.
+    if (needed <= initialSize) {
+      throw new Error(
+        `${name} returned ${first.written}, which does not ask for more than the ${initialSize} bytes it was given`
+      )
+    }
     if (needed > MAX_BUFFER_ABI_RESPONSE_BYTES) {
       throw new Error(
         `${name} requested a ${needed} byte response buffer, exceeding the ${MAX_BUFFER_ABI_RESPONSE_BYTES} byte limit`
