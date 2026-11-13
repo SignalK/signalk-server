@@ -11,6 +11,7 @@ import { faCircleDot } from '@fortawesome/free-regular-svg-icons/faCircleDot'
 import { useStore } from '../../store'
 
 import BasicProvider, { isMxpgnBusOrder } from './BasicProvider'
+import { logsN2kSource, offersCreateDevice } from './providerSourceTypes'
 import set from 'lodash.set'
 
 interface Provider {
@@ -159,7 +160,7 @@ const ProvidersConfiguration: React.FC = () => {
       // refs, and flipping createDevice on retroactively makes the
       // server claim a new address and disrupts that binding.
       if (target.name === 'options.type' && typeof value === 'string') {
-        const isYdwg = /^ydwg02/.test(value)
+        const isYdwg = offersCreateDevice(value)
         if (!isYdwg && updatedProvider.options?.createDevice !== undefined) {
           delete updatedProvider.options.createDevice
         } else if (
@@ -168,6 +169,26 @@ const ProvidersConfiguration: React.FC = () => {
           updatedProvider.options?.createDevice === undefined
         ) {
           set(updatedProvider, 'options.createDevice', true)
+        }
+        // The logging switch is hidden for these sources; a flag left on
+        // would still be saved.
+        if (!logsN2kSource(value)) {
+          updatedProvider.logging = false
+        }
+      }
+      // Switching the Data Type restarts the options from that type's
+      // seed. Options are type-specific (source type, N2K identity,
+      // filters); carrying them across silently persists settings the
+      // new type's form never shows — e.g. useCanName on a J1939
+      // connection, or a source type the target type's select doesn't
+      // list. The type select only renders for new connections, so
+      // nothing configured is lost. J1939 hides the logging control, so
+      // a logging flag set before the switch is cleared with it.
+      if (target.name === 'type' && typeof value === 'string') {
+        updatedProvider.options =
+          value === 'NMEA2000' ? { useCanName: true } : {}
+        if (value === 'J1939') {
+          updatedProvider.logging = false
         }
       }
       setSelectedProvider(updatedProvider)
