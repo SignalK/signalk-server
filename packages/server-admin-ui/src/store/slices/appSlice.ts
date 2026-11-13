@@ -217,6 +217,22 @@ export interface AppSliceActions {
 
 export type AppSlice = AppSliceState & AppSliceActions
 
+export const isAdminStatus = (loginStatus: LoginStatus) =>
+  loginStatus.authenticationRequired === false ||
+  loginStatus.userLevel === 'admin'
+
+// An empty status is still loading; only a reported one tells the role.
+const isKnownNonAdmin = (loginStatus: LoginStatus) =>
+  loginStatus.authenticationRequired === true &&
+  loginStatus.userLevel !== 'admin'
+
+const carriesInstallState = (appStore: AppStoreState) =>
+  appStore.installed.length > 0 ||
+  appStore.updates.length > 0 ||
+  appStore.installing.length > 0 ||
+  appStore.canUpdateServer === true ||
+  appStore.serverUpdate !== undefined
+
 const initialAppState: AppSliceState = {
   plugins: [],
   webapps: [],
@@ -287,6 +303,11 @@ export const createAppSlice: StateCreator<AppSlice, [], [], AppSlice> = (
   },
 
   setAppStore: (appStore) => {
+    // A list answered for an admin can arrive after the logout that
+    // cleared it; the server sends a visitor no install state at all.
+    if (isKnownNonAdmin(get().loginStatus) && carriesInstallState(appStore)) {
+      return
+    }
     const sorted = {
       ...appStore,
       installing: [...appStore.installing].sort(nameCollator),
@@ -298,7 +319,13 @@ export const createAppSlice: StateCreator<AppSlice, [], [], AppSlice> = (
   },
 
   setLoginStatus: (loginStatus) => {
-    set({ loginStatus })
+    // What is installed here is for admins only; a store list loaded as
+    // admin must not outlive the role, even if reloading it fails.
+    if (isAdminStatus(get().loginStatus) && !isAdminStatus(loginStatus)) {
+      set({ loginStatus, appStore: initialAppState.appStore })
+    } else {
+      set({ loginStatus })
+    }
   },
 
   setServerSpecification: (serverSpecification) => {

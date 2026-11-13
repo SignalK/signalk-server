@@ -32,6 +32,23 @@ let iconProbeLastRunAt = 0
 // reflects.
 let iconProbeGeneration = 0
 const ICON_PROBE_COOLDOWN_MS = 5 * 60 * 1000
+const INSTALL_STATE_FIELDS = [
+  'id',
+  'installedVersion',
+  'pendingVersion',
+  'isWaiting',
+  'isInstalling',
+  'isRemoving',
+  'isRemove',
+  'installFailed',
+  'updateDisabled',
+  'installedIconUrl',
+  'installedScreenshotUrls',
+  'installedOnly',
+  // Dist-tags are fetched only for installed packages, so a prerelease
+  // offer marks the package as installed.
+  'prereleaseVersion'
+]
 const _ = require('lodash')
 const semver = require('semver')
 const { gt } = semver
@@ -320,12 +337,13 @@ module.exports = function (app) {
             }
             scheduleInstalledDetailRefresh()
             scheduleIconProbe(plugins, webapps)
-            res.json(result)
+            res.json(seesInstalled(req) ? result : catalogOnly(result))
           })
           .catch((error) => {
             console.log(error.message)
             debug.enabled && debug(error.stack)
-            res.json(buildOfflineResponse(app, cache))
+            const offline = buildOfflineResponse(app, cache)
+            res.json(seesInstalled(req) ? offline : catalogOnly(offline))
           })
       })
 
@@ -340,8 +358,12 @@ module.exports = function (app) {
             name = req.params.org + '/' + name
           }
 
+          const publicOnly = !seesInstalled(req)
           try {
-            const detail = await loadPluginDetail(name)
+            const detail =
+              publicOnly && (await isInstalledOnly(name))
+                ? null
+                : await loadPluginDetail(name)
             if (!detail) {
               res.status(404).json({
                 error: 'Plugin not found',
@@ -350,13 +372,25 @@ module.exports = function (app) {
               })
               return
             }
-            res.json(detail)
+            res.json(seesInstalled(req) ? detail : withoutInstallState(detail))
           } catch (err) {
             console.log(err.message)
             debug.enabled && debug(err.stack)
-            const cached = readDetailFromCache(cache, name)
+            // Offline nothing tells an installed-only package from a
+            // published one, so visitors get no detail of anything installed.
+            const cached =
+              publicOnly && (getPlugin(name) || getWebApp(name))
+                ? undefined
+                : readDetailFromCache(cache, name)
             if (cached) {
-              res.json({ ...cached, storeAvailable: false, fromCache: true })
+              const offline = {
+                ...cached,
+                storeAvailable: false,
+                fromCache: true
+              }
+              res.json(
+                seesInstalled(req) ? offline : withoutInstallState(offline)
+              )
               return
             }
             res.status(503).json({
@@ -1039,12 +1073,22 @@ module.exports = function (app) {
       // An installed WASM plugin published without the Node plugin keyword
       // is missing from the search, but must stay updatable and removable.
       const listed = new Set(npmPlugins.map((p) => p.package.name))
+      const publicWebapps = new Map(
+        [...embeddableWebapps, ...webapps].map((w) => [w.package.name, w])
+      )
       const notInSearch = getInstalledAsPackageEntries(NODE_PLUGIN_KEYWORD)
         .filter(
           (p) =>
             !listed.has(p.package.name) && isWasmPackage(p.package.keywords)
         )
-        .map((p) => ({ ...p, installedVersion: p.package.version }))
+        .map(
+          (p) =>
+            publicWebapps.get(p.package.name) ?? {
+              ...p,
+              installedVersion: p.package.version,
+              installedOnly: true
+            }
+        )
       // Discovery reads the dist-tags the store list last fetched instead of
       // waiting for npm; the store list applies the ones it fetches itself.
       const plugins = withPublishedVersions(
@@ -1250,6 +1294,7 @@ module.exports = function (app) {
       const pluginInfo = {
         name: name,
         version: version,
+        installedOnly: plugin.installedOnly === true,
         description: plugin.package.description,
         author: getAuthor(plugin.package),
         categories: getCategories(plugin.package),
@@ -1399,6 +1444,68 @@ module.exports = function (app) {
 
       return result
     })
+  }
+
+  // Which plugins run here, and at which version, tells an attacker
+  // which known flaws to try, so only the admin learns it.
+  function seesInstalled(req) {
+    return (
+      app.securityStrategy.isDummy() || app.securityStrategy.allowConfigure(req)
+    )
+  }
+
+  function withoutInstallState(entry) {
+    const catalogEntry = { ...entry }
+    for (const field of INSTALL_STATE_FIELDS) {
+      delete catalogEntry[field]
+    }
+    for (const deps of ['requires', 'recommends']) {
+      if (Array.isArray(catalogEntry[deps])) {
+        // The catalog lists names, the plugin detail dependency objects.
+        catalogEntry[deps] = catalogEntry[deps].map((dependency) => {
+          if (typeof dependency !== 'object' || dependency === null) {
+            return dependency
+          }
+          const { installed: _installed, ...reference } = dependency
+          return reference
+        })
+      }
+    }
+    return catalogEntry
+  }
+
+  // Without npm and without a cached list, the offline answer lists what is
+  // installed as available. A list cached before entries were marked cannot
+  // tell installed-only packages apart.
+  function listsOnlyInstalled(appStore) {
+    if (appStore.storeAvailable !== false) return false
+    return (
+      appStore.fromCache === false ||
+      appStore.available.some(
+        (entry) => typeof entry.installedOnly !== 'boolean'
+      )
+    )
+  }
+
+  async function isInstalledOnly(name) {
+    const [plugins] = await findPluginsAndWebapps()
+    return plugins.some((p) => p.package.name === name && p.installedOnly)
+  }
+
+  function catalogOnly(appStore) {
+    const available = listsOnlyInstalled(appStore)
+      ? []
+      : appStore.available.filter((entry) => !entry.installedOnly)
+    const catalog = {
+      ...appStore,
+      available: available.map(withoutInstallState),
+      installed: [],
+      updates: [],
+      installing: [],
+      canUpdateServer: false
+    }
+    delete catalog.serverUpdate
+    return catalog
   }
 
   function addIfNotDuplicate(theArray, moduleInfo) {

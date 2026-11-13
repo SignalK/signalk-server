@@ -113,6 +113,7 @@ describe('Sidebar', () => {
     renderSidebar('/data/browser')
     expect(screen.getByText('BLE Manager')).toBeTruthy()
     expect(screen.getByText('Preferences')).toBeTruthy()
+    expect(screen.getByText('Store')).toBeTruthy()
     expect(screen.queryByText('Fiddler')).toBeNull()
   })
 })

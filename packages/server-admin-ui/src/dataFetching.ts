@@ -3,7 +3,7 @@ import {
   GNSS_API_PATH,
   sanitizeGnssConfig
 } from './store/slices/gnssPositionSlice'
-import type { LoginStatus } from './store/types'
+import type { AppStoreState, LoginStatus } from './store/types'
 
 declare global {
   interface Window {
@@ -91,13 +91,17 @@ export async function fetchLoginStatus(): Promise<void> {
 // seconds later. Re-fetching when the user lands on /apps/store
 // surfaces those hydrated icons without needing a full page reload.
 export async function fetchAppStore(): Promise<void> {
+  // An answer for a session that logged in or out meanwhile carries the
+  // wrong install state.
+  const askedAs = useStore.getState().loginStatus
   try {
     const response = await authFetch(
       `${window.serverRoutesPrefix}/appstore/available`
     )
     if (response.status === 200) {
       const data = await response.json()
-      useStore.getState().setAppStore(data)
+      const { loginStatus, setAppStore } = useStore.getState()
+      if (loginStatus === askedAs) setAppStore(data)
     }
   } catch (error) {
     console.error('Failed to fetch /appstore/available:', error)
@@ -107,7 +111,7 @@ export async function fetchAppStore(): Promise<void> {
 export async function fetchAllData(): Promise<void> {
   const fetchAndSet = async <T>(
     endpoint: string,
-    setter: (data: T) => void,
+    setter: (data: T) => void | Promise<void>,
     prefix?: string
   ) => {
     try {
@@ -116,7 +120,7 @@ export async function fetchAllData(): Promise<void> {
       )
       if (response.status === 200) {
         const data = await response.json()
-        setter(data)
+        await setter(data)
       }
     } catch (error) {
       console.error(`Failed to fetch ${endpoint}:`, error)
@@ -125,12 +129,18 @@ export async function fetchAllData(): Promise<void> {
 
   const state = useStore.getState()
 
+  // The store list is applied for the role the server answered it for,
+  // so the matching login status has to be in place first.
+  const loginStatusSet = fetchAndSet('/loginStatus', state.setLoginStatus)
   await Promise.all([
     fetchAndSet('/plugins', state.setPlugins),
     fetchAndSet('/webapps', state.setWebapps),
     fetchAndSet('/addons', state.setAddons),
-    fetchAndSet('/appstore/available', state.setAppStore),
-    fetchAndSet('/loginStatus', state.setLoginStatus),
+    fetchAndSet('/appstore/available', async (data: AppStoreState) => {
+      await loginStatusSet
+      state.setAppStore(data)
+    }),
+    loginStatusSet,
     fetchAndSet('/signalk', state.setServerSpecification, ''),
     fetchAndSet('/security/access/requests', state.setAccessRequests),
     fetchAndSet('/security/devices', state.setDevices),

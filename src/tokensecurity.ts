@@ -32,6 +32,8 @@ import ms, { StringValue } from 'ms'
 import cookieParser from 'cookie-parser'
 import { createHash, randomBytes } from 'crypto'
 
+const APPSTORE_BROWSE_PATHS = /^\/(available|plugin|icon)(\/|$)/
+
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const pathToRegexp: (path: string) => RegExp = require('path-to-regexp')
 import { createDebug } from './debug'
@@ -830,7 +832,6 @@ function tokenSecurityFactory(
     ;[
       '/restart',
       '/runDiscovery',
-      '/appstore',
       '/security',
       '/settings',
       '/backup',
@@ -839,6 +840,20 @@ function tokenSecurityFactory(
       '/serialports'
     ].forEach((p) =>
       app.use(`${SERVERROUTESPREFIX}${p}`, adminAuthenticationMiddleware(false))
+    )
+
+    // Browsing the store is open to read-only users; every other appstore
+    // route, including any added later, stays with the admin.
+    const appstoreAdmin = adminAuthenticationMiddleware(false)
+    app.use(
+      `${SERVERROUTESPREFIX}/appstore`,
+      (req: Request, res: Response, next: NextFunction) => {
+        if (req.method === 'GET' && APPSTORE_BROWSE_PATHS.test(req.path)) {
+          next()
+        } else {
+          appstoreAdmin(req, res, next)
+        }
+      }
     )
 
     app.use('/plugins', http_authorize(false))

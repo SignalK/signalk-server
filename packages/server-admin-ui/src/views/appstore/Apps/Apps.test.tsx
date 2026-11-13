@@ -14,6 +14,17 @@ vi.mock('../../../dataFetching', () => ({
 
 import Apps from './Apps'
 
+const ADMIN = { authenticationRequired: false }
+const READ_ONLY_VISITOR = {
+  authenticationRequired: true,
+  status: 'notLoggedIn' as const,
+  readOnlyAccess: true
+}
+
+beforeEach(() => {
+  useStore.setState({ loginStatus: ADMIN })
+})
+
 const emptyStore: AppStoreState = {
   updates: [],
   installed: [],
@@ -285,5 +296,43 @@ describe('Apps projects the pending version onto installing rows', () => {
 
     expect(screen.getByText('v2.0.0 (pending restart)')).toBeInTheDocument()
     expect(screen.queryByText('Installed v1.0.0')).toBeNull()
+  })
+})
+
+describe('Apps for a read-only visitor', () => {
+  beforeEach(() => {
+    setAppStore({
+      ...emptyStore,
+      available: [{ name: 'plugin-a', version: '2.0.0' }]
+    })
+    act(() => {
+      useStore.getState().setAppstoreView('All')
+      useStore.getState().setAppstoreSearch('')
+      useStore.getState().setAppstoreCategory('All')
+      useStore.setState({ loginStatus: READ_ONLY_VISITOR })
+    })
+  })
+
+  it('lists the catalog without the install views and actions', () => {
+    render(
+      <MemoryRouter future={ROUTER_FUTURE_FLAGS}>
+        <Apps />
+      </MemoryRouter>
+    )
+    expect(screen.getAllByText('plugin-a').length).toBeGreaterThan(0)
+    expect(screen.queryByRole('button', { name: 'Installed' })).toBeNull()
+    expect(screen.queryByRole('button', { name: /Updates/ })).toBeNull()
+    expect(screen.queryByRole('button', { name: /Install/ })).toBeNull()
+  })
+  it('shows the whole catalog when an install view is still selected', () => {
+    act(() => {
+      useStore.getState().setAppstoreView('Installed')
+    })
+    render(
+      <MemoryRouter future={ROUTER_FUTURE_FLAGS}>
+        <Apps />
+      </MemoryRouter>
+    )
+    expect(screen.getAllByText('plugin-a').length).toBeGreaterThan(0)
   })
 })

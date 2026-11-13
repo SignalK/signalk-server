@@ -8,7 +8,9 @@ export interface DependencyReference {
   name: string
   displayName?: string
   appIcon?: string
-  installed: boolean
+  // Absent for read-only users, whom the server does not tell what is
+  // installed.
+  installed?: boolean
 }
 
 interface DependenciesSectionProps {
@@ -25,10 +27,11 @@ type InstallStatus = 'installing' | 'waiting' | 'installed' | 'not-installed'
 
 function getInstallStatus(
   busy: { isInstalling: boolean; isWaiting: boolean } | undefined,
-  installed: boolean
-): InstallStatus {
+  installed: boolean | undefined
+): InstallStatus | undefined {
   if (busy?.isInstalling) return 'installing'
   if (busy?.isWaiting) return 'waiting'
+  if (installed === undefined) return undefined
   return installed ? 'installed' : 'not-installed'
 }
 

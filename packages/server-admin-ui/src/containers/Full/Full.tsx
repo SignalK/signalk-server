@@ -361,11 +361,13 @@ export default function Full() {
                 />
                 <Route
                   path="/apps/store/plugin/:name"
-                  element={<ProtectedRoute component={DetailView} />}
+                  element={
+                    <ProtectedRoute component={DetailView} supportsReadOnly />
+                  }
                 />
                 <Route
                   path="/apps/store/*"
-                  element={<ProtectedRoute component={Apps} />}
+                  element={<ProtectedRoute component={Apps} supportsReadOnly />}
                 />
                 <Route
                   path="/apps/configuration/:pluginid"
