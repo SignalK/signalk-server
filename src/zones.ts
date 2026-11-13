@@ -56,23 +56,9 @@ export class Zones {
     if (this.unsubscribesForPaths[path]) {
       this.unsubscribesForPaths[path]()
     }
-    const tests = zones.map((zone) => {
-      const { upper = Infinity, lower = -Infinity } = zone
-
-      return (value: Value) => {
-        return typeof value === 'number' && value < upper && value >= lower
-      }
-    })
-
     this.unsubscribesForPaths[path] = this.streambundle
       .getSelfStream(path)
-      .map((value) => {
-        if (value === null) {
-          return -1
-        }
-        const zoneIndex = tests.findIndex((test) => test(value))
-        return zoneIndex
-      })
+      .map((value) => zoneIndexOf(zones, value))
       .skipDuplicates()
       .onValue((zoneIndex: number) => {
         if (debug.enabled) {
@@ -81,6 +67,33 @@ export class Zones {
         this.sendDelta(getNotificationDelta(path, zoneIndex, zones, methods))
       })
   }
+}
+
+/**
+ * The index of the zone a value is in, or -1. A zone holds the values from its
+ * lower limit up to, not including, its upper one, or its single value when
+ * both limits are equal; the first zone listed that holds the value gets it.
+ * A value no zone holds goes to the first zone whose upper limit it is, as the
+ * specification defines `upper` as "the highest value in this zone".
+ */
+export function zoneIndexOf(zones: Zone[], value: Value): number {
+  if (typeof value !== 'number') {
+    return -1
+  }
+  let atUpper = -1
+  for (let i = 0; i < zones.length; i++) {
+    const { lower = -Infinity, upper = Infinity } = zones[i]
+    if (value < lower) {
+      continue
+    }
+    if (value < upper || (value === lower && value === upper)) {
+      return i
+    }
+    if (value === upper && atUpper < 0) {
+      atUpper = i
+    }
+  }
+  return atUpper
 }
 
 export function getMethod(state: string, methods: ZoneMethods): ALARM_METHOD[] {
