@@ -207,6 +207,15 @@ function DeviceTable({
   )
 }
 
+// A request that gets no answer at all (server down, network gone) rejects
+// instead of returning an error response.
+function reportFailure(action: string) {
+  return (err: unknown) =>
+    alert(
+      `${action} failed: ${err instanceof Error ? err.message : String(err)}`
+    )
+}
+
 export default function Devices() {
   const loginStatus = useLoginStatus()
   const [devices, setDevices] = useState<Device[]>([])
@@ -222,6 +231,7 @@ export default function Devices() {
     token: string
   } | null>(null)
   const [deviceToken, setDeviceToken] = useState<string | null>(null)
+  const [creating, setCreating] = useState(false)
   const selectedDeviceRef = useRef<HTMLDivElement>(null)
 
   const loadDevices = useCallback(async (): Promise<Device[]> => {
@@ -237,12 +247,12 @@ export default function Devices() {
   }, [])
 
   const refreshDevices = useCallback(() => {
-    loadDevices().then(setDevices)
+    loadDevices().then(setDevices).catch(reportFailure('Loading the devices'))
   }, [loadDevices])
 
   useEffect(() => {
     if (loginStatus.authenticationRequired) {
-      loadDevices().then(setDevices)
+      loadDevices().then(setDevices).catch(reportFailure('Loading the devices'))
     }
   }, [loginStatus.authenticationRequired, loadDevices])
 
@@ -293,35 +303,43 @@ export default function Devices() {
       dashboard: selectedDevice.dashboard ?? null
     }
 
-    const response = await fetch(
-      `${window.serverRoutesPrefix}/security/devices/${selectedDevice.clientId}`,
-      {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-        credentials: 'include'
-      }
-    )
-    const text = await response.text()
-    setSelectedDevice(null)
-    alert(text)
-    refreshDevices()
+    try {
+      const response = await fetch(
+        `${window.serverRoutesPrefix}/security/devices/${selectedDevice.clientId}`,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+          credentials: 'include'
+        }
+      )
+      const text = await response.text()
+      setSelectedDevice(null)
+      alert(text)
+      refreshDevices()
+    } catch (err) {
+      reportFailure('Saving the device')(err)
+    }
   }
 
   const deleteDevice = async () => {
     if (!selectedDevice) return
-    const response = await fetch(
-      `${window.serverRoutesPrefix}/security/devices/${selectedDevice.clientId}`,
-      {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include'
-      }
-    )
-    const text = await response.text()
-    setSelectedDevice(null)
-    alert(text)
-    refreshDevices()
+    try {
+      const response = await fetch(
+        `${window.serverRoutesPrefix}/security/devices/${selectedDevice.clientId}`,
+        {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include'
+        }
+      )
+      const text = await response.text()
+      setSelectedDevice(null)
+      alert(text)
+      refreshDevices()
+    } catch (err) {
+      reportFailure('Deleting the device')(err)
+    }
   }
 
   const deviceClicked = (device: Device) => {
@@ -346,27 +364,32 @@ export default function Devices() {
     ) {
       return
     }
-    const response = await fetch(
-      `${window.serverRoutesPrefix}/security/devices/${selectedDevice.clientId}/token`,
-      {
-        method: 'POST',
-        credentials: 'include'
-      }
-    )
-    if (response.ok) {
-      const result = await response.json()
-      setDeviceToken(result.token)
-    } else {
-      const result = await response.json().catch(() => ({}))
-      alert(
-        result.error
-          ? `Failed to retrieve token: ${result.error}`
-          : 'Failed to retrieve token'
+    try {
+      const response = await fetch(
+        `${window.serverRoutesPrefix}/security/devices/${selectedDevice.clientId}/token`,
+        {
+          method: 'POST',
+          credentials: 'include'
+        }
       )
+      if (response.ok) {
+        const result = await response.json()
+        setDeviceToken(result.token)
+      } else {
+        const result = await response.json().catch(() => ({}))
+        alert(
+          result.error
+            ? `Failed to retrieve token: ${result.error}`
+            : 'Failed to retrieve token'
+        )
+      }
+    } catch (err) {
+      reportFailure('Retrieving the token')(err)
     }
   }
 
   const handleCreateDevice = async () => {
+    if (creating) return
     const payload: Record<string, unknown> = {
       displayName: newDevice.displayName,
       permissions: newDevice.permissions
@@ -374,28 +397,37 @@ export default function Devices() {
     if (newDevice.dashboardUrl) {
       payload.dashboard = { mode: 'redirect', url: newDevice.dashboardUrl }
     }
-    const response = await fetch(
-      `${window.serverRoutesPrefix}/security/devices`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-        credentials: 'include'
+    // Each request creates a device of its own, so a second click must
+    // not send another while the first is pending.
+    setCreating(true)
+    try {
+      const response = await fetch(
+        `${window.serverRoutesPrefix}/security/devices`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+          credentials: 'include'
+        }
+      )
+      if (response.ok) {
+        const result = await response.json()
+        setCreatedToken(result)
+        setShowAddModal(false)
+        setNewDevice({
+          displayName: '',
+          permissions: 'readonly',
+          dashboardUrl: ''
+        })
+        refreshDevices()
+      } else {
+        const text = await response.text()
+        alert('Failed to create device: ' + text)
       }
-    )
-    if (response.ok) {
-      const result = await response.json()
-      setCreatedToken(result)
-      setShowAddModal(false)
-      setNewDevice({
-        displayName: '',
-        permissions: 'readonly',
-        dashboardUrl: ''
-      })
-      refreshDevices()
-    } else {
-      const text = await response.text()
-      alert('Failed to create device: ' + text)
+    } catch (err) {
+      reportFailure('Creating the device')(err)
+    } finally {
+      setCreating(false)
     }
   }
 
@@ -418,8 +450,9 @@ export default function Devices() {
   const displays = devices.filter((d) => getDeviceCategory(d) === 'display')
   const sensors = devices.filter((d) => getDeviceCategory(d) === 'sensor')
   const servers = devices.filter((d) => getDeviceCategory(d) === 'server')
-  // selectedDevice is a copy held for form edits; connection status comes
-  // from the refreshed list so the card follows connects and disconnects
+  // selectedDevice is a copy held for form edits; what the device reports
+  // (connection status, device info, User-Agent) comes from the refreshed
+  // list so the card follows it
   const liveSelectedDevice =
     devices.find((d) => d.clientId === selectedDevice?.clientId) ??
     selectedDevice
@@ -688,22 +721,22 @@ export default function Devices() {
                   <DeviceDetailRow
                     label="Hardware"
                     value={nameAndVersion(
-                      selectedDevice.deviceInfo?.hardware,
-                      selectedDevice.deviceInfo?.hardwareVersion
+                      liveSelectedDevice?.deviceInfo?.hardware,
+                      liveSelectedDevice?.deviceInfo?.hardwareVersion
                     )}
                   />
                   <DeviceDetailRow
                     label="Software"
                     value={nameAndVersion(
-                      selectedDevice.deviceInfo?.software,
-                      selectedDevice.deviceInfo?.softwareVersion
+                      liveSelectedDevice?.deviceInfo?.software,
+                      liveSelectedDevice?.deviceInfo?.softwareVersion
                     )}
                   />
                   <DeviceDetailRow
                     label="User-Agent"
                     value={
-                      selectedDevice.userAgent ??
-                      selectedDevice.registrationInfo?.userAgent
+                      liveSelectedDevice?.userAgent ??
+                      liveSelectedDevice?.registrationInfo?.userAgent
                     }
                   />
                 </Card.Body>
@@ -822,7 +855,7 @@ export default function Devices() {
               <Button
                 variant="primary"
                 onClick={handleCreateDevice}
-                disabled={!newDevice.displayName.trim()}
+                disabled={creating || !newDevice.displayName.trim()}
               >
                 Create Device
               </Button>
