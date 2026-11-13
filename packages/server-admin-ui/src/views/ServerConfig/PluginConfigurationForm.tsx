@@ -9,6 +9,7 @@ import {
   RegistryWidgetsType
 } from '@rjsf/utils'
 import { ReactNode } from 'react'
+import ReactMarkdown from 'react-markdown'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faPlus } from '@fortawesome/free-solid-svg-icons/faPlus'
 import { faArrowUp } from '@fortawesome/free-solid-svg-icons/faArrowUp'
@@ -198,6 +199,10 @@ const FieldTemplate = (props: FieldTemplateProps) => {
 
   const isCheckbox = schema.type === 'boolean'
   const isObject = schema.type === 'object'
+  // RJSF sets displayLabel only for arrays shown as a widget (multi-select,
+  // files, ui:widget); other arrays go through ArrayFieldTemplate, which
+  // prints the description itself.
+  const isArrayTemplate = schema.type === 'array' && !displayLabel
 
   return (
     <div className={classNames} style={style}>
@@ -207,7 +212,7 @@ const FieldTemplate = (props: FieldTemplateProps) => {
           {required && <span className="required">*</span>}
         </label>
       )}
-      {description && !isObject && !isCheckbox && (
+      {description && !isObject && !isCheckbox && !isArrayTemplate && (
         <p id={`${id}__description`} className={CSS_CLASSES.FIELD_DESCRIPTION}>
           {description}
         </p>
@@ -286,6 +291,8 @@ const ArrayFieldTemplate = (props: ArrayFieldTemplateProps) => {
   } = props
 
   const uiOptions = getUiOptions(uiSchema)
+  const description = (uiOptions.description || schema.description) as
+    string | undefined
 
   // RJSF library requires 'any' type parameters for generic template resolution.
   // The library's TypeScript types are designed with 'any' as default generics.
@@ -317,9 +324,13 @@ const ArrayFieldTemplate = (props: ArrayFieldTemplateProps) => {
           {(uiOptions.title || title) as string}
         </legend>
       )}
-      {(uiOptions.description || schema.description) && (
+      {description && (
         <div className={CSS_CLASSES.FIELD_DESCRIPTION}>
-          {(uiOptions.description || schema.description) as string}
+          {uiOptions.enableMarkdownInDescription ? (
+            <ReactMarkdown>{description}</ReactMarkdown>
+          ) : (
+            description
+          )}
         </div>
       )}
       <div className={CSS_CLASSES.ARRAY_ITEM_LIST}>
