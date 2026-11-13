@@ -762,6 +762,26 @@ describe('WASM buffer ABI', () => {
     expect(plugin.liveAllocations()).to.equal(0)
   })
 
+  it('rejects a negative length that asks for no more space, without a second call', () => {
+    const plugin = fakeBufferAbiPlugin(() => '')
+    let calls = 0
+    const failing: BufferAbiFunction = () => {
+      calls++
+      return -1
+    }
+    expect(() =>
+      callBufferAbi(
+        plugin.exports,
+        'handle',
+        failing,
+        RESPONSE_BUFFER_BYTES,
+        '{}'
+      )
+    ).to.throw(/handle returned -1, which does not ask for more than/)
+    expect(calls).to.equal(1)
+    expect(plugin.liveAllocations()).to.equal(0)
+  })
+
   it('rejects an export that still does not fit after growing', () => {
     let size = RESPONSE_BUFFER_BYTES
     const plugin = fakeBufferAbiPlugin(() => {
