@@ -6,6 +6,7 @@
  */
 
 import Debug from 'debug'
+import { callBufferAbi, RESPONSE_BUFFER_BYTES } from '../utils/buffer-abi'
 import { WasmResourceProvider, WasmPluginInstance } from '../types'
 
 const debug = Debug('signalk:wasm:resource-provider')
@@ -42,39 +43,13 @@ export function callWasmResourceHandler(
         return null
       }
 
-      const requestBytes = Buffer.from(requestJson, 'utf8')
-      const requestPtr = rawExports.allocate(requestBytes.length)
-      const responseMaxLen = 65536 // 64KB response buffer
-      const responsePtr = rawExports.allocate(responseMaxLen)
-
-      // Write request to WASM memory
-      const memory = rawExports.memory as WebAssembly.Memory
-      const memView = new Uint8Array(memory.buffer)
-      memView.set(requestBytes, requestPtr)
-
-      // Call handler: (request_ptr, request_len, response_ptr, response_max_len) -> written_len
-      const writtenLen = rawExports[handlerName](
-        requestPtr,
-        requestBytes.length,
-        responsePtr,
-        responseMaxLen
+      return callBufferAbi(
+        rawExports,
+        handlerName,
+        rawExports[handlerName],
+        RESPONSE_BUFFER_BYTES,
+        requestJson
       )
-
-      // Read response from WASM memory
-      const responseBytes = new Uint8Array(
-        memory.buffer,
-        responsePtr,
-        writtenLen
-      )
-      const responseJson = new TextDecoder('utf-8').decode(responseBytes)
-
-      // Deallocate buffers
-      if (typeof rawExports.deallocate === 'function') {
-        rawExports.deallocate(requestPtr, requestBytes.length)
-        rawExports.deallocate(responsePtr, responseMaxLen)
-      }
-
-      return responseJson
     }
 
     debug(
