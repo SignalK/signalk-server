@@ -1,6 +1,10 @@
 import { Response } from 'express'
 import { writeBaseDeltasFile, writeSettingsFile } from '../../config/config'
-import { GnssConfigPayload, GnssSensorsPayload } from './schemas'
+import {
+  DepthSensorsPayload,
+  GnssConfigPayload,
+  GnssSensorsPayload
+} from './schemas'
 import { SensorsApplication } from './index'
 
 // Apply a gnssSensors config change to settings.json and the base-delta
@@ -162,5 +166,47 @@ function runApplyGnssSensorsAtomic(
         })
       }
     )
+  })
+}
+
+// Save the depth transducer positions to settings.json, restoring the
+// previous rows in memory when the write fails. `next === undefined` clears
+// them (DELETE). Unlike the GNSS rows there are no legacy base-delta entries
+// to sweep, so settings.json is the only file written.
+export function applyDepthSensors(
+  app: SensorsApplication,
+  next: DepthSensorsPayload | undefined,
+  res: Response
+): void {
+  const settings = app.config.settings
+  const hadDepthSensors = Object.prototype.hasOwnProperty.call(
+    settings,
+    'depthSensors'
+  )
+  const previous = settings.depthSensors
+  if (next === undefined) {
+    delete settings.depthSensors
+  } else {
+    settings.depthSensors = next
+  }
+  writeSettingsFile(app, settings, (err: unknown) => {
+    if (err) {
+      if (hadDepthSensors) {
+        settings.depthSensors = previous
+      } else {
+        delete settings.depthSensors
+      }
+      res.status(500).send('Unable to save depthSensors in settings file')
+      return
+    }
+    try {
+      app.emit('serverevent', {
+        type: 'DEPTH_SENSORS',
+        data: { sensors: next ?? [] }
+      })
+    } catch (emitErr) {
+      console.error('DEPTH_SENSORS listener error:', emitErr)
+    }
+    res.json({ result: 'ok' })
   })
 }

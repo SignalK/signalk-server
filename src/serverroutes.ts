@@ -2207,6 +2207,19 @@ module.exports = function (
     }
   )
 
+  // Read-only users see the depth transducer card on the Preferences page;
+  // the same $source refs are already readable in the data model.
+  app.securityStrategy.addAdminWriteMiddleware(
+    `${SERVERROUTESPREFIX}/depthSources`
+  )
+
+  app.get(
+    `${SERVERROUTESPREFIX}/depthSources`,
+    (req: Request, res: Response) => {
+      res.json(app.deltaCache.getActiveDepthSources())
+    }
+  )
+
   app.post(`${SERVERROUTESPREFIX}/debug`, (req: Request, res: Response) => {
     if (!app.logging.enableDebug(req.body.value)) {
       res.status(400).send('invalid debug value')
