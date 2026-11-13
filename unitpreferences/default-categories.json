@@ -256,8 +256,8 @@
         "electrical.displays.*.*.brightness"
       ]
     },
-    "energy": {
-      "siUnit": "J",
+    "charge": {
+      "siUnit": "C",
       "paths": [
         "electrical.batteries.*.capacity.remaining",
         "electrical.batteries.*.capacity.nominal"
