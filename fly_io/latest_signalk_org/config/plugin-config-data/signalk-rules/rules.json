@@ -1,0 +1,99 @@
+{
+  "version": 1,
+  "rules": [
+    {
+      "id": "lights-under-engine",
+      "name": "Navigation, stern and steaming lights when motoring at night",
+      "enabled": true,
+      "dryRun": false,
+      "combinator": "all",
+      "conditions": [
+        { "type": "numeric", "path": "navigation.speedOverGround", "operator": "gt", "threshold": 0.514, "clearThreshold": 0.257 },
+        { "type": "sun", "during": "night" },
+        { "type": "string", "path": "propulsion.main.state", "equals": "started" }
+      ],
+      "actions": [
+        { "type": "setSwitch", "path": "electrical.switches.bank.10.1.state" },
+        { "type": "setSwitch", "path": "electrical.switches.bank.10.2.state" },
+        { "type": "setSwitch", "path": "electrical.switches.bank.10.3.state" }
+      ],
+      "options": { "holdTrueSeconds": 10, "holdFalseSeconds": 10 }
+    },
+    {
+      "id": "tricolour-under-sail",
+      "name": "Tricolour when sailing at night",
+      "enabled": true,
+      "dryRun": false,
+      "combinator": "all",
+      "conditions": [
+        { "type": "numeric", "path": "navigation.speedOverGround", "operator": "gt", "threshold": 0.514, "clearThreshold": 0.257 },
+        { "type": "sun", "during": "night" },
+        { "type": "string", "path": "propulsion.main.state", "equals": "started", "negate": true }
+      ],
+      "actions": [
+        { "type": "setSwitch", "path": "electrical.switches.bank.10.4.state" }
+      ],
+      "options": { "holdTrueSeconds": 10, "holdFalseSeconds": 10 }
+    },
+    {
+      "id": "anchor-light-at-anchor",
+      "name": "Anchor light when lying still at night",
+      "enabled": true,
+      "dryRun": false,
+      "combinator": "all",
+      "conditions": [
+        { "type": "numeric", "path": "navigation.speedOverGround", "operator": "lt", "threshold": 0.257, "clearThreshold": 0.514 },
+        { "type": "sun", "during": "night" }
+      ],
+      "actions": [
+        { "type": "setSwitch", "path": "electrical.switches.bank.10.5.state" }
+      ],
+      "options": { "holdTrueSeconds": 300, "holdFalseSeconds": 60 }
+    },
+    {
+      "id": "tricolour-excludes-deck-lights",
+      "name": "Tricolour switches the deck-level running lights off",
+      "enabled": true,
+      "dryRun": false,
+      "combinator": "all",
+      "conditions": [
+        { "type": "switch", "path": "electrical.switches.bank.10.4.state", "equals": 1 }
+      ],
+      "actions": [
+        { "type": "setSwitch", "path": "electrical.switches.bank.10.1.state", "onValue": 0, "keepOn": true },
+        { "type": "setSwitch", "path": "electrical.switches.bank.10.2.state", "onValue": 0, "keepOn": true },
+        { "type": "setSwitch", "path": "electrical.switches.bank.10.3.state", "onValue": 0, "keepOn": true }
+      ],
+      "options": {}
+    },
+    {
+      "id": "deck-lights-exclude-tricolour",
+      "name": "Navigation lights switch the tricolour off",
+      "enabled": true,
+      "dryRun": false,
+      "combinator": "all",
+      "conditions": [
+        { "type": "switch", "path": "electrical.switches.bank.10.1.state", "equals": 1 }
+      ],
+      "actions": [
+        { "type": "setSwitch", "path": "electrical.switches.bank.10.4.state", "onValue": 0, "keepOn": true }
+      ],
+      "options": {}
+    },
+    {
+      "id": "steaming-needs-running-lights",
+      "name": "Steaming light switches the navigation and stern lights on",
+      "enabled": true,
+      "dryRun": false,
+      "combinator": "all",
+      "conditions": [
+        { "type": "switch", "path": "electrical.switches.bank.10.3.state", "equals": 1 }
+      ],
+      "actions": [
+        { "type": "setSwitch", "path": "electrical.switches.bank.10.1.state", "keepOn": true },
+        { "type": "setSwitch", "path": "electrical.switches.bank.10.2.state", "keepOn": true }
+      ],
+      "options": {}
+    }
+  ]
+}

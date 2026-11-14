@@ -1,0 +1,93 @@
+name: Deploy latest.signalk.org
+
+# The asset build takes long, so it runs apart from the release: after each
+# release, and on demand to try demo changes against a released server.
+on:
+  workflow_run:
+    workflows:
+      - Release - build & publish modules and server, build & publish docker containers
+    types:
+      - completed
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Signal K server release to deploy, e.g. v2.36.0'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+# A run waits for the ones before it, so a manual run of a version that turns
+# out to be unpublished cannot cancel a release's deploy, and queue: max keeps
+# every waiting run instead of only the newest.
+concurrency:
+  group: deploy-latest-demo
+  cancel-in-progress: false
+  queue: max
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    # A manual release run has a branch, not a release tag. The release's
+    # conclusion is not checked: a later job, such as the demo.signalk.org
+    # deploy, can fail after the server image was published.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      startsWith(github.event.workflow_run.head_branch, 'v')
+    steps:
+      - name: Pick the server version
+        id: vars
+        env:
+          VERSION: ${{ inputs.version || github.event.workflow_run.head_branch }}
+          # the first release with read-only plugin routes, through which
+          # visitors open the radar GUI; it also honours
+          # DISABLE_SECURITY_ACTIVATION, which keeps them from creating an admin
+          MIN_VERSION: v2.31.0
+        run: |
+          if ! [[ "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]]; then
+            echo "::error::'$VERSION' is not a release tag"
+            exit 1
+          fi
+          core="${VERSION%%-*}"
+          oldest=$(printf '%s\n' "$MIN_VERSION" "$core" | sort -V | head -n 1)
+          if [[ "$oldest" != "$MIN_VERSION" || ( "$core" == "$MIN_VERSION" && "$VERSION" != "$core" ) ]]; then
+            echo "::error::$VERSION predates $MIN_VERSION, which the demo needs for read-only radar access and a locked security activation"
+            exit 1
+          fi
+          echo "tag=$VERSION" >> "$GITHUB_OUTPUT"
+      - name: Check the server image is published
+        env:
+          TAG: ${{ steps.vars.outputs.tag }}
+        run: |
+          if ! docker manifest inspect "signalk/signalk-server:$TAG" > /dev/null; then
+            echo "::error::signalk/signalk-server:$TAG is not on Docker Hub"
+            exit 1
+          fi
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # the release's own demo config; a manual run takes the branch it runs on
+          ref: ${{ github.event.workflow_run.head_sha || github.ref }}
+          persist-credentials: false
+      - name: Setup flyctl
+        uses: superfly/flyctl-actions/setup-flyctl@ed8efb33836e8b2096c7fd3ba1c8afe303ebbff1 # 1.6
+      - name: Setup Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - name: Test the demo director plugin
+        working-directory: ./fly_io/latest_signalk_org/demo-director
+        run: npm install --no-package-lock --no-audit --no-fund && npm test
+      - name: Build the demo plugin, charts and tidal data
+        working-directory: ./fly_io/latest_signalk_org
+        run: node build-assets.ts "$TAG"
+        env:
+          TAG: ${{ steps.vars.outputs.tag }}
+      - name: Deploy latest.signalk.org at fly.io
+        working-directory: ./fly_io/latest_signalk_org
+        run: flyctl deploy --remote-only --build-arg SK_VERSION="$TAG"
+        env:
+          TAG: ${{ steps.vars.outputs.tag }}
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}

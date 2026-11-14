@@ -1,0 +1,23 @@
+{
+  "name": "signalk-demo-director",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Keeps the Signal K showcase boat under way on an endless route between Harlingen and Vlieland, and lets visitors take the helm",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "test": "node --test"
+  },
+  "keywords": [
+    "signalk-node-server-plugin",
+    "signalk-webapp"
+  ],
+  "license": "Apache-2.0",
+  "dependencies": {
+    "magvar": "2.2.0"
+  },
+  "signalk": {
+    "displayName": "Take the helm",
+    "appIcon": "helm.svg"
+  }
+}

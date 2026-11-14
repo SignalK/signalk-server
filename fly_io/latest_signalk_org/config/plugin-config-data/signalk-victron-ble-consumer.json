@@ -1,0 +1,42 @@
+{
+  "enabled": true,
+  "configuration": {
+    "devices": [
+      {
+        "id": "bimini",
+        "name": "Solar bimini",
+        "mac": "F4:3A:91:2C:7E:01",
+        "advertisementKey": "5f1c0a9e7b3d4c6a8e2f1b0d9c7a5e3f",
+        "enabled": true
+      },
+      {
+        "id": "deckPort",
+        "name": "Solar deck port",
+        "mac": "F4:3A:91:2C:7E:02",
+        "advertisementKey": "8b2e6d4f0a1c3e5b7d9f2a4c6e8b0d1f",
+        "enabled": true
+      },
+      {
+        "id": "deckStarboard",
+        "name": "Solar deck starboard",
+        "mac": "F4:3A:91:2C:7E:03",
+        "advertisementKey": "c3a5e7092b4d6f81a3c5e7092b4d6f81",
+        "enabled": true
+      },
+      {
+        "id": "orionThruster",
+        "name": "Orion to thruster",
+        "mac": "E2:6B:14:9D:50:11",
+        "advertisementKey": "0d2f4b6a8c1e3a5c7e9b0d2f4a6c8e1b",
+        "enabled": true
+      },
+      {
+        "id": "orionStarter",
+        "name": "Orion to starter",
+        "mac": "E2:6B:14:9D:50:12",
+        "advertisementKey": "7e9c1a3b5d7f9e2c4a6b8d0f1e3c5a7b",
+        "enabled": true
+      }
+    ]
+  }
+}

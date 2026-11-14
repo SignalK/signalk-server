@@ -1,0 +1,157 @@
+{
+  "units": {
+    "speed": "kn",
+    "useServerPrefs": true
+  },
+  "map": {
+    "zoomLevel": 14,
+    "center": [
+      5.33147,
+      53.19058
+    ],
+    "s57Options": {
+      "otherLayers": [
+        "OBSTRN",
+        "UWTROC",
+        "WRECKS",
+        "DEPCNT",
+        "RIVERS",
+        "LAKARE"
+      ]
+    }
+  },
+  "ui": {
+    "mapMove": true
+  },
+  "selections": {
+    "charts": [
+      "wadden-coastline",
+      "Waddenzee"
+    ],
+    "chartOrder": [
+      "openstreetmap",
+      "eox-cloudless",
+      "emodnet-european-depths",
+      "openwaters-seamap",
+      "openseamap",
+      "wadden-coastline",
+      "Waddenzee"
+    ],
+    "resourceSets": {
+      "restricted-areas": [
+        "restricted-areas-anchoring",
+        "restricted-areas-entry"
+      ]
+    },
+    "tidalCurrentsEnabled": true
+  },
+  "vessels": {
+    "aisShowTrack": true,
+    "aisTrackLength": 24
+  },
+  "plotterExtensions": {
+    "widgets": [
+      {
+        "instanceId": "demo-polar-performance",
+        "extension": "signalk-history-widgets",
+        "widget": "polar-performance",
+        "anchor": "br",
+        "col": 1,
+        "row": 1
+      },
+      {
+        "instanceId": "demo-battery",
+        "extension": "signalk-history-widgets",
+        "widget": "battery-small",
+        "anchor": "br",
+        "col": 0,
+        "row": 1
+      },
+      {
+        "instanceId": "demo-fuel",
+        "extension": "signalk-history-widgets",
+        "widget": "tank-small",
+        "anchor": "bl",
+        "col": 3,
+        "row": 1,
+        "minScreen": "tablet"
+      },
+      {
+        "instanceId": "demo-fresh-water",
+        "extension": "signalk-history-widgets",
+        "widget": "tank-small",
+        "anchor": "bl",
+        "col": 2,
+        "row": 1,
+        "minScreen": "tablet"
+      },
+      {
+        "instanceId": "demo-twa",
+        "extension": "signalk-history-widgets",
+        "widget": "strip",
+        "anchor": "br",
+        "col": 2,
+        "row": 0,
+        "minScreen": "tablet"
+      },
+      {
+        "instanceId": "demo-tws",
+        "extension": "signalk-history-widgets",
+        "widget": "strip",
+        "anchor": "br",
+        "col": 3,
+        "row": 0,
+        "minScreen": "tablet"
+      },
+      {
+        "instanceId": "demo-tides",
+        "extension": "signalk-tides",
+        "widget": "tides",
+        "anchor": "bl",
+        "col": 0,
+        "row": 1,
+        "minScreen": "tablet"
+      }
+    ],
+    "state": {
+      "signalk-history-widgets": {
+        "instances": {
+          "demo-battery": {
+            "path": "electrical.batteries.house.capacity.stateOfCharge",
+            "style": "flat",
+            "label": "House"
+          },
+          "demo-fuel": {
+            "path": "tanks.fuel.0.currentLevel",
+            "style": "flat",
+            "label": "Diesel"
+          },
+          "demo-fresh-water": {
+            "path": "tanks.freshWater.0.currentLevel",
+            "style": "flat",
+            "label": "Fresh water"
+          },
+          "demo-twa": {
+            "path": "environment.wind.angleTrueWater",
+            "span": 30,
+            "spanUnit": "min"
+          },
+          "demo-tws": {
+            "path": "environment.wind.speedTrue",
+            "span": 30,
+            "spanUnit": "min"
+          }
+        }
+      }
+    }
+  },
+  "resources": {
+    "paths": [
+      "restricted-areas"
+    ]
+  },
+  "display": {
+    "panelOpacity": 0.85,
+    "saveToServer": false
+  }
+}

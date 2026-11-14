@@ -1,0 +1,68 @@
+{
+  "enabled": true,
+  "configuration": {
+    "iframeMode": "keep-alive",
+    "showNightModeButton": true,
+    "showFullscreenButton": false,
+    "showExitButton": false,
+    "tourDismissed": true,
+    "apps": [
+      {
+        "enabled": true,
+        "autostart": true,
+        "url": "/@signalk/freeboard-sk/?zoom=14&movemap=1",
+        "label": "Freeboard-SK",
+        "icon": "/@signalk/freeboard-sk/assets/icons/icon-72x72.png",
+        "color": ""
+      },
+      {
+        "enabled": true,
+        "autostart": false,
+        "url": "/@marineyachtradar/signalk-plugin/",
+        "label": "Radar",
+        "icon": "/@marineyachtradar/signalk-plugin/assets/mayara_logo.png",
+        "color": ""
+      },
+      {
+        "enabled": true,
+        "autostart": false,
+        "url": "/@halos-org/skip/",
+        "label": "Skip",
+        "icon": "/@halos-org/skip/assets/icon-72x72.png",
+        "color": ""
+      },
+      {
+        "enabled": true,
+        "autostart": false,
+        "url": "/signalk-alert-center/",
+        "label": "Alert Center",
+        "icon": "/signalk-alert-center/icon-192.png",
+        "color": ""
+      },
+      {
+        "enabled": true,
+        "autostart": false,
+        "url": "/signalk-rules/",
+        "label": "Rules",
+        "icon": "/signalk-rules/icon.svg",
+        "color": ""
+      },
+      {
+        "enabled": true,
+        "autostart": false,
+        "url": "/signalk-charts-provider-simple/",
+        "label": "Charts",
+        "icon": "/signalk-charts-provider-simple/assets/charts_logo.png",
+        "color": ""
+      },
+      {
+        "enabled": true,
+        "autostart": false,
+        "url": "/admin/#/webapps",
+        "label": "More",
+        "icon": "/@signalk/app-dock/icon-more.svg",
+        "color": ""
+      }
+    ]
+  }
+}

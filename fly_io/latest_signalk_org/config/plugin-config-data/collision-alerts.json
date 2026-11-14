@@ -1,0 +1,18 @@
+{
+  "enabled": true,
+  "configuration": {
+    "preset": "custom",
+    "customZones": [
+      {
+        "level": "warn",
+        "cpa": 370,
+        "tcpa": 360
+      },
+      {
+        "level": "alarm",
+        "cpa": 185,
+        "tcpa": 180
+      }
+    ]
+  }
+}
