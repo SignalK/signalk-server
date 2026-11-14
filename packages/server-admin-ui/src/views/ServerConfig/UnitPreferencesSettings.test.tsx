@@ -89,3 +89,17 @@ describe('UnitPreferencesSettings without admin rights', () => {
     expect(select.disabled).toBe(true)
   })
 })
+
+describe('UnitPreferencesSettings', () => {
+  it('shows an active preset that no longer exists as missing', () => {
+    useStore.setState({
+      unitPrefsLoaded: true,
+      activePreset: 'deleted-preset',
+      loginStatus: { status: 'notLoggedIn', authenticationRequired: true }
+    })
+    render(<UnitPreferencesSettings />)
+    expect(
+      screen.getByDisplayValue('deleted-preset (missing)')
+    ).toBeInTheDocument()
+  })
+})
