@@ -37,7 +37,11 @@ import { getDiscoveryDocument } from './discovery'
 import { buildAuthorizationUrl } from './authorization'
 import { exchangeAuthorizationCode, fetchUserinfo } from './token-exchange'
 import { validateIdToken } from './id-token-validation'
-import { mapGroupsToPermission } from './permission-mapping'
+import {
+  matchIdentityList,
+  PermissionGrant,
+  resolveUserPermission
+} from './permission-mapping'
 
 const debug = createDebug('signalk-server:oidc-auth')
 const skAuthPrefix = '/signalk/v1/auth'
@@ -62,7 +66,9 @@ function arraysEqualIgnoringOrder(
  *
  * Security considerations:
  * - Validates that userinfo sub matches ID token sub (OIDC Core spec requirement)
- * - Only merges safe claims (email, name, preferred_username, groups)
+ * - Only merges safe claims (email, email_verified, name, preferred_username, groups)
+ * - Merges email_verified only together with email, so a verified flag from
+ *   the ID token is never attached to a different address from userinfo
  * - Does NOT allow userinfo to overwrite security-critical claims (sub, iss, aud, nonce)
  *
  * @param idTokenClaims The validated claims from the ID token
@@ -85,12 +91,20 @@ export function validateAndMergeUserinfoClaims(
 
   // Only merge specific safe claims - don't allow userinfo to overwrite
   // security-critical claims like sub, iss, aud, nonce, etc.
-  const safeClaims = ['email', 'name', 'preferred_username', groupsAttribute]
+  const safeClaims = ['name', 'preferred_username', groupsAttribute]
 
   for (const claim of safeClaims) {
     if (userinfoClaims[claim] !== undefined) {
       idTokenClaims[claim] = userinfoClaims[claim]
     }
+  }
+
+  // email_verified describes the address it arrived with, so the pair is
+  // replaced as a unit: a userinfo email without a verification flag must
+  // not inherit the ID token's email_verified for a different address.
+  if (userinfoClaims.email !== undefined) {
+    idTokenClaims.email = userinfoClaims.email
+    idTokenClaims.email_verified = userinfoClaims.email_verified
   }
 }
 
@@ -153,8 +167,9 @@ function isSafeRelativeUrl(url: unknown): url is string {
  * a new user if auto-creation is enabled.
  *
  * For existing users, permissions are recalculated on each login based on
- * current group memberships. This allows permission changes to take effect
- * when group assignments change in the identity provider.
+ * current group memberships and identity allowlists. This allows permission
+ * changes to take effect when group assignments change in the identity
+ * provider or the allowlists are edited.
  */
 export async function findOrCreateOIDCUser(
   userInfo: OIDCUserInfo,
@@ -163,8 +178,9 @@ export async function findOrCreateOIDCUser(
 ): Promise<ExternalUser | null> {
   const issuer = oidcConfig.issuer
 
-  // Calculate permission based on user's groups
-  const mappedPermission = mapGroupsToPermission(userInfo.groups, oidcConfig)
+  // Calculate permission based on user's groups and identity allowlists
+  const grant = resolveUserPermission(userInfo, oidcConfig)
+  const mappedPermission = grant.permission
 
   // Build OIDC metadata to store with user
   const oidcMetadata = {
@@ -214,11 +230,15 @@ export async function findOrCreateOIDCUser(
       }
     }
 
+    logPermissionGrant(userInfo.sub, grant)
     return user
   }
 
-  // User not found - check if auto-creation is enabled
-  if (!oidcConfig.autoCreateUsers) {
+  // User not found - check if auto-creation is enabled.
+  // Users on an identity allowlist are explicitly preconfigured, so they
+  // may still be created - otherwise a server with auto-creation disabled
+  // could never admit the admin named in its own configuration.
+  if (!oidcConfig.autoCreateUsers && !matchIdentityList(userInfo, oidcConfig)) {
     debug('OIDC: user not found and auto-creation disabled')
     return null
   }
@@ -252,7 +272,25 @@ export async function findOrCreateOIDCUser(
     throw err
   }
 
+  logPermissionGrant(userInfo.sub, grant)
   return newUser
+}
+
+/**
+ * Log, once per login, which rule granted the user's permission. Logs the
+ * claim type that matched, never the claim value, so email addresses stay
+ * out of the default log.
+ */
+function logPermissionGrant(sub: string, grant: PermissionGrant): void {
+  const rule =
+    grant.source === 'identity list'
+      ? `identity list (claim: ${grant.identityClaim})`
+      : grant.source === 'group'
+        ? 'group'
+        : 'default permission'
+  console.log(
+    `OIDC: login for subject ${sub} granted ${grant.permission} by ${rule}`
+  )
 }
 
 /**
@@ -421,6 +459,10 @@ export function registerOIDCRoutes(
         const userInfo: OIDCUserInfo = {
           sub: claims.sub as string,
           email: claims.email as string | undefined,
+          emailVerified:
+            typeof claims.email_verified === 'boolean'
+              ? claims.email_verified
+              : undefined,
           name: claims.name as string | undefined,
           preferredUsername: claims.preferred_username as string | undefined,
           groups
