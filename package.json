@@ -138,7 +138,7 @@
     "undici": "^7.28.0",
     "unified": "^11.0.5",
     "unzipper": "^0.12.3",
-    "uuid": "^8.3.2",
+    "uuid": "^14.0.3",
     "ws": "^8.17.0"
   },
   "optionalDependencies": {
