@@ -17,6 +17,7 @@ import {
   usePresets,
   useStore
 } from '../../store'
+import UnitPreferencesLoadNotice from '../../components/UnitPreferencesLoadNotice'
 
 type UploadStatus = 'uploading' | 'success' | 'duplicate' | 'error' | null
 
@@ -272,6 +273,7 @@ const UnitPreferencesSettings: React.FC = () => {
         <FontAwesomeIcon icon={faSliders} /> <strong>Unit Preferences</strong>
       </Card.Header>
       <Card.Body>
+        <UnitPreferencesLoadNotice />
         <Form.Group as={Row} className="mb-3">
           <Col md={2}>
             <Form.Label>Display Units</Form.Label>
