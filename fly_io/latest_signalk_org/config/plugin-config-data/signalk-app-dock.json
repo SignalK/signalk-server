@@ -50,9 +50,9 @@
       {
         "enabled": true,
         "autostart": false,
-        "url": "/signalk-demo-director/",
-        "label": "Take the helm",
-        "icon": "/signalk-demo-director/helm.svg",
+        "url": "/plugins/signalk-charts-provider-simple/",
+        "label": "Charts",
+        "icon": "/signalk-charts-provider-simple/assets/charts_logo.png",
         "color": ""
       },
       {
