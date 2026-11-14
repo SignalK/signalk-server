@@ -6,6 +6,7 @@ import Meta, {
   CategorySelect,
   saveMeta,
   normalizeMetaForSave,
+  UnitSelect,
   UpdateContractSelect,
   Zones
 } from './Meta'
@@ -246,6 +247,21 @@ describe('Zones', () => {
   })
 })
 
+describe('UnitSelect', () => {
+  const unitSelect = (value: string) => {
+    render(<UnitSelect disabled={false} value={value} setValue={() => {}} />)
+    return screen.getByRole('combobox')
+  }
+
+  it('shows no unit when the path has none', () => {
+    expect(unitSelect('')).toHaveDisplayValue('-- No unit --')
+  })
+
+  it('shows a unit that is not in the list', () => {
+    expect(unitSelect('%')).toHaveDisplayValue('%')
+  })
+})
+
 describe('UpdateContractSelect', () => {
   const renderContract = (
     value: unknown,
@@ -304,6 +320,12 @@ describe('UpdateContractSelect', () => {
 })
 
 describe('normalizeMetaForSave', () => {
+  it('drops an empty unit', () => {
+    expect(normalizeMetaForSave({ description: 'x', units: '' })).to.deep.equal(
+      { description: 'x' }
+    )
+  })
+
   it('drops a contract the user never chose', () => {
     // Add Field seeds '' — saving without touching the select must not
     // persist that as the contract.
