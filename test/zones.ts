@@ -1,7 +1,13 @@
 import type { Delta, Notification, Path, Zone } from '@signalk/server-api'
 import { ALARM_METHOD, ALARM_STATE, hasValues } from '@signalk/server-api'
 import { expect } from 'chai'
-import { getMethod, Zones } from '../dist/zones.js'
+import { metadataRegistry, removeMetadataFields } from '@signalk/path-metadata'
+import {
+  defaultZoneMessage,
+  getMethod,
+  zoneIndexOf,
+  Zones
+} from '../dist/zones.js'
 import * as Bacon from 'baconjs'
 
 interface MockStreambundle {
@@ -349,28 +355,169 @@ describe('Zones', () => {
         value: { zones }
       })
 
-      // Value exactly at upper boundary should not be included
+      // Value exactly at upper boundary should be included
       valueStream.push(20)
       expect(deltas.length).to.equal(1)
       const update0 = deltas[0].updates[0]
       if (hasValues(update0)) {
         expect(asNotification(update0.values[0].value).state).to.equal(
-          ALARM_STATE.normal
+          ALARM_STATE.warn
         )
       }
 
       // Reset
       deltas.length = 0
 
-      // Value just below upper boundary should be included
-      valueStream.push(19.99)
+      // Value just above upper boundary should not be included
+      valueStream.push(20.01)
       expect(deltas.length).to.equal(1)
       const update1 = deltas[0].updates[0]
       if (hasValues(update1)) {
         expect(asNotification(update1.values[0].value).state).to.equal(
-          ALARM_STATE.warn
+          ALARM_STATE.normal
         )
       }
+    })
+  })
+
+  describe('default message', () => {
+    const zoneWithoutMessage = (lower?: number, upper?: number): Zone => ({
+      lower,
+      upper,
+      state: ALARM_STATE.alert,
+      message: ''
+    })
+
+    const PATH = 'tanks.freshWater.0.currentLevel' as Path
+
+    afterEach(() => metadataRegistry.reset())
+
+    // the display name as the server keeps it, merged from any meta update
+    const setDisplayName = (displayName: unknown) =>
+      metadataRegistry.addMetaData('vessels.self', PATH, { displayName })
+
+    const watch = () => {
+      const mockBus = new Bacon.Bus()
+      const valueStream = new Bacon.Bus()
+      const mockStreambundle: MockStreambundle = {
+        getSelfMetaBus: () => mockBus,
+        getSelfStream: (_path: Path) => valueStream
+      }
+      const deltas: Delta[] = []
+      new Zones(mockStreambundle as never, (delta: Delta) => deltas.push(delta))
+      mockBus.push({
+        path: PATH,
+        value: { zones: [zoneWithoutMessage(0.08, 0.2)] }
+      })
+      // leave the zone and enter it again, so a message is written each time
+      return (value = 0.1) => {
+        valueStream.push(0.3)
+        valueStream.push(value)
+        const update = deltas[deltas.length - 1].updates[0]
+        return hasValues(update)
+          ? asNotification(update.values[0].value).message
+          : undefined
+      }
+    }
+
+    it('names the value by its display name', () => {
+      setDisplayName('Fresh water')
+      expect(watch()()).to.equal('Fresh water between 0.08 and 0.2')
+    })
+
+    it('names the value by its path without a display name', () => {
+      const byPath = `${PATH} between 0.08 and 0.2`
+      const enter = watch()
+      expect(enter()).to.equal(byPath)
+      setDisplayName('')
+      expect(enter()).to.equal(byPath)
+      setDisplayName(null)
+      expect(enter()).to.equal(byPath)
+    })
+
+    it('follows a display name set, changed or removed apart from the zones', () => {
+      const enter = watch()
+
+      setDisplayName('Fresh water')
+      expect(enter()).to.equal('Fresh water between 0.08 and 0.2')
+
+      setDisplayName('Fresh water port')
+      expect(enter()).to.equal('Fresh water port between 0.08 and 0.2')
+
+      removeMetadataFields(`vessels.self.${PATH}`, ['displayName'])
+      expect(enter()).to.equal(`${PATH} between 0.08 and 0.2`)
+    })
+
+    it('states an open or a single-value range as such', () => {
+      expect(defaultZoneMessage('Bilge', zoneWithoutMessage(1, 1))).to.equal(
+        'Bilge at 1'
+      )
+      expect(
+        defaultZoneMessage('Voltage', zoneWithoutMessage(14.4, undefined))
+      ).to.equal('Voltage at or above 14.4')
+      expect(
+        defaultZoneMessage('Voltage', zoneWithoutMessage(undefined, 11.8))
+      ).to.equal('Voltage at or below 11.8')
+      expect(
+        defaultZoneMessage('Voltage', zoneWithoutMessage(undefined, undefined))
+      ).to.equal('Voltage')
+    })
+  })
+
+  describe('zoneIndexOf', () => {
+    const zone = (lower?: number, upper?: number): Zone => ({
+      lower,
+      upper,
+      state: ALARM_STATE.warn,
+      message: ''
+    })
+
+    it('gives a value where two zones meet to the zone that starts there', () => {
+      const zones = [zone(0, 10), zone(10, 20)]
+
+      expect(zoneIndexOf(zones, 10)).to.equal(1)
+      expect(zoneIndexOf([...zones].reverse(), 10)).to.equal(0)
+    })
+
+    it('includes the upper limit of the topmost zone', () => {
+      // a tank level zone up to 100 %
+      expect(zoneIndexOf([zone(0.2, 1)], 1)).to.equal(0)
+    })
+
+    it('matches a zone whose limits are the same value', () => {
+      // a switch or bilge sensor that is 1 when on
+      const zones = [zone(1, 1)]
+
+      expect(zoneIndexOf(zones, 1)).to.equal(0)
+      expect(zoneIndexOf(zones, 0)).to.equal(-1)
+    })
+
+    it('gives a value to a single-value zone next to a zone ending there', () => {
+      expect(zoneIndexOf([zone(0, 1), zone(1, 1)], 1)).to.equal(1)
+    })
+
+    it('gives a value two zones hold alike to the one listed first', () => {
+      expect(zoneIndexOf([zone(0, 0), zone(0, 0.1)], 0)).to.equal(0)
+      expect(zoneIndexOf([zone(0, 0.1), zone(0, 0)], 0)).to.equal(0)
+    })
+
+    it('gives a value at an upper limit to a zone holding it below its own', () => {
+      expect(zoneIndexOf([zone(5, 10), zone(0, 100)], 10)).to.equal(1)
+    })
+
+    it('never matches a zone whose lower limit is above its upper one', () => {
+      expect(zoneIndexOf([zone(-400, -1000)], -400)).to.equal(-1)
+      expect(zoneIndexOf([zone(-400, -1000)], -1000)).to.equal(-1)
+    })
+
+    it('takes a missing limit as open', () => {
+      expect(zoneIndexOf([zone(undefined, 5)], -1e9)).to.equal(0)
+      expect(zoneIndexOf([zone(5, undefined)], 1e9)).to.equal(0)
+    })
+
+    it('puts no value that is not a number in a zone', () => {
+      expect(zoneIndexOf([zone(0, 1)], null)).to.equal(-1)
+      expect(zoneIndexOf([zone(0, 1)], 'x')).to.equal(-1)
     })
   })
 })

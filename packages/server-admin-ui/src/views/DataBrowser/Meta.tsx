@@ -1371,6 +1371,17 @@ const ZoneRow: React.FC<ZoneProps> = ({
           )}
         </Col>
       </Row>
+      {typeof lower === 'number' &&
+        typeof upper === 'number' &&
+        lower > upper && (
+          <Form.Text
+            className="text-danger"
+            style={{ fontSize: '0.75rem' }}
+            role="alert"
+          >
+            This zone never matches: its lower limit is above its upper limit.
+          </Form.Text>
+        )}
     </div>
   )
 }

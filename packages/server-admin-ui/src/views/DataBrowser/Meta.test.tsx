@@ -10,6 +10,9 @@ import Meta, {
   Zones
 } from './Meta'
 import type { PresetDetails, UnitDefinitions } from '../../utils/unitConversion'
+import type { ComponentProps } from 'react'
+
+type ZoneValue = ComponentProps<typeof Zones>['zones'][number]
 
 const DEFINITIONS: UnitDefinitions = {
   'm/s': {
@@ -219,10 +222,10 @@ describe('CategorySelect', () => {
   })
 })
 
-const renderZones = (targetUnit?: string) =>
+const renderZones = (targetUnit?: string, zones: ZoneValue[] = []) =>
   render(
     <Zones
-      zones={[]}
+      zones={zones}
       isEditing={true}
       setZones={() => {}}
       idPrefix="test"
@@ -243,6 +246,22 @@ describe('Zones', () => {
   it('edits thresholds in the preset unit when there is no override', () => {
     renderZones()
     expect(screen.getByLabelText('Zone unit')).toHaveValue('kn')
+  })
+
+  it('flags a zone whose lower limit is above its upper one', () => {
+    renderZones('m/s', [
+      { lower: -400, upper: -1000, state: 'alarm', message: 'Current high' }
+    ])
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      /This zone never matches/
+    )
+  })
+
+  it('does not flag a zone for a single value', () => {
+    renderZones('m/s', [
+      { lower: 1, upper: 1, state: 'alarm', message: 'Bilge pump on' }
+    ])
+    expect(screen.queryByText(/This zone never matches/)).toBeNull()
   })
 })
 
