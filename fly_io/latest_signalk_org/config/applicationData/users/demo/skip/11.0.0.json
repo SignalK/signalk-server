@@ -1,0 +1,1467 @@
+{
+  "default": {
+    "app": {
+      "configVersion": 25,
+      "autoNightMode": true,
+      "redNightMode": false,
+      "nightModeBrightness": 0.27,
+      "notificationConfig": {
+        "disableNotifications": false,
+        "menuGrouping": true,
+        "security": {
+          "disableSecurity": true
+        },
+        "devices": {
+          "disableDevices": false,
+          "showNormalState": false,
+          "showNominalState": false
+        },
+        "sound": {
+          "disableSound": false,
+          "playConnectionSound": false,
+          "muteNormal": true,
+          "muteNominal": true,
+          "muteWarn": true,
+          "muteAlert": false,
+          "muteAlarm": false,
+          "muteEmergency": false
+        }
+      },
+      "browserTabTitle": "Skip",
+      "pinToolbar": true
+    },
+    "theme": {
+      "themeName": "dark-theme"
+    },
+    "dashboards": [
+      {
+        "id": "d4b00959-cbaa-50c2-b4ba-797b866a062b",
+        "name": "Boat",
+        "icon": "dashboard-anchored-boat",
+        "configuration": [
+          {
+            "x": 0,
+            "y": 0,
+            "w": 24,
+            "h": 24,
+            "minW": 1,
+            "minH": 1,
+            "id": "555b2afe-f8b8-53b9-96a9-b5c00a72a49e",
+            "selector": "widget-host2",
+            "input": {
+              "widgetProperties": {
+                "type": "widget-iframe",
+                "uuid": "555b2afe-f8b8-53b9-96a9-b5c00a72a49e",
+                "config": {
+                  "widgetUrl": "/signalk-demo-boat-systems/",
+                  "allowInput": true
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "id": "ad538032-cbff-52e8-abdf-9fc3a257d397",
+        "name": "Switches",
+        "icon": "dashboard-switchboard",
+        "configuration": [
+          {
+            "x": 0,
+            "y": 0,
+            "w": 8,
+            "h": 14,
+            "minW": 1,
+            "minH": 1,
+            "id": "771f778d-a898-55a6-be7c-69adc6d8cf38",
+            "selector": "widget-host2",
+            "input": {
+              "widgetProperties": {
+                "type": "widget-boolean-switch",
+                "uuid": "771f778d-a898-55a6-be7c-69adc6d8cf38",
+                "config": {
+                  "displayName": "Running lights",
+                  "showLabel": true,
+                  "filterSelfPaths": true,
+                  "paths": [
+                    {
+                      "description": "Navigation",
+                      "path": "self.electrical.switches.bank.10.1.state",
+                      "pathID": "e0e95bef-b9a2-5fc3-b453-534a32faf440",
+                      "source": "default",
+                      "pathType": "number",
+                      "isPathConfigurable": true,
+                      "showPathSkUnitsFilter": false,
+                      "pathSkUnitsFilter": null,
+                      "convertUnitTo": "unitless",
+                      "supportsPut": true
+                    },
+                    {
+                      "description": "Stern",
+                      "path": "self.electrical.switches.bank.10.2.state",
+                      "pathID": "0e584974-ae60-5ec4-8629-ffb6467a1d16",
+                      "source": "default",
+                      "pathType": "number",
+                      "isPathConfigurable": true,
+                      "showPathSkUnitsFilter": false,
+                      "pathSkUnitsFilter": null,
+                      "convertUnitTo": "unitless",
+                      "supportsPut": true
+                    },
+                    {
+                      "description": "Steaming",
+                      "path": "self.electrical.switches.bank.10.3.state",
+                      "pathID": "29a0dc7f-e9ab-5adc-8524-7957fcb06370",
+                      "source": "default",
+                      "pathType": "number",
+                      "isPathConfigurable": true,
+                      "showPathSkUnitsFilter": false,
+                      "pathSkUnitsFilter": null,
+                      "convertUnitTo": "unitless",
+                      "supportsPut": true
+                    },
+                    {
+                      "description": "Tricolour",
+                      "path": "self.electrical.switches.bank.10.4.state",
+                      "pathID": "f5d96d7e-344b-5674-a7a1-8483dc04be71",
+                      "source": "default",
+                      "pathType": "number",
+                      "isPathConfigurable": true,
+                      "showPathSkUnitsFilter": false,
+                      "pathSkUnitsFilter": null,
+                      "convertUnitTo": "unitless",
+                      "supportsPut": true
+                    },
+                    {
+                      "description": "Anchor",
+                      "path": "self.electrical.switches.bank.10.5.state",
+                      "pathID": "0aa86612-4103-565a-a1f8-305bfbc23ef5",
+                      "source": "default",
+                      "pathType": "number",
+                      "isPathConfigurable": true,
+                      "showPathSkUnitsFilter": false,
+                      "pathSkUnitsFilter": null,
+                      "convertUnitTo": "unitless",
+                      "supportsPut": true
+                    },
+                    {
+                      "description": "Deck light",
+                      "path": "self.electrical.switches.bank.10.6.state",
+                      "pathID": "219370a6-648e-58d6-9b55-222e044e09da",
+                      "source": "default",
+                      "pathType": "number",
+                      "isPathConfigurable": true,
+                      "showPathSkUnitsFilter": false,
+                      "pathSkUnitsFilter": null,
+                      "convertUnitTo": "unitless",
+                      "supportsPut": true
+                    }
+                  ],
+                  "enableTimeout": false,
+                  "dataTimeout": 5,
+                  "updateInterval": 1000,
+                  "color": "contrast",
+                  "zonesOnlyPaths": false,
+                  "putEnable": true,
+                  "putMomentary": false,
+                  "multiChildCtrls": [
+                    {
+                      "ctrlLabel": "Navigation",
+                      "type": "1",
+                      "pathID": "e0e95bef-b9a2-5fc3-b453-534a32faf440",
+                      "color": "yellow",
+                      "isNumeric": true,
+                      "value": null
+                    },
+                    {
+                      "ctrlLabel": "Stern",
+                      "type": "1",
+                      "pathID": "0e584974-ae60-5ec4-8629-ffb6467a1d16",
+                      "color": "yellow",
+                      "isNumeric": true,
+                      "value": null
+                    },
+                    {
+                      "ctrlLabel": "Steaming",
+                      "type": "1",
+                      "pathID": "29a0dc7f-e9ab-5adc-8524-7957fcb06370",
+                      "color": "yellow",
+                      "isNumeric": true,
+                      "value": null
+                    },
+                    {
+                      "ctrlLabel": "Tricolour",
+                      "type": "1",
+                      "pathID": "f5d96d7e-344b-5674-a7a1-8483dc04be71",
+                      "color": "yellow",
+                      "isNumeric": true,
+                      "value": null
+                    },
+                    {
+                      "ctrlLabel": "Anchor",
+                      "type": "1",
+                      "pathID": "0aa86612-4103-565a-a1f8-305bfbc23ef5",
+                      "color": "yellow",
+                      "isNumeric": true,
+                      "value": null
+                    },
+                    {
+                      "ctrlLabel": "Deck light",
+                      "type": "1",
+                      "pathID": "219370a6-648e-58d6-9b55-222e044e09da",
+                      "color": "yellow",
+                      "isNumeric": true,
+                      "value": null
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "x": 8,
+            "y": 0,
+            "w": 8,
+            "h": 14,
+            "minW": 1,
+            "minH": 1,
+            "id": "8846ca08-60cb-557a-88a4-9b36e7f7296a",
+            "selector": "widget-host2",
+            "input": {
+              "widgetProperties": {
+                "type": "widget-boolean-switch",
+                "uuid": "8846ca08-60cb-557a-88a4-9b36e7f7296a",
+                "config": {
+                  "displayName": "Cabin",
+                  "showLabel": true,
+                  "filterSelfPaths": true,
+                  "paths": [
+                    {
+                      "description": "Saloon lights",
+                      "path": "self.electrical.switches.bank.13.6.state",
+                      "pathID": "5e8be78b-a860-5cfe-ac08-238799710daa",
+                      "source": "default",
+                      "pathType": "number",
+                      "isPathConfigurable": true,
+                      "showPathSkUnitsFilter": false,
+                      "pathSkUnitsFilter": null,
+                      "convertUnitTo": "unitless",
+                      "supportsPut": true
+                    },
+                    {
+                      "description": "Cabin lights",
+                      "path": "self.electrical.switches.bank.13.7.state",
+                      "pathID": "7474200d-7026-599f-a241-26e4ab73be72",
+                      "source": "default",
+                      "pathType": "number",
+                      "isPathConfigurable": true,
+                      "showPathSkUnitsFilter": false,
+                      "pathSkUnitsFilter": null,
+                      "convertUnitTo": "unitless",
+                      "supportsPut": true
+                    },
+                    {
+                      "description": "Instruments",
+                      "path": "self.electrical.switches.bank.13.8.state",
+                      "pathID": "c34c5165-d6ad-5e0e-880a-c21ccc5ae8fc",
+                      "source": "default",
+                      "pathType": "number",
+                      "isPathConfigurable": true,
+                      "showPathSkUnitsFilter": false,
+                      "pathSkUnitsFilter": null,
+                      "convertUnitTo": "unitless",
+                      "supportsPut": true
+                    },
+                    {
+                      "description": "Fridge",
+                      "path": "self.electrical.switches.bank.13.4.state",
+                      "pathID": "78b10b7f-e811-5a8e-a6c0-1d754a49dd22",
+                      "source": "default",
+                      "pathType": "number",
+                      "isPathConfigurable": true,
+                      "showPathSkUnitsFilter": false,
+                      "pathSkUnitsFilter": null,
+                      "convertUnitTo": "unitless",
+                      "supportsPut": true
+                    },
+                    {
+                      "description": "Freezer",
+                      "path": "self.electrical.switches.bank.13.5.state",
+                      "pathID": "2882636c-7d57-5736-bbf6-5323e8a97f25",
+                      "source": "default",
+                      "pathType": "number",
+                      "isPathConfigurable": true,
+                      "showPathSkUnitsFilter": false,
+                      "pathSkUnitsFilter": null,
+                      "convertUnitTo": "unitless",
+                      "supportsPut": true
+                    }
+                  ],
+                  "enableTimeout": false,
+                  "dataTimeout": 5,
+                  "updateInterval": 1000,
+                  "color": "contrast",
+                  "zonesOnlyPaths": false,
+                  "putEnable": true,
+                  "putMomentary": false,
+                  "multiChildCtrls": [
+                    {
+                      "ctrlLabel": "Saloon lights",
+                      "type": "1",
+                      "pathID": "5e8be78b-a860-5cfe-ac08-238799710daa",
+                      "color": "orange",
+                      "isNumeric": true,
+                      "value": null
+                    },
+                    {
+                      "ctrlLabel": "Cabin lights",
+                      "type": "1",
+                      "pathID": "7474200d-7026-599f-a241-26e4ab73be72",
+                      "color": "orange",
+                      "isNumeric": true,
+                      "value": null
+                    },
+                    {
+                      "ctrlLabel": "Instruments",
+                      "type": "1",
+                      "pathID": "c34c5165-d6ad-5e0e-880a-c21ccc5ae8fc",
+                      "color": "orange",
+                      "isNumeric": true,
+                      "value": null
+                    },
+                    {
+                      "ctrlLabel": "Fridge",
+                      "type": "1",
+                      "pathID": "78b10b7f-e811-5a8e-a6c0-1d754a49dd22",
+                      "color": "orange",
+                      "isNumeric": true,
+                      "value": null
+                    },
+                    {
+                      "ctrlLabel": "Freezer",
+                      "type": "1",
+                      "pathID": "2882636c-7d57-5736-bbf6-5323e8a97f25",
+                      "color": "orange",
+                      "isNumeric": true,
+                      "value": null
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "x": 16,
+            "y": 0,
+            "w": 8,
+            "h": 14,
+            "minW": 1,
+            "minH": 1,
+            "id": "72d06f5a-75b1-5619-b653-c949c11dcd2a",
+            "selector": "widget-host2",
+            "input": {
+              "widgetProperties": {
+                "type": "widget-boolean-switch",
+                "uuid": "72d06f5a-75b1-5619-b653-c949c11dcd2a",
+                "config": {
+                  "displayName": "Pumps and thruster",
+                  "showLabel": true,
+                  "filterSelfPaths": true,
+                  "paths": [
+                    {
+                      "description": "Bow thruster",
+                      "path": "self.electrical.switches.bank.13.1.state",
+                      "pathID": "3100b3ca-99e0-5281-b349-378cbc893954",
+                      "source": "default",
+                      "pathType": "number",
+                      "isPathConfigurable": true,
+                      "showPathSkUnitsFilter": false,
+                      "pathSkUnitsFilter": null,
+                      "convertUnitTo": "unitless",
+                      "supportsPut": true
+                    },
+                    {
+                      "description": "Water pump",
+                      "path": "self.electrical.switches.bank.13.2.state",
+                      "pathID": "03eef57b-f3af-5909-baff-6defbfd551cb",
+                      "source": "default",
+                      "pathType": "number",
+                      "isPathConfigurable": true,
+                      "showPathSkUnitsFilter": false,
+                      "pathSkUnitsFilter": null,
+                      "convertUnitTo": "unitless",
+                      "supportsPut": true
+                    },
+                    {
+                      "description": "Bilge pump",
+                      "path": "self.electrical.switches.bank.13.3.state",
+                      "pathID": "d6fe96eb-8642-58eb-b1d6-6ccedecf51ab",
+                      "source": "default",
+                      "pathType": "number",
+                      "isPathConfigurable": true,
+                      "showPathSkUnitsFilter": false,
+                      "pathSkUnitsFilter": null,
+                      "convertUnitTo": "unitless",
+                      "supportsPut": true
+                    },
+                    {
+                      "description": "Deck wash pump",
+                      "path": "self.electrical.switches.bank.11.6.state",
+                      "pathID": "dd51642b-474e-5e3f-b378-8e28df18847e",
+                      "source": "default",
+                      "pathType": "number",
+                      "isPathConfigurable": true,
+                      "showPathSkUnitsFilter": false,
+                      "pathSkUnitsFilter": null,
+                      "convertUnitTo": "unitless",
+                      "supportsPut": true
+                    },
+                    {
+                      "description": "Fuel transfer",
+                      "path": "self.electrical.switches.bank.11.4.state",
+                      "pathID": "6235ec3c-c1ae-5e99-a5a0-95c29ecf2d9e",
+                      "source": "default",
+                      "pathType": "number",
+                      "isPathConfigurable": true,
+                      "showPathSkUnitsFilter": false,
+                      "pathSkUnitsFilter": null,
+                      "convertUnitTo": "unitless",
+                      "supportsPut": true
+                    }
+                  ],
+                  "enableTimeout": false,
+                  "dataTimeout": 5,
+                  "updateInterval": 1000,
+                  "color": "contrast",
+                  "zonesOnlyPaths": false,
+                  "putEnable": true,
+                  "putMomentary": false,
+                  "multiChildCtrls": [
+                    {
+                      "ctrlLabel": "Bow thruster",
+                      "type": "1",
+                      "pathID": "3100b3ca-99e0-5281-b349-378cbc893954",
+                      "color": "blue",
+                      "isNumeric": true,
+                      "value": null
+                    },
+                    {
+                      "ctrlLabel": "Water pump",
+                      "type": "1",
+                      "pathID": "03eef57b-f3af-5909-baff-6defbfd551cb",
+                      "color": "blue",
+                      "isNumeric": true,
+                      "value": null
+                    },
+                    {
+                      "ctrlLabel": "Bilge pump",
+                      "type": "1",
+                      "pathID": "d6fe96eb-8642-58eb-b1d6-6ccedecf51ab",
+                      "color": "blue",
+                      "isNumeric": true,
+                      "value": null
+                    },
+                    {
+                      "ctrlLabel": "Deck wash pump",
+                      "type": "1",
+                      "pathID": "dd51642b-474e-5e3f-b378-8e28df18847e",
+                      "color": "blue",
+                      "isNumeric": true,
+                      "value": null
+                    },
+                    {
+                      "ctrlLabel": "Fuel transfer",
+                      "type": "1",
+                      "pathID": "6235ec3c-c1ae-5e99-a5a0-95c29ecf2d9e",
+                      "color": "blue",
+                      "isNumeric": true,
+                      "value": null
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "x": 0,
+            "y": 14,
+            "w": 5,
+            "h": 5,
+            "minW": 1,
+            "minH": 1,
+            "id": "1c71caf9-9ceb-5dea-9eb8-afbefc0e1bf7",
+            "selector": "widget-host2",
+            "input": {
+              "widgetProperties": {
+                "type": "widget-simple-linear",
+                "uuid": "1c71caf9-9ceb-5dea-9eb8-afbefc0e1bf7",
+                "config": {
+                  "supportAutomaticHistoricalSeries": true,
+                  "displayName": "Water port",
+                  "filterSelfPaths": true,
+                  "paths": {
+                    "gaugePath": {
+                      "description": "Numeric Data",
+                      "path": "self.tanks.freshWater.0.currentLevel",
+                      "source": "default",
+                      "pathType": "number",
+                      "isPathConfigurable": true,
+                      "showPathSkUnitsFilter": true,
+                      "pathSkUnitsFilter": null,
+                      "convertUnitTo": "percent"
+                    }
+                  },
+                  "displayScale": {
+                    "lower": 0,
+                    "upper": 1,
+                    "type": "linear"
+                  },
+                  "gauge": {
+                    "type": "simpleLinear",
+                    "unitLabelFormat": "full"
+                  },
+                  "numInt": 1,
+                  "numDecimal": 0,
+                  "ignoreZones": false,
+                  "color": "blue",
+                  "updateInterval": 1000,
+                  "enableTimeout": false,
+                  "dataTimeout": 5
+                }
+              }
+            }
+          },
+          {
+            "x": 5,
+            "y": 14,
+            "w": 5,
+            "h": 5,
+            "minW": 1,
+            "minH": 1,
+            "id": "d9ffe77e-6de5-541f-87d1-1cfe5f5a9af9",
+            "selector": "widget-host2",
+            "input": {
+              "widgetProperties": {
+                "type": "widget-simple-linear",
+                "uuid": "d9ffe77e-6de5-541f-87d1-1cfe5f5a9af9",
+                "config": {
+                  "supportAutomaticHistoricalSeries": true,
+                  "displayName": "Water stbd",
+                  "filterSelfPaths": true,
+                  "paths": {
+                    "gaugePath": {
+                      "description": "Numeric Data",
+                      "path": "self.tanks.freshWater.1.currentLevel",
+                      "source": "default",
+                      "pathType": "number",
+                      "isPathConfigurable": true,
+                      "showPathSkUnitsFilter": true,
+                      "pathSkUnitsFilter": null,
+                      "convertUnitTo": "percent"
+                    }
+                  },
+                  "displayScale": {
+                    "lower": 0,
+                    "upper": 1,
+                    "type": "linear"
+                  },
+                  "gauge": {
+                    "type": "simpleLinear",
+                    "unitLabelFormat": "full"
+                  },
+                  "numInt": 1,
+                  "numDecimal": 0,
+                  "ignoreZones": false,
+                  "color": "blue",
+                  "updateInterval": 1000,
+                  "enableTimeout": false,
+                  "dataTimeout": 5
+                }
+              }
+            }
+          },
+          {
+            "x": 10,
+            "y": 14,
+            "w": 5,
+            "h": 5,
+            "minW": 1,
+            "minH": 1,
+            "id": "8606d908-b29c-52b2-8a6a-38b5b60ef0e9",
+            "selector": "widget-host2",
+            "input": {
+              "widgetProperties": {
+                "type": "widget-simple-linear",
+                "uuid": "8606d908-b29c-52b2-8a6a-38b5b60ef0e9",
+                "config": {
+                  "supportAutomaticHistoricalSeries": true,
+                  "displayName": "Diesel port",
+                  "filterSelfPaths": true,
+                  "paths": {
+                    "gaugePath": {
+                      "description": "Numeric Data",
+                      "path": "self.tanks.fuel.0.currentLevel",
+                      "source": "default",
+                      "pathType": "number",
+                      "isPathConfigurable": true,
+                      "showPathSkUnitsFilter": true,
+                      "pathSkUnitsFilter": null,
+                      "convertUnitTo": "percent"
+                    }
+                  },
+                  "displayScale": {
+                    "lower": 0,
+                    "upper": 1,
+                    "type": "linear"
+                  },
+                  "gauge": {
+                    "type": "simpleLinear",
+                    "unitLabelFormat": "full"
+                  },
+                  "numInt": 1,
+                  "numDecimal": 0,
+                  "ignoreZones": false,
+                  "color": "orange",
+                  "updateInterval": 1000,
+                  "enableTimeout": false,
+                  "dataTimeout": 5
+                }
+              }
+            }
+          },
+          {
+            "x": 15,
+            "y": 14,
+            "w": 5,
+            "h": 5,
+            "minW": 1,
+            "minH": 1,
+            "id": "5b411195-74ec-507e-862e-50618998a22b",
+            "selector": "widget-host2",
+            "input": {
+              "widgetProperties": {
+                "type": "widget-simple-linear",
+                "uuid": "5b411195-74ec-507e-862e-50618998a22b",
+                "config": {
+                  "supportAutomaticHistoricalSeries": true,
+                  "displayName": "Diesel stbd",
+                  "filterSelfPaths": true,
+                  "paths": {
+                    "gaugePath": {
+                      "description": "Numeric Data",
+                      "path": "self.tanks.fuel.1.currentLevel",
+                      "source": "default",
+                      "pathType": "number",
+                      "isPathConfigurable": true,
+                      "showPathSkUnitsFilter": true,
+                      "pathSkUnitsFilter": null,
+                      "convertUnitTo": "percent"
+                    }
+                  },
+                  "displayScale": {
+                    "lower": 0,
+                    "upper": 1,
+                    "type": "linear"
+                  },
+                  "gauge": {
+                    "type": "simpleLinear",
+                    "unitLabelFormat": "full"
+                  },
+                  "numInt": 1,
+                  "numDecimal": 0,
+                  "ignoreZones": false,
+                  "color": "orange",
+                  "updateInterval": 1000,
+                  "enableTimeout": false,
+                  "dataTimeout": 5
+                }
+              }
+            }
+          },
+          {
+            "x": 20,
+            "y": 14,
+            "w": 4,
+            "h": 5,
+            "minW": 1,
+            "minH": 1,
+            "id": "40553f4b-f450-5a9a-9832-5c7434839ea2",
+            "selector": "widget-host2",
+            "input": {
+              "widgetProperties": {
+                "type": "widget-simple-linear",
+                "uuid": "40553f4b-f450-5a9a-9832-5c7434839ea2",
+                "config": {
+                  "supportAutomaticHistoricalSeries": true,
+                  "displayName": "Black water",
+                  "filterSelfPaths": true,
+                  "paths": {
+                    "gaugePath": {
+                      "description": "Numeric Data",
+                      "path": "self.tanks.blackWater.0.currentLevel",
+                      "source": "default",
+                      "pathType": "number",
+                      "isPathConfigurable": true,
+                      "showPathSkUnitsFilter": true,
+                      "pathSkUnitsFilter": null,
+                      "convertUnitTo": "percent"
+                    }
+                  },
+                  "displayScale": {
+                    "lower": 0,
+                    "upper": 1,
+                    "type": "linear"
+                  },
+                  "gauge": {
+                    "type": "simpleLinear",
+                    "unitLabelFormat": "full"
+                  },
+                  "numInt": 1,
+                  "numDecimal": 0,
+                  "ignoreZones": false,
+                  "color": "purple",
+                  "updateInterval": 1000,
+                  "enableTimeout": false,
+                  "dataTimeout": 5
+                }
+              }
+            }
+          },
+          {
+            "x": 0,
+            "y": 19,
+            "w": 6,
+            "h": 5,
+            "minW": 1,
+            "minH": 1,
+            "id": "d017baf5-c2c0-5950-9897-59858445f9cb",
+            "selector": "widget-host2",
+            "input": {
+              "widgetProperties": {
+                "type": "widget-numeric",
+                "uuid": "d017baf5-c2c0-5950-9897-59858445f9cb",
+                "config": {
+                  "supportAutomaticHistoricalSeries": true,
+                  "displayName": "Fridge",
+                  "filterSelfPaths": true,
+                  "paths": {
+                    "numericPath": {
+                      "description": "Numeric Data",
+                      "path": "self.environment.inside.refrigerator.temperature",
+                      "source": "default",
+                      "pathType": "number",
+                      "suppressBootstrapNull": true,
+                      "isPathConfigurable": true,
+                      "convertUnitTo": "celsius",
+                      "showPathSkUnitsFilter": true,
+                      "pathSkUnitsFilter": null
+                    }
+                  },
+                  "showMax": false,
+                  "showMin": false,
+                  "numDecimal": 1,
+                  "showMiniChart": false,
+                  "yScaleMin": null,
+                  "yScaleMax": null,
+                  "inverseYAxis": false,
+                  "verticalChart": false,
+                  "color": "green",
+                  "updateInterval": 1000,
+                  "enableTimeout": false,
+                  "dataTimeout": 5,
+                  "ignoreZones": false
+                }
+              }
+            }
+          },
+          {
+            "x": 6,
+            "y": 19,
+            "w": 6,
+            "h": 5,
+            "minW": 1,
+            "minH": 1,
+            "id": "98b6e187-dc64-51b8-a04e-ce08a62a9b6d",
+            "selector": "widget-host2",
+            "input": {
+              "widgetProperties": {
+                "type": "widget-numeric",
+                "uuid": "98b6e187-dc64-51b8-a04e-ce08a62a9b6d",
+                "config": {
+                  "supportAutomaticHistoricalSeries": true,
+                  "displayName": "Freezer",
+                  "filterSelfPaths": true,
+                  "paths": {
+                    "numericPath": {
+                      "description": "Numeric Data",
+                      "path": "self.environment.inside.freezer.temperature",
+                      "source": "default",
+                      "pathType": "number",
+                      "suppressBootstrapNull": true,
+                      "isPathConfigurable": true,
+                      "convertUnitTo": "celsius",
+                      "showPathSkUnitsFilter": true,
+                      "pathSkUnitsFilter": null
+                    }
+                  },
+                  "showMax": false,
+                  "showMin": false,
+                  "numDecimal": 1,
+                  "showMiniChart": false,
+                  "yScaleMin": null,
+                  "yScaleMax": null,
+                  "inverseYAxis": false,
+                  "verticalChart": false,
+                  "color": "blue",
+                  "updateInterval": 1000,
+                  "enableTimeout": false,
+                  "dataTimeout": 5,
+                  "ignoreZones": false
+                }
+              }
+            }
+          },
+          {
+            "x": 12,
+            "y": 19,
+            "w": 6,
+            "h": 5,
+            "minW": 1,
+            "minH": 1,
+            "id": "0a25acfa-bf2c-551d-b2c6-5df54bdb02be",
+            "selector": "widget-host2",
+            "input": {
+              "widgetProperties": {
+                "type": "widget-numeric",
+                "uuid": "0a25acfa-bf2c-551d-b2c6-5df54bdb02be",
+                "config": {
+                  "supportAutomaticHistoricalSeries": true,
+                  "displayName": "Saloon",
+                  "filterSelfPaths": true,
+                  "paths": {
+                    "numericPath": {
+                      "description": "Numeric Data",
+                      "path": "self.environment.inside.saloon.temperature",
+                      "source": "default",
+                      "pathType": "number",
+                      "suppressBootstrapNull": true,
+                      "isPathConfigurable": true,
+                      "convertUnitTo": "celsius",
+                      "showPathSkUnitsFilter": true,
+                      "pathSkUnitsFilter": null
+                    }
+                  },
+                  "showMax": false,
+                  "showMin": false,
+                  "numDecimal": 1,
+                  "showMiniChart": false,
+                  "yScaleMin": null,
+                  "yScaleMax": null,
+                  "inverseYAxis": false,
+                  "verticalChart": false,
+                  "color": "orange",
+                  "updateInterval": 1000,
+                  "enableTimeout": false,
+                  "dataTimeout": 5,
+                  "ignoreZones": false
+                }
+              }
+            }
+          },
+          {
+            "x": 18,
+            "y": 19,
+            "w": 6,
+            "h": 5,
+            "minW": 1,
+            "minH": 1,
+            "id": "c5fecece-a305-510d-a836-b99b8542ee29",
+            "selector": "widget-host2",
+            "input": {
+              "widgetProperties": {
+                "type": "widget-numeric",
+                "uuid": "c5fecece-a305-510d-a836-b99b8542ee29",
+                "config": {
+                  "supportAutomaticHistoricalSeries": true,
+                  "displayName": "Outside air",
+                  "filterSelfPaths": true,
+                  "paths": {
+                    "numericPath": {
+                      "description": "Numeric Data",
+                      "path": "self.environment.outside.temperature",
+                      "source": "default",
+                      "pathType": "number",
+                      "suppressBootstrapNull": true,
+                      "isPathConfigurable": true,
+                      "convertUnitTo": "celsius",
+                      "showPathSkUnitsFilter": true,
+                      "pathSkUnitsFilter": null
+                    }
+                  },
+                  "showMax": false,
+                  "showMin": false,
+                  "numDecimal": 1,
+                  "showMiniChart": false,
+                  "yScaleMin": null,
+                  "yScaleMax": null,
+                  "inverseYAxis": false,
+                  "verticalChart": false,
+                  "color": "yellow",
+                  "updateInterval": 1000,
+                  "enableTimeout": false,
+                  "dataTimeout": 5,
+                  "ignoreZones": false
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "id": "ffeaaa6c-83ef-5488-84ca-6ea64c781a8d",
+        "name": "Energy",
+        "icon": "dashboard-green-energy",
+        "configuration": [
+          {
+            "x": 0,
+            "y": 0,
+            "w": 10,
+            "h": 24,
+            "minW": 1,
+            "minH": 1,
+            "id": "60bf5dc1-5f0a-53c9-b48a-c26cc0e06a91",
+            "selector": "widget-host2",
+            "input": {
+              "widgetProperties": {
+                "type": "widget-bms",
+                "uuid": "60bf5dc1-5f0a-53c9-b48a-c26cc0e06a91",
+                "config": {
+                  "color": "green",
+                  "ignoreZones": false,
+                  "bms": {
+                    "trackedDevices": [],
+                    "optionsById": {}
+                  }
+                }
+              }
+            }
+          },
+          {
+            "x": 10,
+            "y": 0,
+            "w": 7,
+            "h": 24,
+            "minW": 1,
+            "minH": 1,
+            "id": "8a8b24e2-60ce-51ef-8c00-ff7a62f44e84",
+            "selector": "widget-host2",
+            "input": {
+              "widgetProperties": {
+                "type": "widget-solar-charger",
+                "uuid": "8a8b24e2-60ce-51ef-8c00-ff7a62f44e84",
+                "config": {
+                  "color": "yellow",
+                  "ignoreZones": false,
+                  "solarCharger": {
+                    "trackedDevices": [],
+                    "optionsById": {}
+                  }
+                }
+              }
+            }
+          },
+          {
+            "x": 17,
+            "y": 0,
+            "w": 7,
+            "h": 24,
+            "minW": 1,
+            "minH": 1,
+            "id": "8067b46d-7250-5e2c-abac-195f0738e16f",
+            "selector": "widget-host2",
+            "input": {
+              "widgetProperties": {
+                "type": "widget-charger",
+                "uuid": "8067b46d-7250-5e2c-abac-195f0738e16f",
+                "config": {
+                  "color": "blue",
+                  "ignoreZones": false,
+                  "charger": {
+                    "trackedDevices": [],
+                    "optionsById": {}
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "id": "e48a6c20-8f2b-5a47-b04c-d3d64e9df731",
+        "name": "Panel",
+        "icon": "dashboard-panel",
+        "configuration": [
+          {
+            "x": 0,
+            "y": 0,
+            "w": 8,
+            "h": 3,
+            "minW": 1,
+            "minH": 1,
+            "id": "40c7e2dd-8c4b-5e6e-ad6d-97155a9ef5f4",
+            "selector": "widget-host2",
+            "input": {
+              "widgetProperties": {
+                "type": "widget-numeric",
+                "uuid": "40c7e2dd-8c4b-5e6e-ad6d-97155a9ef5f4",
+                "config": {
+                  "supportAutomaticHistoricalSeries": true,
+                  "displayName": "House bank",
+                  "filterSelfPaths": true,
+                  "paths": {
+                    "numericPath": {
+                      "description": "Numeric Data",
+                      "path": "self.electrical.batteries.house.capacity.stateOfCharge",
+                      "source": "default",
+                      "pathType": "number",
+                      "suppressBootstrapNull": true,
+                      "isPathConfigurable": true,
+                      "convertUnitTo": "percent",
+                      "showPathSkUnitsFilter": true,
+                      "pathSkUnitsFilter": null
+                    }
+                  },
+                  "showMax": false,
+                  "showMin": false,
+                  "numDecimal": 0,
+                  "showMiniChart": false,
+                  "yScaleMin": null,
+                  "yScaleMax": null,
+                  "inverseYAxis": false,
+                  "verticalChart": false,
+                  "color": "green",
+                  "updateInterval": 1000,
+                  "enableTimeout": false,
+                  "dataTimeout": 5,
+                  "ignoreZones": false
+                }
+              }
+            }
+          },
+          {
+            "x": 8,
+            "y": 0,
+            "w": 8,
+            "h": 3,
+            "minW": 1,
+            "minH": 1,
+            "id": "dddab735-7f2b-5977-81ea-7768713ca3a6",
+            "selector": "widget-host2",
+            "input": {
+              "widgetProperties": {
+                "type": "widget-numeric",
+                "uuid": "dddab735-7f2b-5977-81ea-7768713ca3a6",
+                "config": {
+                  "supportAutomaticHistoricalSeries": true,
+                  "displayName": "Thruster bank",
+                  "filterSelfPaths": true,
+                  "paths": {
+                    "numericPath": {
+                      "description": "Numeric Data",
+                      "path": "self.electrical.batteries.bowThruster.capacity.stateOfCharge",
+                      "source": "default",
+                      "pathType": "number",
+                      "suppressBootstrapNull": true,
+                      "isPathConfigurable": true,
+                      "convertUnitTo": "percent",
+                      "showPathSkUnitsFilter": true,
+                      "pathSkUnitsFilter": null
+                    }
+                  },
+                  "showMax": false,
+                  "showMin": false,
+                  "numDecimal": 0,
+                  "showMiniChart": false,
+                  "yScaleMin": null,
+                  "yScaleMax": null,
+                  "inverseYAxis": false,
+                  "verticalChart": false,
+                  "color": "blue",
+                  "updateInterval": 1000,
+                  "enableTimeout": false,
+                  "dataTimeout": 5,
+                  "ignoreZones": false
+                }
+              }
+            }
+          },
+          {
+            "x": 16,
+            "y": 0,
+            "w": 8,
+            "h": 3,
+            "minW": 1,
+            "minH": 1,
+            "id": "28208d04-80d4-5411-a026-70f38454a3ed",
+            "selector": "widget-host2",
+            "input": {
+              "widgetProperties": {
+                "type": "widget-numeric",
+                "uuid": "28208d04-80d4-5411-a026-70f38454a3ed",
+                "config": {
+                  "supportAutomaticHistoricalSeries": true,
+                  "displayName": "Starter",
+                  "filterSelfPaths": true,
+                  "paths": {
+                    "numericPath": {
+                      "description": "Numeric Data",
+                      "path": "self.electrical.batteries.starter.voltage",
+                      "source": "default",
+                      "pathType": "number",
+                      "suppressBootstrapNull": true,
+                      "isPathConfigurable": true,
+                      "convertUnitTo": "V",
+                      "showPathSkUnitsFilter": true,
+                      "pathSkUnitsFilter": null
+                    }
+                  },
+                  "showMax": false,
+                  "showMin": false,
+                  "numDecimal": 2,
+                  "showMiniChart": false,
+                  "yScaleMin": null,
+                  "yScaleMax": null,
+                  "inverseYAxis": false,
+                  "verticalChart": false,
+                  "color": "orange",
+                  "updateInterval": 1000,
+                  "enableTimeout": false,
+                  "dataTimeout": 5,
+                  "ignoreZones": false
+                }
+              }
+            }
+          },
+          {
+            "x": 0,
+            "y": 3,
+            "w": 24,
+            "h": 9,
+            "minW": 1,
+            "minH": 1,
+            "id": "38d522af-e7f6-55d4-9834-c63b0146004c",
+            "selector": "widget-host2",
+            "input": {
+              "widgetProperties": {
+                "type": "widget-boolean-switch",
+                "uuid": "38d522af-e7f6-55d4-9834-c63b0146004c",
+                "config": {
+                  "displayName": "Running lights",
+                  "showLabel": true,
+                  "filterSelfPaths": true,
+                  "paths": [
+                    {
+                      "description": "Navigation",
+                      "path": "self.electrical.switches.bank.10.1.state",
+                      "pathID": "5c4595db-7ffb-5b5c-a6b8-0054f3ec377d",
+                      "source": "default",
+                      "pathType": "number",
+                      "isPathConfigurable": true,
+                      "showPathSkUnitsFilter": false,
+                      "pathSkUnitsFilter": null,
+                      "convertUnitTo": "unitless",
+                      "supportsPut": true
+                    },
+                    {
+                      "description": "Stern",
+                      "path": "self.electrical.switches.bank.10.2.state",
+                      "pathID": "4840c0e4-dbbc-56a8-8ffd-7939b8933e5c",
+                      "source": "default",
+                      "pathType": "number",
+                      "isPathConfigurable": true,
+                      "showPathSkUnitsFilter": false,
+                      "pathSkUnitsFilter": null,
+                      "convertUnitTo": "unitless",
+                      "supportsPut": true
+                    },
+                    {
+                      "description": "Steaming",
+                      "path": "self.electrical.switches.bank.10.3.state",
+                      "pathID": "7214c4af-6253-58b7-883d-e49776585060",
+                      "source": "default",
+                      "pathType": "number",
+                      "isPathConfigurable": true,
+                      "showPathSkUnitsFilter": false,
+                      "pathSkUnitsFilter": null,
+                      "convertUnitTo": "unitless",
+                      "supportsPut": true
+                    },
+                    {
+                      "description": "Tricolour",
+                      "path": "self.electrical.switches.bank.10.4.state",
+                      "pathID": "1198b83a-e579-5b98-85e9-9a38330008e2",
+                      "source": "default",
+                      "pathType": "number",
+                      "isPathConfigurable": true,
+                      "showPathSkUnitsFilter": false,
+                      "pathSkUnitsFilter": null,
+                      "convertUnitTo": "unitless",
+                      "supportsPut": true
+                    },
+                    {
+                      "description": "Anchor",
+                      "path": "self.electrical.switches.bank.10.5.state",
+                      "pathID": "c784a993-5325-5260-94f6-37e6bcabe049",
+                      "source": "default",
+                      "pathType": "number",
+                      "isPathConfigurable": true,
+                      "showPathSkUnitsFilter": false,
+                      "pathSkUnitsFilter": null,
+                      "convertUnitTo": "unitless",
+                      "supportsPut": true
+                    },
+                    {
+                      "description": "Deck light",
+                      "path": "self.electrical.switches.bank.10.6.state",
+                      "pathID": "b92997f7-faf9-58b9-a275-050cc0b5fd10",
+                      "source": "default",
+                      "pathType": "number",
+                      "isPathConfigurable": true,
+                      "showPathSkUnitsFilter": false,
+                      "pathSkUnitsFilter": null,
+                      "convertUnitTo": "unitless",
+                      "supportsPut": true
+                    }
+                  ],
+                  "enableTimeout": false,
+                  "dataTimeout": 5,
+                  "updateInterval": 1000,
+                  "color": "contrast",
+                  "zonesOnlyPaths": false,
+                  "putEnable": true,
+                  "putMomentary": false,
+                  "multiChildCtrls": [
+                    {
+                      "ctrlLabel": "Navigation",
+                      "type": "1",
+                      "pathID": "5c4595db-7ffb-5b5c-a6b8-0054f3ec377d",
+                      "color": "yellow",
+                      "isNumeric": true,
+                      "value": null
+                    },
+                    {
+                      "ctrlLabel": "Stern",
+                      "type": "1",
+                      "pathID": "4840c0e4-dbbc-56a8-8ffd-7939b8933e5c",
+                      "color": "yellow",
+                      "isNumeric": true,
+                      "value": null
+                    },
+                    {
+                      "ctrlLabel": "Steaming",
+                      "type": "1",
+                      "pathID": "7214c4af-6253-58b7-883d-e49776585060",
+                      "color": "yellow",
+                      "isNumeric": true,
+                      "value": null
+                    },
+                    {
+                      "ctrlLabel": "Tricolour",
+                      "type": "1",
+                      "pathID": "1198b83a-e579-5b98-85e9-9a38330008e2",
+                      "color": "yellow",
+                      "isNumeric": true,
+                      "value": null
+                    },
+                    {
+                      "ctrlLabel": "Anchor",
+                      "type": "1",
+                      "pathID": "c784a993-5325-5260-94f6-37e6bcabe049",
+                      "color": "yellow",
+                      "isNumeric": true,
+                      "value": null
+                    },
+                    {
+                      "ctrlLabel": "Deck light",
+                      "type": "1",
+                      "pathID": "b92997f7-faf9-58b9-a275-050cc0b5fd10",
+                      "color": "yellow",
+                      "isNumeric": true,
+                      "value": null
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "x": 0,
+            "y": 12,
+            "w": 12,
+            "h": 3,
+            "minW": 1,
+            "minH": 1,
+            "id": "2dcabca8-04d6-5f64-93e0-94da6b673fa8",
+            "selector": "widget-host2",
+            "input": {
+              "widgetProperties": {
+                "type": "widget-numeric",
+                "uuid": "2dcabca8-04d6-5f64-93e0-94da6b673fa8",
+                "config": {
+                  "supportAutomaticHistoricalSeries": true,
+                  "displayName": "Fridge",
+                  "filterSelfPaths": true,
+                  "paths": {
+                    "numericPath": {
+                      "description": "Numeric Data",
+                      "path": "self.environment.inside.refrigerator.temperature",
+                      "source": "default",
+                      "pathType": "number",
+                      "suppressBootstrapNull": true,
+                      "isPathConfigurable": true,
+                      "convertUnitTo": "celsius",
+                      "showPathSkUnitsFilter": true,
+                      "pathSkUnitsFilter": null
+                    }
+                  },
+                  "showMax": false,
+                  "showMin": false,
+                  "numDecimal": 1,
+                  "showMiniChart": false,
+                  "yScaleMin": null,
+                  "yScaleMax": null,
+                  "inverseYAxis": false,
+                  "verticalChart": false,
+                  "color": "green",
+                  "updateInterval": 1000,
+                  "enableTimeout": false,
+                  "dataTimeout": 5,
+                  "ignoreZones": false
+                }
+              }
+            }
+          },
+          {
+            "x": 12,
+            "y": 12,
+            "w": 12,
+            "h": 3,
+            "minW": 1,
+            "minH": 1,
+            "id": "108c3dca-fa35-5ace-a564-9425ebf7f49f",
+            "selector": "widget-host2",
+            "input": {
+              "widgetProperties": {
+                "type": "widget-numeric",
+                "uuid": "108c3dca-fa35-5ace-a564-9425ebf7f49f",
+                "config": {
+                  "supportAutomaticHistoricalSeries": true,
+                  "displayName": "Freezer",
+                  "filterSelfPaths": true,
+                  "paths": {
+                    "numericPath": {
+                      "description": "Numeric Data",
+                      "path": "self.environment.inside.freezer.temperature",
+                      "source": "default",
+                      "pathType": "number",
+                      "suppressBootstrapNull": true,
+                      "isPathConfigurable": true,
+                      "convertUnitTo": "celsius",
+                      "showPathSkUnitsFilter": true,
+                      "pathSkUnitsFilter": null
+                    }
+                  },
+                  "showMax": false,
+                  "showMin": false,
+                  "numDecimal": 1,
+                  "showMiniChart": false,
+                  "yScaleMin": null,
+                  "yScaleMax": null,
+                  "inverseYAxis": false,
+                  "verticalChart": false,
+                  "color": "blue",
+                  "updateInterval": 1000,
+                  "enableTimeout": false,
+                  "dataTimeout": 5,
+                  "ignoreZones": false
+                }
+              }
+            }
+          },
+          {
+            "x": 0,
+            "y": 15,
+            "w": 24,
+            "h": 5,
+            "minW": 1,
+            "minH": 1,
+            "id": "d87a7b86-9d4b-5702-86e3-738cbcbcc8fd",
+            "selector": "widget-host2",
+            "input": {
+              "widgetProperties": {
+                "type": "widget-boolean-switch",
+                "uuid": "d87a7b86-9d4b-5702-86e3-738cbcbcc8fd",
+                "config": {
+                  "displayName": "Quick",
+                  "showLabel": true,
+                  "filterSelfPaths": true,
+                  "paths": [
+                    {
+                      "description": "Bow thruster",
+                      "path": "self.electrical.switches.bank.13.1.state",
+                      "pathID": "3b40bcc5-bdfa-50ab-af19-fc7587679675",
+                      "source": "default",
+                      "pathType": "number",
+                      "isPathConfigurable": true,
+                      "showPathSkUnitsFilter": false,
+                      "pathSkUnitsFilter": null,
+                      "convertUnitTo": "unitless",
+                      "supportsPut": true
+                    },
+                    {
+                      "description": "Deck light",
+                      "path": "self.electrical.switches.bank.10.6.state",
+                      "pathID": "ae6622fe-b796-5d19-aef0-153aef1b84df",
+                      "source": "default",
+                      "pathType": "number",
+                      "isPathConfigurable": true,
+                      "showPathSkUnitsFilter": false,
+                      "pathSkUnitsFilter": null,
+                      "convertUnitTo": "unitless",
+                      "supportsPut": true
+                    }
+                  ],
+                  "enableTimeout": false,
+                  "dataTimeout": 5,
+                  "updateInterval": 1000,
+                  "color": "contrast",
+                  "zonesOnlyPaths": false,
+                  "putEnable": true,
+                  "putMomentary": false,
+                  "multiChildCtrls": [
+                    {
+                      "ctrlLabel": "Bow thruster",
+                      "type": "1",
+                      "pathID": "3b40bcc5-bdfa-50ab-af19-fc7587679675",
+                      "color": "blue",
+                      "isNumeric": true,
+                      "value": null
+                    },
+                    {
+                      "ctrlLabel": "Deck light",
+                      "type": "1",
+                      "pathID": "ae6622fe-b796-5d19-aef0-153aef1b84df",
+                      "color": "blue",
+                      "isNumeric": true,
+                      "value": null
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        ]
+      }
+    ]
+  }
+}
