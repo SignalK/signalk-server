@@ -135,8 +135,12 @@ export function getAvailableUnits(
   if (!unitDefinitions || !siUnit) return []
   const conversions = unitDefinitions[siUnit]?.conversions
   if (!conversions) return []
-  return Object.entries(conversions).map(([unit, conv]) => ({
+  const units = Object.entries(conversions).map(([unit, conv]) => ({
     unit,
     symbol: conv.symbol || unit
   }))
+  // Values are in the SI unit, which not every definition lists
+  return conversions[siUnit]
+    ? units
+    : [{ unit: siUnit, symbol: siUnit }, ...units]
 }
