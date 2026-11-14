@@ -179,6 +179,7 @@ export const AppStoreEntryExtensionSchema = Type.Object(
     installedScreenshotUrls: Type.Optional(Type.Array(Type.String())),
     official: Type.Boolean(),
     deprecated: Type.Boolean(),
+    deprecationMessage: Type.Optional(Type.String()),
     readmeUrl: Type.String(),
     changelogUrl: Type.Optional(Type.String()),
     githubUrl: Type.Optional(Type.String()),
@@ -206,6 +207,7 @@ export const PluginDetailPayloadSchema = Type.Object(
     installedScreenshotUrls: Type.Optional(Type.Array(Type.String())),
     official: Type.Boolean(),
     deprecated: Type.Boolean(),
+    deprecationMessage: Type.Optional(Type.String()),
     // Header-display fields. These exist on list entries too, but the
     // detail page must not depend on the list having been hydrated to
     // render its header (a hard refresh of /apps/store/plugin/:name

@@ -34,6 +34,7 @@ interface DetailPayload {
   installedScreenshotUrls?: string[]
   official: boolean
   deprecated: boolean
+  deprecationMessage?: string
   description?: string
   author?: string
   categories?: string[]
@@ -519,6 +520,13 @@ const DetailView: React.FC = () => {
             <Alert variant="danger" className="mt-4">
               <strong>This plugin is deprecated.</strong> The author no longer
               recommends it for new installations.
+              {detail.deprecationMessage && (
+                <>
+                  {' '}
+                  The author&apos;s note: &ldquo;{detail.deprecationMessage}
+                  &rdquo;
+                </>
+              )}
               {isInstalled && (
                 <>
                   {' '}

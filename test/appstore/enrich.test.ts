@@ -31,6 +31,21 @@ describe('appstore/enrich', () => {
     expect(r.deprecated).to.equal(true)
   })
 
+  it('detects deprecated via the npm deprecation notice', () => {
+    const r = enrichEntry({
+      ...basePkg,
+      deprecated: 'Use @signalk/foo instead'
+    })
+    expect(r.deprecated).to.equal(true)
+    expect(r.deprecationMessage).to.equal('Use @signalk/foo instead')
+  })
+
+  it('ignores an empty npm deprecation notice', () => {
+    const r = enrichEntry({ ...basePkg, deprecated: '  ' })
+    expect(r.deprecated).to.equal(false)
+    expect(r.deprecationMessage).to.equal(undefined)
+  })
+
   it('not deprecated by default', () => {
     const r = enrichEntry(basePkg)
     expect(r.deprecated).to.equal(false)

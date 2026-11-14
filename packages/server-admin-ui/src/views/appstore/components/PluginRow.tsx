@@ -89,7 +89,11 @@ const PluginRow: React.FC<PluginRowProps> = ({
           </Badge>
         )}
         {showDeprecated && (
-          <Badge bg="danger" className="plugin-row__badge">
+          <Badge
+            bg="danger"
+            className="plugin-row__badge"
+            title={app.deprecationMessage}
+          >
             DEPRECATED
           </Badge>
         )}

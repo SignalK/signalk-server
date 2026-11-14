@@ -12,6 +12,7 @@ interface DetailPayload {
   screenshots: string[]
   official: boolean
   deprecated: boolean
+  deprecationMessage?: string
   readme: string
   changelog: string
   requires: Array<{ name: string; installed: boolean; displayName?: string }>
@@ -117,6 +118,21 @@ describe('DetailView', () => {
     renderDetail('signalk-example')
     await waitFor(() => {
       expect(screen.getByText(/plugin is deprecated/i)).toBeDefined()
+    })
+  })
+
+  it('shows the npm deprecation notice in the deprecated banner', async () => {
+    mockFetch(
+      samplePayload({
+        deprecated: true,
+        deprecationMessage: 'Replaced by @signalk/collision-alerts'
+      })
+    )
+    renderDetail('signalk-example')
+    await waitFor(() => {
+      expect(
+        screen.getByText(/Replaced by @signalk\/collision-alerts/)
+      ).toBeDefined()
     })
   })
 

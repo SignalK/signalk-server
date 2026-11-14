@@ -181,7 +181,11 @@ const PluginCard: React.FC<PluginCardProps> = ({
                 </Badge>
               )}
               {showDeprecated && (
-                <Badge bg="danger" className="plugin-card__badge">
+                <Badge
+                  bg="danger"
+                  className="plugin-card__badge"
+                  title={app.deprecationMessage}
+                >
                   DEPRECATED
                 </Badge>
               )}

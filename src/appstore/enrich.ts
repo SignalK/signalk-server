@@ -44,6 +44,8 @@ interface NpmPackageLike {
   repository?: string | { type?: string; url?: string }
   bugs?: string | { url?: string }
   signalk?: unknown
+  // npm's own deprecation notice for this version, set by `npm deprecate`.
+  deprecated?: unknown
 }
 
 function isGithubUrl(url: string | undefined): boolean {
@@ -173,11 +175,18 @@ function resolveAppIcon(
   return defaultResolve(pkg.name, pkg.version, icon, lookup)
 }
 
+function npmDeprecationMessage(pkg: NpmPackageLike): string | undefined {
+  if (typeof pkg.deprecated !== 'string') return undefined
+  const message = pkg.deprecated.trim()
+  return message === '' ? undefined : message
+}
+
 function isDeprecated(
   pkg: NpmPackageLike,
   meta: SignalKPackageMetadata | undefined
 ): boolean {
   if (meta?.deprecated === true) return true
+  if (npmDeprecationMessage(pkg)) return true
   return (pkg.keywords || []).includes(DEPRECATED_KEYWORD)
 }
 
@@ -223,6 +232,7 @@ export function enrichEntry(
     screenshots: screenshots.length > 0 ? screenshots : undefined,
     official,
     deprecated,
+    deprecationMessage: npmDeprecationMessage(pkg),
     readmeUrl: readmeUrlFor(pkg.name, pkg.version),
     changelogUrl: changelogUrlFor(pkg.name, pkg.version),
     githubUrl,

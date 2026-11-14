@@ -62,6 +62,7 @@ export interface PackageSummary {
   screenshots: string[]
   official: boolean
   deprecated: boolean
+  deprecationMessage?: string
   description?: string
   author?: string
   categories?: string[]
@@ -170,6 +171,7 @@ export async function buildPluginDetail(
     screenshots: summary.screenshots,
     official: summary.official,
     deprecated: summary.deprecated,
+    deprecationMessage: summary.deprecationMessage,
     description: summary.description,
     author: summary.author,
     categories: summary.categories,
