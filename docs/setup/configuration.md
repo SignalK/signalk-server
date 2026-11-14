@@ -21,7 +21,7 @@ It is considered good practise to enable security and create an administrator ac
 
 If you ran the `signalk-server-setup` script, security will be enabled and you will be presented with a login screen when accessing the Admin UI.
 
-If the login screen is not displayed, click `Login` _(top right of screen)_ to display the prompt to create a user and password.
+If the login screen is not displayed, click `Enable Security` _(top right of screen)_ to display the prompt to create a user and password.
 
 Alternatively, from the menu select _Security -> Users_ and then:
 
