@@ -29,6 +29,8 @@ export class Zones {
       //send normal notification to clear out any previous notification
       //when zones field is reset
       if (value.zones === null) {
+        this.unsubscribesForPaths[path]?.()
+        delete this.unsubscribesForPaths[path]
         this.sendNormalDelta(path)
         return
       }
