@@ -41,6 +41,7 @@ export type UnitPreferencesSlice = UnitPreferencesSliceState &
   UnitPreferencesSliceActions
 
 const DEFAULT_PRESETS: PresetInfo[] = [
+  { name: 'nautical-metric', label: 'Nautical (Metric)' },
   { name: 'metric', label: 'Metric (SI)' },
   { name: 'imperial-us', label: 'Imperial (US)' },
   { name: 'imperial-uk', label: 'Imperial (UK)' }

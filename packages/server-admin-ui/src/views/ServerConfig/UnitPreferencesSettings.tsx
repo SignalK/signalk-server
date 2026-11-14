@@ -286,6 +286,9 @@ const UnitPreferencesSettings: React.FC = () => {
                 disabled={!canChoose}
                 style={{ maxWidth: '300px' }}
               >
+                {!presets.some((p) => p.name === activePreset) && (
+                  <option value={activePreset}>{activePreset} (missing)</option>
+                )}
                 <optgroup label="Built-in">
                   {builtInPresets.map((p) => (
                     <option key={p.name} value={p.name}>
