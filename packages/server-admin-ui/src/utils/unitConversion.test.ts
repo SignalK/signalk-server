@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   convertValue,
+  getAvailableUnits,
   type PresetDetails,
   type UnitDefinitions
 } from './unitConversion'
@@ -68,5 +69,15 @@ describe('convertValue', () => {
       value: 10,
       unit: 'm/s'
     })
+  })
+})
+
+describe('getAvailableUnits', () => {
+  it('offers the SI unit even when its definition does not list it', () => {
+    expect(getAvailableUnits('m/s', DEFINITIONS).map((u) => u.unit)).toEqual([
+      'm/s',
+      'kn',
+      'km/h'
+    ])
   })
 })

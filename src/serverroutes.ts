@@ -1396,10 +1396,11 @@ module.exports = function (
       )
     }
 
-    if (newVessel.aisShipType) {
+    const shipType = Number(newVessel.aisShipType)
+    if (shipType) {
       set(data.vessels.self, 'design.aisShipType.value', {
-        name: getAISShipTypeName(newVessel.aisShipType),
-        id: Number(newVessel.aisShipType)
+        name: getAISShipTypeName(shipType),
+        id: shipType
       })
     } else {
       delete self.design.aisShipType
@@ -1492,13 +1493,11 @@ module.exports = function (
         makeNumber(vessel.gpsFromCenter)
       )
     }
+    const shipType = Number(vessel.aisShipType)
     de.setSelfValue(
       'design.aisShipType',
-      !isUndefined(vessel.aisShipType)
-        ? {
-            name: getAISShipTypeName(vessel.aisShipType),
-            id: Number(vessel.aisShipType)
-          }
+      shipType
+        ? { name: getAISShipTypeName(shipType), id: shipType }
         : undefined
     )
     de.setSelfValue(

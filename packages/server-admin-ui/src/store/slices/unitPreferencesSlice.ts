@@ -23,6 +23,7 @@ export interface UnitPreferencesSliceState {
   defaultCategories: DefaultCategories | null
   categories: Record<string, CategoryInfo> | null
   unitPrefsLoaded: boolean
+  unitPrefsFailedLoads: number
 }
 
 export interface UnitPreferencesSliceActions {
@@ -41,88 +42,62 @@ export type UnitPreferencesSlice = UnitPreferencesSliceState &
   UnitPreferencesSliceActions
 
 const DEFAULT_PRESETS: PresetInfo[] = [
+  { name: 'nautical-metric', label: 'Nautical (Metric)' },
   { name: 'metric', label: 'Metric (SI)' },
   { name: 'imperial-us', label: 'Imperial (US)' },
   { name: 'imperial-uk', label: 'Imperial (UK)' }
 ]
 
-async function fetchPresetsFromServer(): Promise<PresetInfo[]> {
-  try {
-    const response = await fetch('/signalk/v1/unitpreferences/presets', {
-      credentials: 'include'
-    })
-    if (response.ok) {
-      const data = await response.json()
-      const presets: PresetInfo[] = []
-      if (data.builtIn) {
-        for (const p of data.builtIn) {
-          presets.push({
-            name: typeof p === 'object' ? p.name : p,
-            label: typeof p === 'object' ? p.displayName || p.name : p,
-            isCustom: false,
-            isBuiltIn: true
-          })
-        }
-      }
-      if (data.custom) {
-        for (const p of data.custom) {
-          presets.push({
-            name: typeof p === 'object' ? p.name : p,
-            label: typeof p === 'object' ? p.displayName || p.name : p,
-            isCustom: true,
-            isBuiltIn: false
-          })
-        }
-      }
-      return presets.length > 0 ? presets : DEFAULT_PRESETS
-    }
-  } catch (e) {
-    console.error('Failed to fetch presets:', e)
+// Trying again doesn't change a client error, such as a 404 with the
+// unitpreferences-api interface switched off, a 401 when not logged in, or
+// a 400 for an invalid preset name. So only other failures throw.
+async function fetchJsonOrNull(url: string) {
+  const response = await fetch(url, { credentials: 'include' })
+  if (response.ok) {
+    return response.json()
   }
-  return DEFAULT_PRESETS
+  if (response.status < 500) {
+    return null
+  }
+  throw new Error(`${url}: ${response.status}`)
 }
 
-async function fetchActivePresetFromServer(): Promise<string> {
-  try {
-    const userResponse = await fetch(
-      '/signalk/v1/applicationData/user/unitpreferences/1.0.0',
-      { credentials: 'include' }
-    )
-    if (userResponse.ok) {
-      const userConfig = await userResponse.json()
-      if (userConfig.activePreset) {
-        return userConfig.activePreset
-      }
+async function fetchPresetsFromServer(): Promise<PresetInfo[]> {
+  const data = await fetchJsonOrNull('/signalk/v1/unitpreferences/presets')
+  const presets: PresetInfo[] = []
+  if (data?.builtIn) {
+    for (const p of data.builtIn) {
+      presets.push({
+        name: typeof p === 'object' ? p.name : p,
+        label: typeof p === 'object' ? p.displayName || p.name : p,
+        isCustom: false,
+        isBuiltIn: true
+      })
     }
-  } catch {}
-
-  try {
-    const response = await fetch('/signalk/v1/unitpreferences/config', {
-      credentials: 'include'
-    })
-    if (response.ok) {
-      const config = await response.json()
-      return config.activePreset || 'nautical-metric'
-    }
-  } catch (e) {
-    console.error('Failed to fetch unit preferences:', e)
   }
-  return 'nautical-metric'
+  if (data?.custom) {
+    for (const p of data.custom) {
+      presets.push({
+        name: typeof p === 'object' ? p.name : p,
+        label: typeof p === 'object' ? p.displayName || p.name : p,
+        isCustom: true,
+        isBuiltIn: false
+      })
+    }
+  }
+  return presets.length > 0 ? presets : DEFAULT_PRESETS
+}
+
+async function fetchUserPresetFromServer(): Promise<string | undefined> {
+  const userConfig = await fetchJsonOrNull(
+    '/signalk/v1/applicationData/user/unitpreferences/1.0.0'
+  )
+  return userConfig?.activePreset
 }
 
 async function fetchServerDefaultPresetFromServer(): Promise<string> {
-  try {
-    const response = await fetch('/signalk/v1/unitpreferences/config', {
-      credentials: 'include'
-    })
-    if (response.ok) {
-      const config = await response.json()
-      return config.activePreset || 'nautical-metric'
-    }
-  } catch (e) {
-    console.error('Failed to fetch server default preset:', e)
-  }
-  return 'nautical-metric'
+  const config = await fetchJsonOrNull('/signalk/v1/unitpreferences/config')
+  return config?.activePreset || 'nautical-metric'
 }
 
 const initialState: UnitPreferencesSliceState = {
@@ -133,7 +108,8 @@ const initialState: UnitPreferencesSliceState = {
   unitDefinitions: null,
   defaultCategories: null,
   categories: null,
-  unitPrefsLoaded: false
+  unitPrefsLoaded: false,
+  unitPrefsFailedLoads: 0
 }
 
 export const createUnitPreferencesSlice: StateCreator<
@@ -145,42 +121,45 @@ export const createUnitPreferencesSlice: StateCreator<
   ...initialState,
 
   fetchUnitPreferences: async () => {
-    const [presets, activePreset, serverDefaultPreset] = await Promise.all([
-      fetchPresetsFromServer(),
-      fetchActivePresetFromServer(),
-      fetchServerDefaultPresetFromServer()
-    ])
-
-    const [definitions, defaultCategories, categories] = await Promise.all([
-      fetch('/signalk/v1/unitpreferences/definitions', {
-        credentials: 'include'
+    try {
+      const [
+        presets,
+        userPreset,
+        serverDefaultPreset,
+        unitDefinitions,
+        defaultCategories,
+        categories
+      ] = await Promise.all([
+        fetchPresetsFromServer(),
+        fetchUserPresetFromServer(),
+        fetchServerDefaultPresetFromServer(),
+        fetchJsonOrNull('/signalk/v1/unitpreferences/definitions'),
+        fetchJsonOrNull('/signalk/v1/unitpreferences/default-categories'),
+        fetchJsonOrNull('/signalk/v1/unitpreferences/categories')
+      ])
+      const activePreset = userPreset || serverDefaultPreset
+      const presetDetails = await fetchJsonOrNull(
+        `/signalk/v1/unitpreferences/presets/${activePreset}`
+      )
+      set({
+        presets,
+        activePreset,
+        serverDefaultPreset,
+        presetDetails,
+        unitDefinitions,
+        defaultCategories: defaultCategories?.categories || null,
+        categories,
+        unitPrefsLoaded: true,
+        unitPrefsFailedLoads: 0
       })
-        .then((r) => (r.ok ? r.json() : null))
-        .catch(() => null),
-      fetch('/signalk/v1/unitpreferences/default-categories', {
-        credentials: 'include'
+    } catch (e) {
+      console.error('Failed to load unit preferences:', e)
+      // Loaded all the same: the pages show what they have, and retry.
+      set({
+        unitPrefsLoaded: true,
+        unitPrefsFailedLoads: get().unitPrefsFailedLoads + 1
       })
-        .then((r) => (r.ok ? r.json() : null))
-        .then((data) => data?.categories || null)
-        .catch(() => null),
-      fetch('/signalk/v1/unitpreferences/categories', {
-        credentials: 'include'
-      })
-        .then((r) => (r.ok ? r.json() : null))
-        .catch(() => null)
-    ])
-
-    set({
-      presets,
-      activePreset,
-      serverDefaultPreset,
-      unitDefinitions: definitions,
-      defaultCategories,
-      categories,
-      unitPrefsLoaded: true
-    })
-
-    await get().fetchPresetDetails(activePreset)
+    }
   },
 
   fetchPresetDetails: async (presetName: string) => {
