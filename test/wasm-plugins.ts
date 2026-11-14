@@ -24,6 +24,7 @@ import {
   getAdminToken
 } from './servertestutilities'
 import type { PluginRoutePermission, SecurityStrategy } from '../src/security'
+import { reloadWasmPlugin } from '../dist/wasm/loader'
 
 interface PluginInfo {
   id: string
@@ -603,6 +604,19 @@ export function plugin_stop(): i32 {
         `${url}/signalk/v1/api/vessels/self/probe/one/meta`
       )
       expect((await metaOne.json()).supportsPut).to.equal(false)
+    })
+
+    it('serves the endpoints of the binary a reload loads', async function () {
+      expect(await reload('two')).to.equal(200)
+      expect(await waitForStatus('build two')).to.equal('build two')
+
+      buildProbe('five')
+      await reloadWasmPlugin(server!.app, packageName)
+
+      const five = await getBuildEndpoint('five')
+      expect(five.status).to.equal(200)
+      expect(await five.text()).to.equal('five')
+      expect((await getBuildEndpoint('two')).status).to.equal(404)
     })
 
     /** Rebuild the probe as `build`, then disable and enable it */
