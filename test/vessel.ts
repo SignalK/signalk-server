@@ -16,6 +16,7 @@ const getVessel = async (host: string) =>
   (await (await fetch(`${host}/skServer/vessel`)).json()) as {
     name?: string
     hullType?: string
+    aisShipType?: number
   }
 
 describe('Vessel base data: hull type (design.hullType)', () => {
@@ -69,5 +70,33 @@ describe('Vessel base data: hull type (design.hullType)', () => {
     expect(getMetadata('vessels.self.design.hullType')?.enum).to.deep.equal(
       HULL_TYPES
     )
+  })
+})
+
+describe('Vessel base data: ship type (design.aisShipType)', () => {
+  it('clears the ship type when empty', async function () {
+    const { host, stop } = await startServer()
+    try {
+      await putVessel(host, { name: 'Cat', aisShipType: '36' })
+      expect((await getVessel(host)).aisShipType).to.equal(36)
+
+      await putVessel(host, { name: 'Cat', aisShipType: '' })
+      expect((await getVessel(host)).aisShipType).to.equal(undefined)
+    } finally {
+      await stop()
+    }
+  })
+
+  it('stores the name with the ship type', async function () {
+    const { host, selfGetJsonV1, stop } = await startServer()
+    try {
+      await putVessel(host, { name: 'Cat', aisShipType: '36' })
+      expect(await selfGetJsonV1('design/aisShipType/value')).to.deep.equal({
+        name: 'Sailing',
+        id: 36
+      })
+    } finally {
+      await stop()
+    }
   })
 })
