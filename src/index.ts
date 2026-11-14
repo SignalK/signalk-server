@@ -83,6 +83,11 @@ const debug = createDebug('signalk-server')
 
 import { migrateSourceRef } from './sourceref-migration'
 import { StreamBundle } from './streambundle'
+import {
+  mountUsageStatisticsApi,
+  startUsageStatistics,
+  UsageStatisticsApp
+} from './usage-statistics'
 
 /**
  * Shallow-clones a delta so that an `unfilteredDelta` consumer mutating a
@@ -182,6 +187,7 @@ class Server {
     startSecurity(app, opts ? opts.securityConfig : null)
 
     require('./serverroutes')(app, saveSecurityConfig, getSecurityConfig)
+    mountUsageStatisticsApi(app)
     require('./put').start(app)
 
     app.signalk = new FullSignalK(app.selfId, app.selfType)
@@ -769,6 +775,9 @@ class Server {
 
         app.apis = await startApis(app)
         await startInterfaces(app)
+        app.intervals.push(
+          startUsageStatistics(app as unknown as UsageStatisticsApp)
+        )
         startMdns(app)
         app.pipedProviders = pipedProviders(app as any)
         app.providers = app.pipedProviders.start()

@@ -87,6 +87,16 @@ describe('Endpoint authentication', function () {
         body: {}
       },
       {
+        method: 'GET',
+        path: '/skServer/settings/usageStatistics',
+        body: {}
+      },
+      {
+        method: 'PUT',
+        path: '/skServer/settings/usageStatistics',
+        body: {}
+      },
+      {
         method: 'PUT',
         path: '/skServer/vessel',
         body: { name: 'TestVessel', mmsi: '123456789' }
