@@ -21,6 +21,55 @@ interface VesselData {
   height?: string
 }
 
+const SHIP_TYPES: [number, string][] = [
+  [20, 'Wing In Ground'],
+  [29, 'Wing In Ground (no other information)'],
+  [30, 'Fishing'],
+  [31, 'Towing'],
+  [32, 'Towing exceeds 200m or wider than 25m'],
+  [33, 'Engaged in dredging or underwater operations'],
+  [34, 'Engaged in diving operations'],
+  [35, 'Engaged in military operations'],
+  [36, 'Sailing'],
+  [37, 'Pleasure'],
+  [40, 'High speed craft'],
+  [41, 'High speed craft carrying dangerous goods'],
+  [42, 'High speed craft hazard cat B'],
+  [43, 'High speed craft hazard cat C'],
+  [44, 'High speed craft hazard cat D'],
+  [49, 'High speed craft (no additional information)'],
+  [50, 'Pilot vessel'],
+  [51, 'SAR'],
+  [52, 'Tug'],
+  [53, 'Port tender'],
+  [54, 'Anti-pollution'],
+  [55, 'Law enforcement'],
+  [56, 'Spare'],
+  [57, 'Spare #2'],
+  [58, 'Medical'],
+  [59, 'RR Resolution No.1'],
+  [60, 'Passenger ship'],
+  [69, 'Passenger ship (no additional information)'],
+  [70, 'Cargo ship'],
+  [71, 'Cargo ship carrying dangerous goods'],
+  [72, 'Cargo ship hazard cat B'],
+  [73, 'Cargo ship hazard cat C'],
+  [74, 'Cargo ship hazard cat D'],
+  [79, 'Cargo ship (no additional information)'],
+  [80, 'Tanker'],
+  [81, 'Tanker carrying dangerous goods'],
+  [82, 'Tanker hazard cat B'],
+  [83, 'Tanker hazard cat C'],
+  [84, 'Tanker hazard cat D'],
+  [89, 'Tanker (no additional information)'],
+  [90, 'Other'],
+  [91, 'Other carrying dangerous goods'],
+  [92, 'Other hazard cat B'],
+  [93, 'Other hazard cat C'],
+  [94, 'Other hazard cat D'],
+  [99, 'Other (no additional information)']
+]
+
 const VesselConfiguration: React.FC = () => {
   const [hasData, setHasData] = useState(false)
   const [vesselData, setVesselData] = useState<VesselData>({})
@@ -166,68 +215,11 @@ const VesselConfiguration: React.FC = () => {
                   value={vesselData.aisShipType || ''}
                   onChange={handleChange}
                 >
-                  <option value="20">Wing In Ground</option>
-                  <option value="29">
-                    Wing In Ground (no other information)
-                  </option>
-                  <option value="30">Fishing</option>
-                  <option value="31">Towing</option>
-                  <option value="32">
-                    Towing exceeds 200m or wider than 25m
-                  </option>
-                  <option value="33">
-                    Engaged in dredging or underwater operations
-                  </option>
-                  <option value="34">Engaged in diving operations</option>
-                  <option value="35">Engaged in military operations</option>
-                  <option value="36">Sailing</option>
-                  <option value="37">Pleasure</option>
-                  <option value="40">High speed craft</option>
-                  <option value="41">
-                    High speed craft carrying dangerous goods
-                  </option>
-                  <option value="42">High speed craft hazard cat B</option>
-                  <option value="43">High speed craft hazard cat C</option>
-                  <option value="44">High speed craft hazard cat D</option>
-                  <option value="49">
-                    High speed craft (no additional information)
-                  </option>
-                  <option value="50">Pilot vessel</option>
-                  <option value="51">SAR</option>
-                  <option value="52">Tug</option>
-                  <option value="53">Port tender</option>
-                  <option value="54">Anti-pollution</option>
-                  <option value="55">Law enforcement</option>
-                  <option value="56">Spare</option>
-                  <option value="57">Spare #2</option>
-                  <option value="58">Medical</option>
-                  <option value="59">RR Resolution No.1</option>
-                  <option value="60">Passenger ship</option>
-                  <option value="69">
-                    Passenger ship (no additional information)
-                  </option>
-                  <option value="70">Cargo ship</option>
-                  <option value="71">
-                    Cargo ship carrying dangerous goods
-                  </option>
-                  <option value="72">Cargo ship hazard cat B</option>
-                  <option value="73">Cargo ship hazard cat C</option>
-                  <option value="74">Cargo ship hazard cat D</option>
-                  <option value="79">
-                    Cargo ship (no additional information)
-                  </option>
-                  <option value="80">Tanker</option>
-                  <option value="81">Tanker carrying dangerous goods</option>
-                  <option value="82">Tanker hazard cat B</option>
-                  <option value="83">Tanker hazard cat C</option>
-                  <option value="84">Tanker hazard cat D</option>
-                  <option value="89">Tanker (no additional information)</option>
-                  <option value="90">Other</option>
-                  <option value="91">Other carrying dangerous goods</option>
-                  <option value="92">Other hazard cat B</option>
-                  <option value="93">Other hazard cat C</option>
-                  <option value="94">Other hazard cat D</option>
-                  <option value="99">Other (no additional information)</option>
+                  {SHIP_TYPES.map(([id, name]) => (
+                    <option key={id} value={id}>
+                      {name}
+                    </option>
+                  ))}
                 </Form.Select>
               </Col>
             </Form.Group>
