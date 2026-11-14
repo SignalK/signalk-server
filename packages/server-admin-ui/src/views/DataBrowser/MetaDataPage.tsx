@@ -9,6 +9,7 @@ import Col from 'react-bootstrap/Col'
 import Form from 'react-bootstrap/Form'
 import Row from 'react-bootstrap/Row'
 import VirtualizedMetaTable from './VirtualizedMetaTable'
+import UnitPreferencesLoadNotice from '../../components/UnitPreferencesLoadNotice'
 import type { PathData } from '../../store'
 import { useStore } from '../../store'
 import { useSignalKData, type SelectOption } from './useSignalKData'
@@ -82,6 +83,7 @@ const MetaDataPage: React.FC = () => {
     <div className="animated fadeIn">
       <Card>
         <Card.Body>
+          <UnitPreferencesLoadNotice />
           <Form
             className="form-horizontal"
             onSubmit={(e) => {
