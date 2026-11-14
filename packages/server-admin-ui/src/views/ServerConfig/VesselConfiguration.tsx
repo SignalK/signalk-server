@@ -47,7 +47,7 @@ const SHIP_TYPES: [number, string][] = [
   [56, 'Spare'],
   [57, 'Spare #2'],
   [58, 'Medical'],
-  [59, 'RR Resolution No.1'],
+  [59, 'RR Resolution No.18'],
   [60, 'Passenger ship'],
   [69, 'Passenger ship (no additional information)'],
   [70, 'Cargo ship'],
