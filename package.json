@@ -134,7 +134,7 @@
     "semver": "^7.8.5",
     "split": "^1.0.1",
     "stat-mode": "^1.0.0",
-    "swagger-ui-express": "^4.6.3",
+    "swagger-ui-express": "^5.0.1",
     "undici": "^7.28.0",
     "unified": "^11.0.5",
     "unzipper": "^0.12.3",
