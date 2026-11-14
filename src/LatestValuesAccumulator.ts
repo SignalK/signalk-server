@@ -35,16 +35,22 @@ export interface BackpressureDelta extends Delta {
  *
  * @param accumulator - Map to store accumulated values, keyed by context:path:$source
  * @param delta - Signal K delta to accumulate
+ * @returns Number of accumulated values replaced by a newer update
  */
 export function accumulateLatestValue(
   accumulator: Map<string, AccumulatedItem>,
   delta: Delta
-): void {
-  if (!delta.updates) return
+): number {
+  let dropped = 0
+  if (!delta.updates) return dropped
   for (const update of delta.updates) {
     if (!hasValues(update)) continue
     for (const pv of update.values) {
       const key = `${delta.context}:${pv.path}:${update.$source || 'unknown'}`
+      // A cache replay re-sends an update that is already accumulated; only
+      // an update with another timestamp means one was lost.
+      const previous = accumulator.get(key)
+      if (previous && previous.timestamp !== update.timestamp) dropped++
       accumulator.set(key, {
         context: delta.context as Context,
         path: pv.path,
@@ -54,6 +60,7 @@ export function accumulateLatestValue(
       })
     }
   }
+  return dropped
 }
 
 /**
@@ -62,12 +69,15 @@ export function accumulateLatestValue(
  *
  * @param accumulator - Map of accumulated values
  * @param duration - How long backpressure was active in milliseconds
- * @returns Array of deltas, one per context, with $backpressure indicator
+ * @param dropped - How many updates were replaced while accumulating
+ * @returns Array of deltas, one per context, with a $backpressure indicator
+ * when updates were dropped
  */
 export function buildFlushDeltas(
   accumulator: Map<string, AccumulatedItem>,
-  duration: number
-): BackpressureDelta[] {
+  duration: number,
+  dropped: number
+): Array<Delta | BackpressureDelta> {
   if (accumulator.size === 0) return []
 
   const countBefore = accumulator.size
@@ -106,18 +116,20 @@ export function buildFlushDeltas(
     }
   }
 
-  const deltas: BackpressureDelta[] = []
+  const deltas: Array<Delta | BackpressureDelta> = []
   for (const [context, bySource] of byContext) {
-    deltas.push({
-      context,
-      updates: Array.from(bySource.values()).flatMap((byTimestamp) =>
-        Array.from(byTimestamp.values())
-      ),
-      $backpressure: {
-        accumulated: countBefore,
-        duration
-      }
-    })
+    const updates = Array.from(bySource.values()).flatMap((byTimestamp) =>
+      Array.from(byTimestamp.values())
+    )
+    deltas.push(
+      dropped > 0
+        ? {
+            context,
+            updates,
+            $backpressure: { accumulated: countBefore, duration }
+          }
+        : { context, updates }
+    )
   }
 
   return deltas
