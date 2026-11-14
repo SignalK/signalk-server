@@ -38,6 +38,7 @@ import {
   UpdateOptions
 } from '../requestResponse'
 import { putPath, deletePath } from '../put'
+import ServerSubscriptionManager from '../subscriptionmanager'
 import { createDebug } from '../debug'
 import { JsonWebTokenError, TokenExpiredError } from 'jsonwebtoken'
 import { startEvents, startServerEvents } from '../events'
@@ -191,7 +192,12 @@ interface SubscriptionManager {
     sourcePolicy?: string,
     excludeSources?: string[]
   ) => void
-  unsubscribe: (msg: WsMessage, unsubscribes: Array<() => void>) => void
+  unsubscribe: (
+    msg: WsMessage,
+    unsubscribes: Array<() => void>,
+    sourcePolicy?: string,
+    excludeSources?: string[]
+  ) => void
 }
 
 interface HistoryProvider {
@@ -625,6 +631,9 @@ function wsInterface(app: WsApp): WsApi {
           }
 
           const unsubscribes: Array<() => void> = []
+          // One callback for all of the connection's subscribe messages, so
+          // the subscription manager recognises a row subscribed again.
+          const deliverSubscribed = subscriptionDelivery(app, spark)
 
           if (primusOptions.isPlayback) {
             spark.on('data', () => {
@@ -652,7 +661,13 @@ function wsInterface(app: WsApp): WsApi {
                 }
 
                 if (parsedMsg.subscribe) {
-                  processSubscribe(app, unsubscribes, spark, parsedMsg)
+                  processSubscribe(
+                    app,
+                    unsubscribes,
+                    spark,
+                    parsedMsg,
+                    deliverSubscribed
+                  )
                 }
 
                 if (parsedMsg.unsubscribe) {
@@ -1244,11 +1259,23 @@ function sendMetaData(app: WsApp, spark: Spark, delta: Delta): void {
   }
 }
 
+function subscriptionDelivery(app: WsApp, spark: Spark) {
+  return (message: Delta) => {
+    const filtered = app.securityStrategy.filterReadDelta(
+      spark.request.skPrincipal,
+      message
+    )
+    if (!filtered) return
+    spark.backpressureManager!.send(filtered)
+  }
+}
+
 function processSubscribe(
   app: WsApp,
   unsubscribes: Array<() => void>,
   spark: Spark,
-  msg: WsMessage
+  msg: WsMessage,
+  deliver: (message: Delta) => void
 ): void {
   if (
     Array.isArray(msg.subscribe) &&
@@ -1270,9 +1297,9 @@ function processSubscribe(
     }
   } else {
     // Per-message sourcePolicy is honoured: subscriptionmanager.subscribe
-    // attaches its own listener on the chosen bus (filtered or unfiltered)
-    // for each subscribe call, independent of the connection-wide delta
-    // listener attached in handleRealtimeConnection. Falling back to the
+    // attaches its listeners on the chosen bus (filtered or unfiltered),
+    // independent of the connection-wide delta listener attached in
+    // handleRealtimeConnection. Falling back to the
     // spark-level policy keeps the URL-query default working for clients
     // that never send a per-message override.
     //
@@ -1289,21 +1316,18 @@ function processSubscribe(
       msg,
       unsubscribes,
       spark.write.bind(spark),
-      (message: Delta) => {
-        const filtered = app.securityStrategy.filterReadDelta(
-          spark.request.skPrincipal,
-          message
-        )
-        if (!filtered) return
-        spark.backpressureManager!.send(filtered)
-      },
+      deliver,
       spark.request.skPrincipal,
       msg.sourcePolicy ?? spark.sourcePolicy,
-      Array.isArray(msg.excludeSources) && msg.excludeSources.length > 0
-        ? msg.excludeSources
-        : undefined
+      excludeSourcesOf(msg)
     )
   }
+}
+
+function excludeSourcesOf(msg: WsMessage): string[] | undefined {
+  return Array.isArray(msg.excludeSources) && msg.excludeSources.length > 0
+    ? msg.excludeSources
+    : undefined
 }
 
 function processUnsubscribe(
@@ -1324,11 +1348,22 @@ function processUnsubscribe(
         spark.logUnsubscribe = undefined
       }
     } else {
-      app.subscriptionmanager.unsubscribe(msg, unsubscribes)
-      const deltaEvent =
-        spark.sourcePolicy === 'all' ? 'unfilteredDelta' : 'delta'
-      app.signalk.removeListener(deltaEvent, onChange)
-      spark.sentMetaData = {}
+      // Resolved as processSubscribe does, so that echoing a subscribe
+      // message ends the rows it made.
+      app.subscriptionmanager.unsubscribe(
+        msg,
+        unsubscribes,
+        msg.sourcePolicy ?? spark.sourcePolicy,
+        excludeSourcesOf(msg)
+      )
+      // The connection-wide stream from ?subscribe= is not a subscription
+      // row, so only unsubscribe-all stops it.
+      if (ServerSubscriptionManager.isUnsubscribeAll(msg)) {
+        const deltaEvent =
+          spark.sourcePolicy === 'all' ? 'unfilteredDelta' : 'delta'
+        app.signalk.removeListener(deltaEvent, onChange)
+        spark.sentMetaData = {}
+      }
     }
   } catch (e) {
     console.log(e)

@@ -83,6 +83,7 @@ const debug = createDebug('signalk-server')
 
 import { migrateSourceRef } from './sourceref-migration'
 import { StreamBundle } from './streambundle'
+import { HELLO_CAPABILITIES } from './constants'
 
 /**
  * Shallow-clones a delta so that an `unfilteredDelta` consumer mutating a
@@ -642,7 +643,8 @@ class Server {
       self: `vessels.${app.selfId}`,
       roles: ['master', 'main'],
       timestamp: new Date(),
-      serverStartId
+      serverStartId,
+      capabilities: HELLO_CAPABILITIES
     })
 
     app.isNmea2000OutAvailable = false
