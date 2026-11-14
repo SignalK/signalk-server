@@ -53,6 +53,7 @@ import {
   saveSecurityConfig,
   RequestStatusData,
   ACL,
+  PluginRoutePermission,
   SecurityStrategy,
   SkPrincipal,
   LoginResponse as SecurityLoginResponse,
@@ -257,16 +258,20 @@ function tokenSecurityFactory(
 
   const RESERVED_PLUGIN_PATHS = ['/', '/config']
 
-  const pluginRoutePermissions: Array<{
+  type PluginRoutePermissionEntry = {
+    pluginId: string
     method: string
     regex: RegExp
-    permission: 'readwrite' | 'readonly'
-  }> = []
+    permission: PluginRoutePermission['permission']
+  }
 
-  strategy.registerPluginRoutePermissions = function (
+  const pluginRoutePermissions: PluginRoutePermissionEntry[] = []
+
+  function toPermissionEntries(
     pluginId: string,
-    permissions: RoutePermission[]
-  ): void {
+    permissions: PluginRoutePermission[]
+  ): PluginRoutePermissionEntry[] {
+    const entries: PluginRoutePermissionEntry[] = []
     for (const { method, path, permission } of permissions) {
       const normalizedPath = path.startsWith('/') ? path : `/${path}`
       if (
@@ -275,12 +280,43 @@ function tokenSecurityFactory(
         continue
       }
       const fullPath = `/plugins/${pluginId}${normalizedPath}`
-      pluginRoutePermissions.push({
+      entries.push({
+        pluginId,
         method: method.toUpperCase(),
         regex: pathToRegexp(fullPath),
         permission
       })
     }
+    return entries
+  }
+
+  function isReservedPluginPath(pluginId: string, requestPath: string) {
+    const prefix = `/plugins/${pluginId}`
+    return (
+      requestPath.startsWith(prefix) &&
+      RESERVED_PLUGIN_PATHS.includes(requestPath.slice(prefix.length) || '/')
+    )
+  }
+
+  strategy.registerPluginRoutePermissions = function (
+    pluginId: string,
+    permissions: RoutePermission[]
+  ): void {
+    pluginRoutePermissions.push(...toPermissionEntries(pluginId, permissions))
+  }
+
+  strategy.replacePluginRoutePermissions = function (
+    pluginId: string,
+    permissions: PluginRoutePermission[]
+  ): void {
+    // Built first, so a path that fails to compile leaves the old entries
+    const entries = toPermissionEntries(pluginId, permissions)
+    for (let i = pluginRoutePermissions.length - 1; i >= 0; i--) {
+      if (pluginRoutePermissions[i].pluginId === pluginId) {
+        pluginRoutePermissions.splice(i, 1)
+      }
+    }
+    pluginRoutePermissions.push(...entries)
   }
 
   const { expiration = 'NEVER' } = config
@@ -663,7 +699,9 @@ function tokenSecurityFactory(
         (entry) => entry.method === req.method && entry.regex.test(requestPath)
       )
 
-      if (match) {
+      // A declared pattern such as /:name also matches the server's own
+      // routes for the plugin, which stay admin-only.
+      if (match && !isReservedPluginPath(match.pluginId, requestPath)) {
         if (match.permission === 'readonly') {
           const skReq = req as SKRequest
           if (skReq.skIsAuthenticated) {
@@ -671,7 +709,9 @@ function tokenSecurityFactory(
           }
           return handlePermissionDenied(req, res)
         }
-        return writeMw(req, res, next)
+        if (match.permission === 'readwrite') {
+          return writeMw(req, res, next)
+        }
       }
 
       return adminMw(req, res, next)

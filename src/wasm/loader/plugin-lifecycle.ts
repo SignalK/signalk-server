@@ -13,7 +13,7 @@ import { WasmPlugin } from './types'
 import { wasmPlugins, restartTimers, setPluginStatus } from './plugin-registry'
 import { getWasmRuntime, resetWasmRuntime } from '../wasm-runtime'
 import { resetSubscriptionManager } from '../wasm-subscriptions'
-import { backwardsCompat } from './plugin-routes'
+import { backwardsCompat, setupPluginSpecificRoutes } from './plugin-routes'
 import { updateResourceProviderInstance } from '../bindings/resource-provider'
 import { updateWeatherProviderInstance } from '../bindings/weather-provider'
 import { updateRadarProviderInstance } from '../bindings/radar-provider'
@@ -357,6 +357,8 @@ export async function reloadWasmPlugin(
     }
 
     plugin.instance = newInstance
+    // The endpoints and their access levels come from the binary just loaded
+    setupPluginSpecificRoutes(app, plugin)
 
     // Update schema from new instance
     const schemaJson = newInstance.exports.schema()
