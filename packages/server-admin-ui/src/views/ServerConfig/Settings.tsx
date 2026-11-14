@@ -77,6 +77,10 @@ const OptionDescriptions: Record<string, React.ReactNode> = {
       </a>
     </>
   ),
+  restoreOwnData:
+    "Keep own vessel's latest values over a restart or reboot. Saved when the server stops cleanly. Not kept after a power cut.",
+  restoreOtherVessels:
+    "Also keep AIS and other vessels. Vessels older than the maximum age of inactive vessels' data are not restored.",
   ssl: "Server's built-in SSL (HTTPS) support"
 }
 
@@ -335,8 +339,19 @@ const ServerSettings: React.FC = () => {
                 {settings.options &&
                   Object.keys(settings.options).map((name) => {
                     const description = OptionDescriptions[name]
+                    const disabled =
+                      name === 'restoreOtherVessels' &&
+                      !settings.options?.restoreOwnData
                     return (
-                      <div key={name} className="mb-2">
+                      <div
+                        key={name}
+                        className="mb-2"
+                        style={
+                          disabled
+                            ? { opacity: DISABLED_ROW_OPACITY }
+                            : undefined
+                        }
+                      >
                         <div className="d-flex align-items-center">
                           <Form.Label
                             style={{ marginRight: '15px', marginBottom: 0 }}
@@ -349,6 +364,7 @@ const ServerSettings: React.FC = () => {
                               className="switch-input"
                               onChange={handleOptionChange}
                               checked={settings.options?.[name] || false}
+                              disabled={disabled}
                               aria-labelledby={`option-label-${name}`}
                               aria-describedby={
                                 description

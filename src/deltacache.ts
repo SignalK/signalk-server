@@ -26,6 +26,7 @@ import { toDelta, StreamBundle } from './streambundle'
 import { ContextMatcher, SignalKServer } from './types'
 import {
   Context,
+  Delta,
   FORBIDDEN_PATH_KEYS,
   NormalizedDelta,
   SourceRef
@@ -692,6 +693,73 @@ export default class DeltaCache {
     if (delta.context) {
       this.lastModifieds[delta.context] = Date.now()
     }
+  }
+
+  /**
+   * Put values saved by an earlier run back into the cache without
+   * passing them through the delta chain, so plugins, the priority engine
+   * and source freshness do not treat them as live data. A value that
+   * arrived live before the restore is kept. Returns whether any value
+   * was usable.
+   */
+  restoreDelta(delta: Delta, lastModified: number): boolean {
+    if (typeof delta?.context !== 'string' || !Array.isArray(delta.updates)) {
+      return false
+    }
+    let restored = false
+    for (const update of delta.updates) {
+      if (!('values' in update) || !Array.isArray(update.values)) continue
+      for (const pathValue of update.values) {
+        if (typeof pathValue?.path !== 'string') continue
+        const usable = this.restoreValue({
+          context: delta.context,
+          source: update.source,
+          $source: update.$source,
+          timestamp: update.timestamp,
+          path: pathValue.path,
+          value: pathValue.value,
+          state: pathValue.state,
+          isMeta: false
+        } as NormalizedDelta)
+        restored ||= usable
+      }
+    }
+    if (restored) {
+      this.lastModifieds[delta.context] = Math.max(
+        this.lastModifieds[delta.context] ?? 0,
+        lastModified
+      )
+    }
+    return restored
+  }
+
+  private restoreValue(msg: NormalizedDelta): boolean {
+    if (typeof msg.$source !== 'string' || msg.value === undefined) {
+      return false
+    }
+    const leaf = getLeafObject(
+      this.cache,
+      this.getContextAndPathParts(msg),
+      true
+    )
+    if (!leaf) {
+      return false
+    }
+    if (msg.path.length !== 0) {
+      leaf[msg.$source] ??= msg
+      return true
+    }
+    if (typeof msg.value !== 'object' || msg.value === null) {
+      return false
+    }
+    let restored = false
+    for (const key of Object.keys(msg.value)) {
+      if (FORBIDDEN_PATH_KEYS.has(key)) continue
+      leaf[key] ??= {}
+      leaf[key][msg.$source] ??= msg
+      restored = true
+    }
+    return restored
   }
 
   setSourceDelta(key: string, delta: any) {
