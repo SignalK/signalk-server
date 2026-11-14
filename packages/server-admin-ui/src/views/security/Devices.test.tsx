@@ -2,12 +2,13 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import Devices from './Devices'
 import { useStore } from '../../store'
+import type { LoginStatus } from '../../store/types'
 
 vi.mock('../../hooks/useWebSocket', () => ({
   useServerEvent: vi.fn()
 }))
 
-const LOGGED_IN = {
+const LOGGED_IN: LoginStatus = {
   status: 'loggedIn',
   authenticationRequired: true,
   username: 'admin',
