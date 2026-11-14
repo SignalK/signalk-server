@@ -34,13 +34,18 @@ function createMockTransport(bufferLength = 0): MockTransport {
   }
 }
 
-function createDelta(path: string, value: unknown, source?: string): Delta {
+function createDelta(
+  path: string,
+  value: unknown,
+  source?: string,
+  timestamp = '2024-01-15T10:30:00.000Z'
+): Delta {
   return {
     context: 'vessels.self',
     updates: [
       {
         $source: source || 'test',
-        timestamp: '2024-01-15T10:30:00.000Z',
+        timestamp,
         values: [{ path, value }]
       }
     ]
@@ -221,12 +226,76 @@ describe('BackpressureManager', function () {
       manager.flush()
 
       expect(transport._writes.length).to.equal(1)
+      expect(manager.isActive).to.be.false
+      expect(manager.accumulatorSize).to.equal(0)
+    })
+
+    it('should flag the flush when an update was dropped', function () {
+      const transport = createMockTransport(2000)
+      const manager = new BackpressureManager(transport, defaultOptions)
+
+      manager.send(
+        createDelta(
+          'navigation.speedOverGround',
+          5.0,
+          'gps',
+          '2024-01-15T10:30:00Z'
+        )
+      )
+      manager.send(
+        createDelta(
+          'navigation.speedOverGround',
+          5.5,
+          'gps',
+          '2024-01-15T10:30:01Z'
+        )
+      )
+      manager.send(createDelta('navigation.courseOverGroundTrue', 1.57, 'gps'))
+      manager.flush()
+
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const written = transport._writes[0] as any
       expect(written.$backpressure).to.exist
       expect(written.$backpressure.accumulated).to.equal(2)
-      expect(manager.isActive).to.be.false
-      expect(manager.accumulatorSize).to.equal(0)
+    })
+
+    it('should not flag the flush when every accumulated update was delivered', function () {
+      const transport = createMockTransport(2000)
+      const manager = new BackpressureManager(transport, defaultOptions)
+
+      manager.send(createDelta('navigation.speedOverGround', 5.0, 'gps'))
+      manager.send(createDelta('navigation.speedOverGround', 5.0, 'gps'))
+      manager.send(createDelta('navigation.courseOverGroundTrue', 1.57, 'gps'))
+      manager.flush()
+
+      expect(transport._writes[0]).to.not.have.property('$backpressure')
+    })
+
+    it('should not carry dropped updates into the next backpressure period', function () {
+      const transport = createMockTransport(2000)
+      const manager = new BackpressureManager(transport, defaultOptions)
+
+      manager.send(
+        createDelta(
+          'navigation.speedOverGround',
+          5.0,
+          'gps',
+          '2024-01-15T10:30:00Z'
+        )
+      )
+      manager.send(
+        createDelta(
+          'navigation.speedOverGround',
+          5.5,
+          'gps',
+          '2024-01-15T10:30:01Z'
+        )
+      )
+      manager.flush()
+      manager.send(createDelta('navigation.courseOverGroundTrue', 1.57, 'gps'))
+      manager.flush()
+
+      expect(transport._writes[1]).to.not.have.property('$backpressure')
     })
 
     it('should call beforeWrite hook for each flushed delta', function () {

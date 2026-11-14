@@ -11,12 +11,12 @@ Signal K Server includes automatic backpressure handling to gracefully manage sl
 When a client connection can't keep up with the data rate, the server enters "backpressure mode" for that connection:
 
 1. Instead of queuing more data (which would consume server memory), the server keeps only the **latest value** for each path
-2. When the client catches up, accumulated values are sent in a single delta with a `$backpressure` indicator
+2. When the client catches up, accumulated values are sent in a single delta, with a `$backpressure` indicator if updates were dropped
 3. Normal operation resumes automatically
 
 ## Detecting Backpressure
 
-When the server flushes accumulated values after a backpressure period, it adds a `$backpressure` property to the delta:
+When the server flushes accumulated values after a backpressure period in which at least one update was replaced by a newer one, it adds a `$backpressure` property to the delta. A short burst, such as the cached values a new subscription replays, can enter backpressure without losing anything; that flush carries no indicator:
 
 ```javascript
 ws.onmessage = (event) => {

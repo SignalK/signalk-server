@@ -61,6 +61,7 @@ export class BackpressureManager {
   private active = false
   private readonly accumulator: Map<string, AccumulatedItem> = new Map()
   private since: number | null = null
+  private dropped = 0
   private bufferSizeExceeded: number | undefined = undefined
   private readonly transport: BackpressureTransport
   private readonly options: BackpressureOptions
@@ -90,7 +91,7 @@ export class BackpressureManager {
           bufferLength
         )
       }
-      accumulateLatestValue(this.accumulator, delta)
+      this.dropped += accumulateLatestValue(this.accumulator, delta)
     } else {
       this.transport.write(this.options.beforeWrite?.(delta) ?? delta)
     }
@@ -101,20 +102,20 @@ export class BackpressureManager {
     if (this.accumulator.size === 0) return
     const countBefore = this.accumulator.size
     const duration = this.since ? Date.now() - this.since : 0
-    const deltas = buildFlushDeltas(this.accumulator, duration)
+    const deltas = buildFlushDeltas(this.accumulator, duration, this.dropped)
     for (const delta of deltas) {
-      this.transport.write(
-        this.options.beforeWrite?.(delta as Delta) ?? (delta as Delta)
-      )
+      this.transport.write(this.options.beforeWrite?.(delta) ?? delta)
     }
+    debug(
+      'Flushed %d accumulated values (%d updates dropped) for %s',
+      countBefore,
+      this.dropped,
+      this.transport.id
+    )
     this.accumulator.clear()
     this.active = false
     this.since = null
-    debug(
-      'Flushed %d accumulated values for %s',
-      countBefore,
-      this.transport.id
-    )
+    this.dropped = 0
   }
 
   assertBufferSize(knownBufferLength?: number): void {
@@ -145,6 +146,7 @@ export class BackpressureManager {
     this.accumulator.clear()
     this.active = false
     this.since = null
+    this.dropped = 0
     this.bufferSizeExceeded = undefined
   }
 

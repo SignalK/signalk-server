@@ -75,6 +75,44 @@ describe('LatestValuesAccumulator', function () {
       expect(item.timestamp).to.equal('2024-01-15T10:30:01.000Z')
     })
 
+    it('should count a replaced update with another timestamp as dropped', function () {
+      const accumulator = new Map()
+      const delta = (value, timestamp) => ({
+        context: 'vessels.self',
+        updates: [
+          {
+            $source: 'gps',
+            timestamp,
+            values: [{ path: 'navigation.speedOverGround', value }]
+          }
+        ]
+      })
+
+      expect(
+        accumulateLatestValue(accumulator, delta(5.0, '2024-01-15T10:30:00Z'))
+      ).to.equal(0)
+      expect(
+        accumulateLatestValue(accumulator, delta(5.5, '2024-01-15T10:30:01Z'))
+      ).to.equal(1)
+    })
+
+    it('should not count a replayed update with the same timestamp as dropped', function () {
+      const accumulator = new Map()
+      const delta = {
+        context: 'vessels.self',
+        updates: [
+          {
+            $source: 'gps',
+            timestamp: '2024-01-15T10:30:00Z',
+            values: [{ path: 'navigation.speedOverGround', value: 5.0 }]
+          }
+        ]
+      }
+
+      accumulateLatestValue(accumulator, delta)
+      expect(accumulateLatestValue(accumulator, delta)).to.equal(0)
+    })
+
     it('should keep separate values for different $sources', function () {
       const accumulator = new Map()
       const delta1 = {
@@ -221,7 +259,7 @@ describe('LatestValuesAccumulator', function () {
   describe('buildFlushDeltas', function () {
     it('should return empty array for empty accumulator', function () {
       const accumulator = new Map()
-      const deltas = buildFlushDeltas(accumulator, 1000)
+      const deltas = buildFlushDeltas(accumulator, 1000, 1)
       expect(deltas).to.deep.equal([])
     })
 
@@ -235,7 +273,7 @@ describe('LatestValuesAccumulator', function () {
         timestamp: '2024-01-15T10:30:00.000Z'
       })
 
-      const deltas = buildFlushDeltas(accumulator, 1500)
+      const deltas = buildFlushDeltas(accumulator, 1500, 1)
 
       expect(deltas.length).to.equal(1)
       expect(deltas[0].context).to.equal('vessels.self')
@@ -262,7 +300,7 @@ describe('LatestValuesAccumulator', function () {
         timestamp: '2024-01-15T10:30:00.000Z'
       })
 
-      const deltas = buildFlushDeltas(accumulator, 1000)
+      const deltas = buildFlushDeltas(accumulator, 1000, 1)
 
       expect(deltas.length).to.equal(2)
       const selfDelta = deltas.find((d) => d.context === 'vessels.self')
@@ -297,7 +335,7 @@ describe('LatestValuesAccumulator', function () {
         timestamp: '2024-01-15T10:30:00.000Z'
       })
 
-      const deltas = buildFlushDeltas(accumulator, 1000)
+      const deltas = buildFlushDeltas(accumulator, 1000, 1)
 
       expect(deltas.length).to.equal(1)
       expect(deltas[0].updates.length).to.equal(2) // Two update groups: gps and compass
@@ -328,7 +366,7 @@ describe('LatestValuesAccumulator', function () {
         timestamp: '2024-01-15T10:30:00.005Z'
       })
 
-      const deltas = buildFlushDeltas(accumulator, FLUSH_DURATION_MS)
+      const deltas = buildFlushDeltas(accumulator, FLUSH_DURATION_MS, 1)
 
       expect(deltas).to.have.length(1)
       expect(deltas[0].updates).to.deep.equal([
@@ -362,7 +400,7 @@ describe('LatestValuesAccumulator', function () {
         timestamp: '2024-01-15T10:30:00.005Z'
       })
 
-      const [flushed] = buildFlushDeltas(accumulator, FLUSH_DURATION_MS)
+      const [flushed] = buildFlushDeltas(accumulator, FLUSH_DURATION_MS, 1)
 
       expect(flushed.updates).to.deep.equal([
         {
@@ -378,6 +416,25 @@ describe('LatestValuesAccumulator', function () {
       ])
     })
 
+    it('should leave out the backpressure indicator when no update was dropped', function () {
+      const accumulator = new Map()
+      accumulator.set('vessels.self:navigation.speedOverGround:gps', {
+        context: 'vessels.self',
+        path: 'navigation.speedOverGround',
+        value: 5.0,
+        $source: 'gps',
+        timestamp: '2024-01-15T10:30:00.000Z'
+      })
+
+      const deltas = buildFlushDeltas(accumulator, 1500, 0)
+
+      expect(deltas.length).to.equal(1)
+      expect(deltas[0]).to.not.have.property('$backpressure')
+      expect(deltas[0].updates[0].values).to.deep.equal([
+        { path: 'navigation.speedOverGround', value: 5.0 }
+      ])
+    })
+
     it('should include accumulated count in backpressure indicator', function () {
       const accumulator = new Map()
       for (let i = 0; i < 10; i++) {
@@ -390,7 +447,7 @@ describe('LatestValuesAccumulator', function () {
         })
       }
 
-      const deltas = buildFlushDeltas(accumulator, 2000)
+      const deltas = buildFlushDeltas(accumulator, 2000, 1)
 
       expect(deltas[0].$backpressure.accumulated).to.equal(10)
       expect(deltas[0].$backpressure.duration).to.equal(2000)
