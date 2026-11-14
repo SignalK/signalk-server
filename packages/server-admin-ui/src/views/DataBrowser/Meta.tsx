@@ -358,7 +358,7 @@ const formatMetaValue = (v: unknown): string =>
       : v.toFixed(2)
     : String(v)
 
-const UnitSelect: React.FC<ValueRenderProps> = ({
+export const UnitSelect: React.FC<ValueRenderProps> = ({
   disabled,
   value,
   setValue,
@@ -371,6 +371,10 @@ const UnitSelect: React.FC<ValueRenderProps> = ({
     size="sm"
     onChange={(e) => setValue(e.target.value)}
   >
+    <option value="">-- No unit --</option>
+    {typeof value === 'string' && value && !UNITS[value] && (
+      <option value={value}>{value}</option>
+    )}
     {Object.entries(UNITS).map(([unit, description]) => (
       <option key={unit} value={unit}>
         {unit}:{description}
@@ -704,6 +708,10 @@ const UPDATE_CONTRACT_VALUES = ['periodic', 'event']
 const SELF_CONTEXT = 'self'
 
 export const normalizeMetaForSave = (meta: MetaData): MetaData => {
+  if (meta.units === '') {
+    const { units: _none, ...rest } = meta
+    return normalizeMetaForSave(rest)
+  }
   if (!('updateContract' in meta)) return meta
   if (
     meta.updateContract !== undefined &&
