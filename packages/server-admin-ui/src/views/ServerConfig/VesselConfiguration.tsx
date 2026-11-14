@@ -215,6 +215,15 @@ const VesselConfiguration: React.FC = () => {
                   value={vesselData.aisShipType || ''}
                   onChange={handleChange}
                 >
+                  <option value="">Not set</option>
+                  {!!vesselData.aisShipType &&
+                    !SHIP_TYPES.some(
+                      ([id]) => id === Number(vesselData.aisShipType)
+                    ) && (
+                      <option value={vesselData.aisShipType}>
+                        {vesselData.aisShipType}
+                      </option>
+                    )}
                   {SHIP_TYPES.map(([id, name]) => (
                     <option key={id} value={id}>
                       {name}
