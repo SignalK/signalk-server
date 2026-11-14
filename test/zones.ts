@@ -243,6 +243,33 @@ describe('Zones', () => {
       }
     })
 
+    it('stops old alarms after zones are cleared and allows new zones', () => {
+      const mockBus = new Bacon.Bus()
+      const valueStream = new Bacon.Bus()
+      const mockStreambundle: MockStreambundle = {
+        getSelfMetaBus: () => mockBus,
+        getSelfStream: (_path: Path) => valueStream
+      }
+      const deltas: Delta[] = []
+      new Zones(mockStreambundle as never, (delta) => deltas.push(delta))
+      const path = 'test.temperature' as Path
+      mockBus.push({ path, value: { zones: [{ upper: 10, state: 'alarm' }] } })
+      valueStream.push(5)
+      expect(deltas).to.have.lengthOf(1)
+      mockBus.push({ path, value: { zones: null } })
+      expect(deltas).to.have.lengthOf(2)
+      valueStream.push(25)
+      valueStream.push(5)
+      expect(deltas).to.have.lengthOf(2)
+      mockBus.push({ path, value: { zones: [{ lower: 20, state: 'warn' }] } })
+      valueStream.push(25)
+      expect(deltas).to.have.lengthOf(3)
+      const update = deltas[2].updates[0]
+      if (hasValues(update)) {
+        expect(asNotification(update.values[0].value).state).to.equal('warn')
+      }
+    })
+
     it('sends normal notification when zones are cleared', () => {
       const mockBus = new Bacon.Bus()
       const mockStreambundle: MockStreambundle = {
