@@ -1,0 +1,155 @@
+import { expect } from 'chai'
+import fs from 'fs'
+import Module from 'module'
+import os from 'os'
+import path from 'path'
+import '../dist/host-modules.js'
+import { importOrRequire } from '../dist/modules.js'
+
+// ESM import coverage needs module.registerHooks (Node >= 22.15); on older
+// Node 22.x the server intentionally falls back to CJS-only coverage
+const itWithRegisterHooks =
+  typeof Module.registerHooks === 'function' ? it : it.skip
+
+function writeModule(dir: string, pkg: object, files: Record<string, string>) {
+  fs.mkdirSync(dir, { recursive: true })
+  fs.writeFileSync(path.join(dir, 'package.json'), JSON.stringify(pkg))
+  for (const [name, content] of Object.entries(files)) {
+    fs.writeFileSync(path.join(dir, name), content)
+  }
+}
+
+describe('host-provided modules', () => {
+  let testDir: string | undefined
+  let plugin: {
+    serverApi: Record<string, unknown>
+    historyApi: Record<string, unknown>
+    deep: { BUNDLED_STALE_COPY?: boolean }
+    bacon: Record<string, unknown>
+  }
+  let esmPlugin: typeof plugin
+
+  before(async () => {
+    testDir = fs.mkdtempSync(
+      path.join(os.tmpdir(), '_skservertest_host_modules')
+    )
+    const pluginDir = path.join(testDir, 'node_modules', 'testplugin')
+    writeModule(
+      pluginDir,
+      { name: 'testplugin', version: '1.0.0', main: 'index.js' },
+      {
+        'index.js': `module.exports = {
+          serverApi: require('@signalk/server-api'),
+          historyApi: require('@signalk/server-api/history'),
+          deep: require('@signalk/server-api/deep.js'),
+          bacon: require('baconjs')
+        }`
+      }
+    )
+    writeStaleBundledCopies(pluginDir)
+    plugin = await importOrRequire(pluginDir)
+
+    // without registerHooks coverage the ESM fixture cannot even load:
+    // importing the extensionless subpath fails against the stale copy
+    if (typeof Module.registerHooks === 'function') {
+      const esmPluginDir = path.join(testDir, 'node_modules', 'testplugin-esm')
+      writeModule(
+        esmPluginDir,
+        {
+          name: 'testplugin-esm',
+          version: '1.0.0',
+          type: 'module',
+          main: 'index.js'
+        },
+        {
+          'index.js': `import serverApi from '@signalk/server-api'
+          import historyApi from '@signalk/server-api/history'
+          import deep from '@signalk/server-api/deep.js'
+          import bacon from 'baconjs'
+          export { serverApi, historyApi, deep, bacon }`
+        }
+      )
+      writeStaleBundledCopies(esmPluginDir)
+      esmPlugin = await importOrRequire(esmPluginDir)
+    }
+  })
+
+  // stale bundled copies without an exports map, like server-api 2.9.x
+  function writeStaleBundledCopies(pluginDir: string) {
+    writeModule(
+      path.join(pluginDir, 'node_modules', '@signalk', 'server-api'),
+      { name: '@signalk/server-api', version: '0.0.1', main: 'index.js' },
+      {
+        'index.js': `module.exports = { BUNDLED_STALE_COPY: true }`,
+        'history.js': `module.exports = { BUNDLED_STALE_COPY: true }`,
+        'deep.js': `module.exports = { BUNDLED_STALE_COPY: true }`
+      }
+    )
+    writeModule(
+      path.join(pluginDir, 'node_modules', 'baconjs'),
+      { name: 'baconjs', version: '0.0.1', main: 'index.js' },
+      { 'index.js': `module.exports = { BUNDLED_STALE_COPY: true }` }
+    )
+  }
+
+  after(() => {
+    if (testDir !== undefined) {
+      fs.rmSync(testDir, { recursive: true, force: true })
+    }
+  })
+
+  it('plugin bundling its own @signalk/server-api gets the host copy', () => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    expect(plugin.serverApi).to.equal(require('@signalk/server-api'))
+    expect(plugin.serverApi.BUNDLED_STALE_COPY).to.equal(undefined)
+  })
+
+  it('exported subpaths resolve to the host copy', () => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    expect(plugin.historyApi).to.equal(require('@signalk/server-api/history'))
+    expect(plugin.historyApi.BUNDLED_STALE_COPY).to.equal(undefined)
+  })
+
+  it('subpaths the host copy does not export resolve normally', () => {
+    expect(plugin.deep.BUNDLED_STALE_COPY).to.equal(true)
+  })
+
+  it('plugin bundling its own baconjs gets the host copy', () => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    expect(plugin.bacon).to.equal(require('baconjs'))
+    expect(plugin.bacon.BUNDLED_STALE_COPY).to.equal(undefined)
+  })
+
+  itWithRegisterHooks(
+    'ESM plugin importing @signalk/server-api gets the host copy',
+    () => {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      expect(esmPlugin.serverApi).to.equal(require('@signalk/server-api'))
+      expect(esmPlugin.serverApi.BUNDLED_STALE_COPY).to.equal(undefined)
+    }
+  )
+
+  itWithRegisterHooks(
+    'ESM-imported exported subpaths resolve to the host copy',
+    () => {
+      expect(esmPlugin.historyApi).to.equal(
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        require('@signalk/server-api/history')
+      )
+      expect(esmPlugin.historyApi.BUNDLED_STALE_COPY).to.equal(undefined)
+    }
+  )
+
+  itWithRegisterHooks(
+    'ESM-imported subpaths the host copy does not export resolve normally',
+    () => {
+      expect(esmPlugin.deep.BUNDLED_STALE_COPY).to.equal(true)
+    }
+  )
+
+  itWithRegisterHooks('ESM plugin importing baconjs gets the host copy', () => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    expect(esmPlugin.bacon).to.equal(require('baconjs'))
+    expect(esmPlugin.bacon.BUNDLED_STALE_COPY).to.equal(undefined)
+  })
+})
