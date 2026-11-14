@@ -358,7 +358,9 @@ export async function reloadWasmPlugin(
 
     plugin.instance = newInstance
     // The endpoints and their access levels come from the binary just loaded
-    setupPluginSpecificRoutes(app, plugin)
+    if (!setupPluginSpecificRoutes(app, plugin)) {
+      throw new Error('cannot read the HTTP endpoints it declares')
+    }
 
     // Update schema from new instance
     const schemaJson = newInstance.exports.schema()

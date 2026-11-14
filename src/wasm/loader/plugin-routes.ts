@@ -215,16 +215,18 @@ function installEndpointRoutes(
 /**
  * (Re)build the router for the HTTP endpoints the loaded binary declares,
  * replacing the endpoints of any previously loaded binary, and record each
- * endpoint's declared access level with the security strategy
+ * endpoint's declared access level with the security strategy. Returns
+ * false when the declaration cannot be read; the plugin then serves no
+ * endpoints.
  */
 export function setupPluginSpecificRoutes(
   app: WithSecurityStrategy,
   plugin: WasmPlugin
-): void {
+): boolean {
   installEndpointRoutes(app, plugin, undefined)
   if (!plugin.instance) {
     debug(`No instance for ${plugin.id}`)
-    return
+    return true
   }
   try {
     installEndpointRoutes(
@@ -232,9 +234,11 @@ export function setupPluginSpecificRoutes(
       plugin,
       buildEndpointRoutes(plugin, plugin.instance)
     )
+    return true
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error)
     debug(`Failed to register HTTP endpoints: ${errorMsg}`)
+    return false
   }
 }
 

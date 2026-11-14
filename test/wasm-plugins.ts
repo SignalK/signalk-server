@@ -654,6 +654,21 @@ export function plugin_stop(): i32 {
       await expectBuildTwoRunning()
       expect((await getBuildEndpoint('four')).status).to.equal(404)
     })
+
+    it('reports a reload whose binary declares malformed endpoints', async function () {
+      expect(await reload('two')).to.equal(200)
+      expect(await waitForStatus('build two')).to.equal('build two')
+
+      buildProbe('six', undefined, '[{not json')
+      let failure: unknown
+      await reloadWasmPlugin(server!.app, packageName).catch((error) => {
+        failure = error
+      })
+
+      expect(String(failure)).to.contain('HTTP endpoints')
+      expect((await getBuildEndpoint('two')).status).to.equal(404)
+      expect((await getBuildEndpoint('six')).status).to.equal(404)
+    })
   })
 
   describe('Endpoint access levels', () => {
