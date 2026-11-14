@@ -33,6 +33,11 @@ export default class TimestampThrottle extends Transform {
     done: TransformCallback
   ): void {
     const msgMillis = this.getMilliseconds(msg)
+    if (!Number.isFinite(msgMillis)) {
+      this.push(msg)
+      done()
+      return
+    }
     if (msgMillis < this.lastMsgMillis) {
       this.offsetMillis = Date.now() - msgMillis
     }
