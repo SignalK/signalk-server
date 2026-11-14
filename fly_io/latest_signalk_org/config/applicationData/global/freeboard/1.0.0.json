@@ -152,6 +152,8 @@
   },
   "display": {
     "panelOpacity": 0.85,
-    "saveToServer": false
+    "saveToServer": false,
+    "whatsNew": false,
+    "positionBar": false
   }
 }
