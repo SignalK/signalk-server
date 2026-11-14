@@ -50,7 +50,7 @@
       {
         "enabled": true,
         "autostart": false,
-        "url": "/plugins/signalk-charts-provider-simple/",
+        "url": "/signalk-charts-provider-simple/",
         "label": "Charts",
         "icon": "/signalk-charts-provider-simple/assets/charts_logo.png",
         "color": ""
