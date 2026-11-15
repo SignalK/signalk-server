@@ -8,6 +8,12 @@ import type {
 import { rmSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { magvar } from 'magvar'
+import {
+  chartedDepth,
+  loadDepthGrid,
+  Sounder,
+  type DepthGrid
+} from './depth.ts'
 
 const PLUGIN_ID = 'signalk-demo-director'
 const TICK_MS = 5000
@@ -64,6 +70,9 @@ const GUST_SPEED_SHARE = 0.1
 const GUST_DIRECTION_RAD = degToRad(10)
 const GUST_RETURN_S = 20
 const GUST_STEP = 0.16
+// The echo sounder pings once a second from a transducer 0.5 m down
+const SOUNDER_MS = 1000
+const TRANSDUCER_DEPTH_M = 0.5
 const AUTOPILOT_PATHS = [
   'steering.autopilot.state',
   'steering.autopilot.mode',
@@ -189,6 +198,9 @@ export default function (app: ServerAPI): Plugin {
   let historyStart: ReturnType<typeof setTimeout> | undefined
   const gust: Gust = { speed: 0, direction: 0 }
   let gustedAt = Date.now()
+  let depthGrid: DepthGrid | undefined
+  let sounderTimer: ReturnType<typeof setInterval> | undefined
+  const sounder = new Sounder()
 
   function letTheWindGust(delta: Delta, next: (delta: Delta) => void) {
     for (const update of delta.updates) {
@@ -300,6 +312,46 @@ export default function (app: ServerAPI): Plugin {
             {
               path: 'performance.polarVelocityMadeGoodRatio' as Path,
               value: vmgRatio
+            }
+          ]
+        }
+      ]
+    })
+  }
+
+  // Below the transducer is what a sounder measures; below the surface is
+  // what the depth widget and the tide plugin read.
+  function sound() {
+    const position = selfPosition()
+    const charted =
+      depthGrid &&
+      position &&
+      chartedDepth(depthGrid, position.latitude, position.longitude)
+    if (charted === undefined) {
+      sounder.reset()
+      return
+    }
+    const tide = app.getSelfPath('environment.tide.heightNow.value')
+    const belowSurface = sounder.next(
+      charted,
+      typeof tide === 'number' ? tide : 0,
+      SOUNDER_MS / 1000
+    )
+    app.handleMessage(PLUGIN_ID, {
+      updates: [
+        {
+          values: [
+            {
+              path: 'environment.depth.belowSurface' as Path,
+              value: belowSurface
+            },
+            {
+              path: 'environment.depth.belowTransducer' as Path,
+              value: Math.max(0, belowSurface - TRANSDUCER_DEPTH_M)
+            },
+            {
+              path: 'environment.depth.surfaceToTransducer' as Path,
+              value: TRANSDUCER_DEPTH_M
             }
           ]
         }
@@ -419,7 +471,7 @@ export default function (app: ServerAPI): Plugin {
     id: PLUGIN_ID,
     name: 'Demo director',
     description:
-      'Keeps the demo boat under way: publishes magnetic variation, the computer health and the polar performance, lets the simulated wind gust, turns the active route round at its end, takes the boat back to the route when visitors stop steering, and switches back to day mode',
+      'Keeps the demo boat under way: publishes magnetic variation, the computer health, the polar performance and the depth from the chart and the tide, lets the simulated wind gust, turns the active route round at its end, takes the boat back to the route when visitors stop steering, and switches back to day mode',
     schema: () => ({ type: 'object', properties: {} }),
     start: () => {
       ticksSinceVariation = VARIATION_EVERY_TICKS
@@ -427,6 +479,9 @@ export default function (app: ServerAPI): Plugin {
       autopilotChangedAt = Date.now()
       gustedAt = Date.now()
       app.registerDeltaInputHandler(letTheWindGust)
+      depthGrid = loadDepthGrid(app.getDataDirPath())
+      sounder.reset()
+      sounderTimer = setInterval(sound, SOUNDER_MS)
       tick()
       historyStart = setTimeout(startPiHistory, PI_HISTORY_DELAY_MS)
       timer = setInterval(tick, TICK_MS)
@@ -435,6 +490,8 @@ export default function (app: ServerAPI): Plugin {
     stop: () => {
       if (timer) clearInterval(timer)
       timer = undefined
+      if (sounderTimer) clearInterval(sounderTimer)
+      sounderTimer = undefined
       clearTimeout(historyStart)
       stopPiHistory()
     }

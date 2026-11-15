@@ -1,7 +1,8 @@
 // Builds what the demo image needs and git does not keep: the demo plugins'
 // JavaScript, and the large demo assets: the Waddenzee ENC
 // as vector MBTiles plus its raw S-57 cells, a coastline clipped to the
-// area, the land, buoys and beacons of the ENC cells for the radar emulator, and the Netherlands
+// area, the land, buoys and beacons of the ENC cells for the radar emulator,
+// a grid of their charted depths for the demo boat's sounder, and the Netherlands
 // tidal current dataset. They land in ./assets, laid out like the server's
 // config directory, for the Dockerfile to copy.
 //
@@ -26,6 +27,7 @@ import {
 import { createHash } from 'node:crypto'
 import { stripTypeScriptTypes } from 'node:module'
 import { join } from 'node:path'
+import { gzipSync } from 'node:zlib'
 import { DatabaseSync } from 'node:sqlite'
 
 const HERE = import.meta.dirname
@@ -500,6 +502,97 @@ function extractMarks(runtime: string): void {
   writeMayaraAsset('marks.geojson', features)
 }
 
+// The demo boat sounds the chart (demo-director/depth.ts): a grid of
+// charted depths over the area, about 50 m a cell. Each cell takes the
+// soundings around it, kept within the depth area (DEPARE, DRGARE) it lies
+// in, so the depth follows the chart's own bands between soundings.
+const DEPTH_GRID_SIZE = { width: 1800, height: 1600 }
+// soundings within about 300 m count towards a cell
+const SOUNDING_RADIUS_DEG = 0.004
+const NO_DATA = -9999
+const NO_DEPTH = -32768
+
+const DEPTH_GRID_SCRIPT = `
+set -e
+for cell in /cells/*/*.000; do
+  for layer in DEPARE DRGARE; do
+    ogr2ogr -append -f GPKG /out/depth.gpkg "$cell" -nln areas \
+      -nlt PROMOTE_TO_MULTI -sql "SELECT DRVAL1, DRVAL2 FROM $layer" \
+      2>/dev/null || true
+  done
+  ogr2ogr -append -f GPKG /out/depth.gpkg "$cell" -nln soundings -dim XY \
+    -oo SPLIT_MULTIPOINT=ON -oo ADD_SOUNDG_DEPTH=ON \
+    -sql "SELECT DEPTH FROM SOUNDG" 2>/dev/null || true
+done
+grid="-te ${AREA.join(' ')} -ts ${DEPTH_GRID_SIZE.width} ${DEPTH_GRID_SIZE.height} -ot Float32 -of ENVI"
+gdal_rasterize -q -l areas -a DRVAL1 -init ${NO_DATA} -a_nodata ${NO_DATA} $grid /out/depth.gpkg /out/low.bin
+gdal_rasterize -q -l areas -a DRVAL2 -init ${NO_DATA} -a_nodata ${NO_DATA} $grid /out/depth.gpkg /out/high.bin
+gdal_grid -q -l soundings -zfield DEPTH \
+  -a invdistnn:power=2:radius=${SOUNDING_RADIUS_DEG}:max_points=8:min_points=1:nodata=${NO_DATA} \
+  -txe ${AREA[0]} ${AREA[2]} -tye ${AREA[3]} ${AREA[1]} \
+  -outsize ${DEPTH_GRID_SIZE.width} ${DEPTH_GRID_SIZE.height} \
+  -ot Float32 -of ENVI /out/depth.gpkg /out/soundings.bin
+`
+
+function readFloats(file: string): Float32Array {
+  const bytes = readFileSync(file)
+  const values = new Float32Array(bytes.length / 4)
+  for (let i = 0; i < values.length; i++) values[i] = bytes.readFloatLE(i * 4)
+  return values
+}
+
+// Charted depth of one cell in cm, or NO_DEPTH outside every depth area.
+// A depth area without a deeper bound (DRVAL2) only sets the shallowest depth.
+function cellDepth(low: number, high: number, sounded: number): number {
+  if (low === NO_DATA) return NO_DEPTH
+  const bounded = high !== NO_DATA && high >= low
+  let depth = sounded === NO_DATA ? (bounded ? (low + high) / 2 : low) : sounded
+  depth = Math.max(low, bounded ? Math.min(high, depth) : depth)
+  return Math.round(depth * 100)
+}
+
+function extractDepths(runtime: string): void {
+  run(runtime, [
+    'run',
+    '--rm',
+    '--user',
+    `${process.getuid?.() ?? 0}:${process.getgid?.() ?? 0}`,
+    '-v',
+    `${join(ASSETS, 'enc-cells')}:/cells:ro`,
+    '-v',
+    `${BUILD}:/out`,
+    '--entrypoint',
+    'sh',
+    CHARTS_TOOLBOX_IMAGE,
+    '-c',
+    DEPTH_GRID_SCRIPT
+  ])
+  const low = readFloats(join(BUILD, 'low.bin'))
+  const high = readFloats(join(BUILD, 'high.bin'))
+  const sounded = readFloats(join(BUILD, 'soundings.bin'))
+  const cm = Buffer.alloc(low.length * 2)
+  let water = 0
+  for (let i = 0; i < low.length; i++) {
+    const depth = cellDepth(low[i], high[i], sounded[i])
+    if (depth !== NO_DEPTH) water++
+    cm.writeInt16LE(depth, i * 2)
+  }
+  if (water === 0) throw new BuildFailure('the ENC holds no depth areas')
+  const target = join(ASSETS, 'plugin-config-data', 'signalk-demo-director')
+  mkdirSync(target, { recursive: true })
+  writeFileSync(
+    join(target, 'depth-grid.json'),
+    JSON.stringify({
+      west: AREA[0],
+      north: AREA[3],
+      dLon: (AREA[2] - AREA[0]) / DEPTH_GRID_SIZE.width,
+      dLat: (AREA[3] - AREA[1]) / DEPTH_GRID_SIZE.height,
+      ...DEPTH_GRID_SIZE
+    })
+  )
+  writeFileSync(join(target, 'depth-grid.bin.gz'), gzipSync(cm, { level: 9 }))
+}
+
 interface DownloadJob {
   state: 'queued' | 'active' | 'done' | 'error'
   error?: string
@@ -536,10 +629,19 @@ async function downloadTidalCurrents(configDir: string): Promise<void> {
 // The server loads plugins from node_modules, where Node does not strip types
 function buildPlugin(name: string): void {
   const dir = join(HERE, name)
-  writeFileSync(
-    join(dir, 'index.js'),
-    stripTypeScriptTypes(readFileSync(join(dir, 'index.ts'), 'utf8'))
-  )
+  for (const file of readdirSync(dir)) {
+    if (
+      !file.endsWith('.ts') ||
+      file.endsWith('.d.ts') ||
+      file.endsWith('.test.ts')
+    )
+      continue
+    const source = readFileSync(join(dir, file), 'utf8')
+    writeFileSync(
+      join(dir, file.replace(/\.ts$/, '.js')),
+      stripTypeScriptTypes(source).replace(/(from '\.\/[\w-]+)\.ts'/g, "$1.js'")
+    )
+  }
 }
 
 buildPlugin('demo-director')
@@ -588,6 +690,7 @@ try {
 const runtime = containerRuntime()
 extractLand(runtime)
 extractMarks(runtime)
+extractDepths(runtime)
 await extractRestrictedAreas(runtime)
 rmSync(BUILD, { recursive: true, force: true })
 console.log(`assets ready in ${ASSETS}`)

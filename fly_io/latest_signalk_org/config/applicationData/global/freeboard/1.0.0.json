@@ -108,6 +108,15 @@
         "col": 0,
         "row": 1,
         "minScreen": "tablet"
+      },
+      {
+        "instanceId": "demo-depth",
+        "extension": "signalk-history-widgets",
+        "widget": "depth",
+        "anchor": "cb",
+        "col": 0,
+        "row": 1,
+        "minScreen": "tablet"
       }
     ],
     "state": {
@@ -137,6 +146,10 @@
             "path": "environment.wind.speedTrue",
             "span": 30,
             "spanUnit": "min"
+          },
+          "demo-depth": {
+            "path": "environment.depth.belowSurface",
+            "minutes": 30
           }
         }
       }

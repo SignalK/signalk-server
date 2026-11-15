@@ -68,6 +68,12 @@
       "context": "vessels.self"
     },
     {
+      "path": "environment.depth.belowSurface",
+      "name": "Depth below surface",
+      "enabled": true,
+      "context": "vessels.self"
+    },
+    {
       "path": "environment.rpi.cpu.temperature",
       "name": "CPU temperature",
       "enabled": true,
