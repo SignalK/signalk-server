@@ -209,16 +209,11 @@ export class AutopilotApi {
       (req: Request, res: Response, next: NextFunction) => {
         debug(`Autopilot path`, req.method, req.params)
         try {
-          if (['PUT', 'POST'].includes(req.method)) {
-            debug(`Autopilot`, req.method, req.path, req.body)
-            if (!this.updateAllowed(req)) {
-              res.status(403).json(Responses.unauthorised)
-            } else {
-              next()
-            }
-          } else {
-            debug(`Autopilot`, req.method, req.path, req.query, req.body)
+          debug(`Autopilot`, req.method, req.path, req.query, req.body)
+          if (req.method === 'GET' || this.updateAllowed(req)) {
             next()
+          } else {
+            res.status(403).json(Responses.unauthorised)
           }
         } catch (err: any) {
           res.status(500).json({
