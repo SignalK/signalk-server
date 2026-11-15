@@ -35,6 +35,7 @@
     "signalk-underkeel": "latest",
     "signalk-universal-installer-rpi-mgmt": "latest",
     "signalk-victron-ble-consumer": "latest",
+    "signalk-wiring": "latest",
     "signalk-zigbee": "latest"
   }
 }
