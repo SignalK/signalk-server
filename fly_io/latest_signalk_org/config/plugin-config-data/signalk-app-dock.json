@@ -5,7 +5,8 @@
     "showNightModeButton": true,
     "showFullscreenButton": false,
     "showExitButton": false,
-    "tourDismissed": true,
+    "tourDismissed": false,
+    "lockTour": true,
     "apps": [
       {
         "enabled": true,
