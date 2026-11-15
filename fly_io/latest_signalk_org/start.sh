@@ -33,8 +33,8 @@ SERVER_PID=$$
 
 # Visitors may only watch: Freeboard opens the radar at 3 nm for them
 # (radars.watchRange) and lets them zoom out in their own browser as far as
-# the radar sends, here 12 nm.
-RADAR_RANGE_METERS=22224
+# the radar sends, here 6 nm: sharp enough to zoom in to 0.5 nm.
+RADAR_RANGE_METERS=11112
 RESTART_DELAY_SECONDS=5
 
 set_radar_range() {
