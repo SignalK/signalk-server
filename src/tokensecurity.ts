@@ -290,11 +290,13 @@ function tokenSecurityFactory(
     return entries
   }
 
+  // Express routing and pathToRegexp are case-insensitive, so this must be too
   function isReservedPluginPath(pluginId: string, requestPath: string) {
-    const prefix = `/plugins/${pluginId}`
+    const prefix = `/plugins/${pluginId}`.toLowerCase()
+    const path = requestPath.toLowerCase()
     return (
-      requestPath.startsWith(prefix) &&
-      RESERVED_PLUGIN_PATHS.includes(requestPath.slice(prefix.length) || '/')
+      path.startsWith(prefix) &&
+      RESERVED_PLUGIN_PATHS.includes(path.slice(prefix.length) || '/')
     )
   }
 

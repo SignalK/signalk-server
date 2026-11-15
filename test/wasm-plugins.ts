@@ -806,9 +806,14 @@ export function plugin_stop(): i32 {
         { method: 'POST', path: '/:name', permission: 'readonly' }
       ])
       try {
-        for (const prefix of ['', '/skServer']) {
+        for (const [prefix, configPath] of [
+          ['', 'config'],
+          ['/skServer', 'config'],
+          ['/skServer', 'CONFIG'],
+          ['/skServer', 'Config']
+        ]) {
           const save = await fetch(
-            `${url}${prefix}/plugins/${examplePluginId}/config`,
+            `${url}${prefix}/plugins/${examplePluginId}/${configPath}`,
             {
               method: 'POST',
               headers: {
@@ -820,7 +825,7 @@ export function plugin_stop(): i32 {
           )
           expect(save.status).to.equal(401)
           const read = await fetch(
-            `${url}${prefix}/plugins/${examplePluginId}/config`,
+            `${url}${prefix}/plugins/${examplePluginId}/${configPath}`,
             { headers: { Authorization: `Bearer ${readToken}` } }
           )
           expect(read.status).to.equal(401)
