@@ -150,6 +150,9 @@
       "restricted-areas"
     ]
   },
+  "radars": {
+    "watchRange": 5556
+  },
   "display": {
     "panelOpacity": 0.85,
     "saveToServer": false,
