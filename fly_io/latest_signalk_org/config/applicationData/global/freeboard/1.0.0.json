@@ -38,10 +38,7 @@
       "Waddenzee"
     ],
     "resourceSets": {
-      "restricted-areas": [
-        "restricted-areas-anchoring",
-        "restricted-areas-entry"
-      ]
+      "restricted-areas": []
     },
     "tidalCurrentsEnabled": true
   },
