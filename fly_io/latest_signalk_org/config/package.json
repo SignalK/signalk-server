@@ -14,7 +14,6 @@
     "signalk-aiscast": "latest",
     "signalk-alert-center": "latest",
     "signalk-autopilot-emulator-v2": "latest",
-    "signalk-basic-tide-widgets": "latest",
     "signalk-buddylist-plugin": "latest",
     "signalk-charts-provider-simple": "latest",
     "signalk-demo-boat-systems": "file:../boat-systems",

@@ -52,17 +52,16 @@
         "instanceId": "demo-polar-performance",
         "extension": "signalk-history-widgets",
         "widget": "polar-performance",
-        "anchor": "ct",
-        "col": 0,
-        "row": 0,
-        "minScreen": "tablet"
+        "anchor": "br",
+        "col": 1,
+        "row": 1
       },
       {
         "instanceId": "demo-battery",
         "extension": "signalk-history-widgets",
         "widget": "battery-small",
         "anchor": "br",
-        "col": 1,
+        "col": 0,
         "row": 1
       },
       {
@@ -70,7 +69,7 @@
         "extension": "signalk-history-widgets",
         "widget": "tank-small",
         "anchor": "bl",
-        "col": 2,
+        "col": 3,
         "row": 1,
         "minScreen": "tablet"
       },
@@ -79,7 +78,7 @@
         "extension": "signalk-history-widgets",
         "widget": "tank-small",
         "anchor": "bl",
-        "col": 1,
+        "col": 2,
         "row": 1,
         "minScreen": "tablet"
       },
@@ -103,8 +102,8 @@
       },
       {
         "instanceId": "demo-tides",
-        "extension": "signalk-basic-tide-widgets",
-        "widget": "level",
+        "extension": "signalk-tides",
+        "widget": "tides",
         "anchor": "bl",
         "col": 0,
         "row": 1,
@@ -114,9 +113,9 @@
         "instanceId": "demo-depth",
         "extension": "signalk-history-widgets",
         "widget": "depth",
-        "anchor": "cb",
+        "anchor": "ct",
         "col": 0,
-        "row": 1,
+        "row": 0,
         "minScreen": "tablet"
       }
     ],
