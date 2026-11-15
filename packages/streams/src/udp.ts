@@ -40,10 +40,11 @@ export default class Udp extends Transform {
     if (this.options.outEvent && this.options.port !== undefined) {
       this.options.app.on(this.options.outEvent, (d: string) => {
         this.debug('sending over udp: %s', d)
+        const message = Buffer.from(d)
         socket.send(
-          d,
+          message,
           0,
-          d.length,
+          message.length,
           this.options.port,
           this.options.host ?? '255.255.255.255'
         )
