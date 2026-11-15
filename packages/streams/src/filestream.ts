@@ -19,6 +19,7 @@ interface FileStreamOptions {
 export default class FileStream {
   private readonly options: FileStreamOptions
   private keepRunning: boolean
+  private stopped = false
   private pipeTo: Writable | null = null
   private endIgnoringPassThrough: EndIgnoringPassThrough | null = null
   private filestream: ReadStream | null = null
@@ -37,6 +38,8 @@ export default class FileStream {
   }
 
   startStream(): void {
+    if (this.stopped) return
+
     let filename: string
     if (isAbsolute(this.options.filename)) {
       filename = this.options.filename
@@ -53,17 +56,19 @@ export default class FileStream {
       this.keepRunning = false
     })
     if (this.keepRunning) {
-      this.filestream.on('end', () => this.startStream())
+      this.filestream.on('end', () => {
+        if (this.keepRunning) this.startStream()
+      })
     }
     this.filestream.pipe(this.endIgnoringPassThrough!)
   }
 
   end(): void {
-    if (this.pipeTo) {
-      this.pipeTo.end()
-    }
-    if (this.filestream) {
-      this.filestream.close()
-    }
+    if (this.stopped) return
+    this.stopped = true
+    this.keepRunning = false
+    this.filestream?.destroy()
+    this.endIgnoringPassThrough?.destroy()
+    this.pipeTo?.end()
   }
 }
