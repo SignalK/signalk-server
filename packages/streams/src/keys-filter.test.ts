@@ -108,3 +108,41 @@ describe('KeysFilter', () => {
     })
   })
 })
+
+describe('KeysFilter metadata', () => {
+  it('retains metadata-only updates', () => {
+    const filter = new KeysFilter({ excludeMatchingPaths: ['ignored'] })
+    const results: unknown[] = []
+    filter.on('data', (delta: unknown) => results.push(delta))
+    const meta = [
+      { path: 'navigation.speedOverGround', value: { units: 'm/s' } }
+    ]
+    filter.end({ updates: [{ meta, $source: 'instrument' }] })
+    expect(results).to.have.length(1)
+    expect(JSON.parse(JSON.stringify(results[0]))).to.deep.equal({
+      updates: [{ meta, $source: 'instrument' }]
+    })
+  })
+
+  it('retains allowed metadata when every value is excluded', () => {
+    const filter = new KeysFilter({ excludeMatchingPaths: ['ignored'] })
+    const results: unknown[] = []
+    filter.on('data', (delta: unknown) => results.push(delta))
+    const meta = [{ path: 'allowed', value: { displayName: 'Depth' } }]
+    filter.end({ updates: [{ values: [{ path: 'ignored', value: 1 }], meta }] })
+    expect(results).to.have.length(1)
+    expect(JSON.parse(JSON.stringify(results[0]))).to.deep.equal({
+      updates: [{ meta }]
+    })
+  })
+
+  it('applies path exclusions to metadata as well', () => {
+    const filter = new KeysFilter({ excludeMatchingPaths: ['ignored'] })
+    const results: unknown[] = []
+    filter.on('data', (delta: unknown) => results.push(delta))
+    filter.end({
+      updates: [{ meta: [{ path: 'ignored', value: { units: 'm' } }] }]
+    })
+    expect(results).to.have.length(0)
+  })
+})

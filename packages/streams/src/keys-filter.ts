@@ -8,6 +8,7 @@ interface KeysFilterOptions {
 
 interface DeltaUpdate {
   values?: Array<{ path: string; [key: string]: unknown }>
+  meta?: Array<{ path: string; value: unknown }>
   $source?: string
   source?: unknown
   timestamp?: string
@@ -56,26 +57,21 @@ export default class KeysFilter extends Transform {
     if (delta && Array.isArray(delta.updates)) {
       const updates: DeltaUpdate[] = []
       for (const update of delta.updates) {
-        if (Array.isArray(update.values)) {
-          const values = update.values.filter(
-            (value) => !this.exclude.includes(value.path)
-          )
+        const values = Array.isArray(update.values)
+          ? update.values.filter((value) => !this.exclude.includes(value.path))
+          : undefined
+        const meta = Array.isArray(update.meta)
+          ? update.meta.filter((entry) => !this.exclude.includes(entry.path))
+          : undefined
 
-          if (values.length > 0) {
-            const upd: DeltaUpdate = { values }
-
-            if (update.$source) {
-              upd.$source = update.$source
-            }
-            if (update.source) {
-              upd.source = update.source
-            }
-            if (update.timestamp) {
-              upd.timestamp = update.timestamp
-            }
-
-            updates.push(upd)
-          }
+        if ((values?.length ?? 0) > 0 || (meta?.length ?? 0) > 0) {
+          updates.push({
+            values: values?.length ? values : undefined,
+            meta: meta?.length ? meta : undefined,
+            $source: update.$source,
+            source: update.source,
+            timestamp: update.timestamp
+          })
         }
       }
 
