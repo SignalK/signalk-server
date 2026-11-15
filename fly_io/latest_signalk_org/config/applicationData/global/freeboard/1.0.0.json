@@ -54,7 +54,8 @@
         "widget": "polar-performance",
         "anchor": "br",
         "col": 1,
-        "row": 1
+        "row": 1,
+        "minScreen": "tablet"
       },
       {
         "instanceId": "demo-battery",
@@ -62,7 +63,8 @@
         "widget": "battery-small",
         "anchor": "br",
         "col": 0,
-        "row": 1
+        "row": 1,
+        "minScreen": "tablet"
       },
       {
         "instanceId": "demo-fuel",
