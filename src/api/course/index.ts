@@ -160,8 +160,13 @@ export class CourseApi {
       try {
         storeData = await this.store.read()
         debug('Found persisted course data')
+        // The settings are kept apart from the destination, which may have
+        // been saved without one or dropped as invalid.
         this.courseInfo = {
           ...(await this.validateCourseInfo(storeData)),
+          arrivalCircle: this.isValidArrivalCircle(storeData.arrivalCircle)
+            ? storeData.arrivalCircle
+            : NO_COURSE_INFO.arrivalCircle,
           autoAdvance: isAutoAdvance(storeData.autoAdvance)
             ? storeData.autoAdvance
             : DEFAULT_AUTO_ADVANCE
@@ -854,7 +859,8 @@ export class CourseApi {
         }
         if (this.isValidArrivalCircle(req.body.value)) {
           this.courseInfo.arrivalCircle = req.body.value
-          this.emitCourseInfo(false, 'arrivalCircle')
+          this.emitCourseInfo(true, 'arrivalCircle')
+          this.persistSettings()
           res.status(200).json(Responses.ok)
         } else {
           res.status(400).json(Responses.invalid)
@@ -1170,6 +1176,7 @@ export class CourseApi {
     try {
       const passedIndex = route.pointIndex
       const mode = this.courseInfo.autoAdvance
+      const reverse = route.reverse
       const rte = await this.getRoute(route.href)
       // The route or the mode may have been changed while it was fetched; the
       // next position update then decides afresh.
@@ -1177,6 +1184,7 @@ export class CourseApi {
         !rte ||
         this.courseInfo.activeRoute !== route ||
         route.pointIndex !== passedIndex ||
+        route.reverse !== reverse ||
         this.courseInfo.autoAdvance !== mode
       ) {
         return

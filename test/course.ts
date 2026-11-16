@@ -769,6 +769,44 @@ describe('Course Api', () => {
     stop()
   })
 
+  it('does not advance when the route is reversed during the advance', async function () {
+    const { post, server, selfGetJson, selfPut, sendDelta, stop } =
+      await startServer()
+    await sendDelta('navigation.position', { latitude: 60.05, longitude: 3 })
+    const response = await post('/resources/routes', {
+      feature: {
+        type: 'Feature',
+        geometry: {
+          type: 'LineString',
+          coordinates: [
+            [3, 60],
+            [3, 60.1],
+            [3, 60.2]
+          ]
+        }
+      }
+    })
+    const { id } = (await response.json()) as { id: string }
+    await selfPut('navigation/course/activeRoute', {
+      href: `/resources/routes/${id}`,
+      pointIndex: 1
+    }).then((response) => response.status.should.equal(200))
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const courseApi = server.app.courseApi as any
+    const getRoute = courseApi.getRoute.bind(courseApi)
+    courseApi.getRoute = async (href: string) => {
+      courseApi.courseInfo.activeRoute.reverse = true
+      return getRoute(href)
+    }
+    await courseApi.advanceOnArrival({ latitude: 60.101, longitude: 3 })
+
+    const data = (await selfGetJson('navigation/course')) as CourseInfo
+    expect(data.activeRoute?.pointIndex).to.equal(1)
+
+    stop()
+  })
+
   it('saves autoAdvance without an external destination', async function () {
     const { server, selfPut, sendDelta, stop } = await startServer()
     await sendDelta('navigation.position', { latitude: 43.02, longitude: 7.84 })
@@ -785,6 +823,9 @@ describe('Course Api', () => {
       { latitude: 43.03, longitude: 7.94 }
     )
 
+    await selfPut('navigation/course/arrivalCircle', { value: 150 }).then(
+      (response) => response.status.should.equal(200)
+    )
     await selfPut('navigation/course/autoAdvance', { value: 'off' }).then(
       (response) => response.status.should.equal(200)
     )
@@ -794,8 +835,12 @@ describe('Course Api', () => {
       return course?.autoAdvance === 'off'
     })
     expect(saved?.nextPoint).to.equal(null)
+    expect(saved?.arrivalCircle).to.equal(150)
+    await stop()
 
-    stop()
+    const course = await courseAfterRestart()
+    expect(course.autoAdvance).to.equal('off')
+    expect(course.arrivalCircle).to.equal(150)
   })
 
   it('can restart the course from the vessel position', async function () {
