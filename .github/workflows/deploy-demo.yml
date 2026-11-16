@@ -1,4 +1,4 @@
-name: Deploy latest.signalk.org
+name: Deploy demo.signalk.org
 
 # The asset build takes long, so it runs apart from the release: after each
 # release, and on demand to try demo changes against a released server.
@@ -22,7 +22,7 @@ permissions:
 # out to be unpublished cannot cancel a release's deploy, and queue: max keeps
 # every waiting run instead of only the newest.
 concurrency:
-  group: deploy-latest-demo
+  group: deploy-demo
   cancel-in-progress: false
   queue: max
 
@@ -30,7 +30,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     # A manual release run has a branch, not a release tag. The release's
-    # conclusion is not checked: a later job, such as the demo.signalk.org
+    # conclusion is not checked: a later job, such as the latest.signalk.org
     # deploy, can fail after the server image was published.
     if: >-
       github.event_name == 'workflow_dispatch' ||
@@ -78,15 +78,15 @@ jobs:
           node-version: 24
           package-manager-cache: false
       - name: Test the demo director plugin
-        working-directory: ./fly_io/latest_signalk_org/demo-director
+        working-directory: ./fly_io/demo_signalk_org/demo-director
         run: npm install --no-package-lock --no-audit --no-fund && npm test
       - name: Build the demo plugin, charts and tidal data
-        working-directory: ./fly_io/latest_signalk_org
+        working-directory: ./fly_io/demo_signalk_org
         run: node build-assets.ts "$TAG"
         env:
           TAG: ${{ steps.vars.outputs.tag }}
-      - name: Deploy latest.signalk.org at fly.io
-        working-directory: ./fly_io/latest_signalk_org
+      - name: Deploy demo.signalk.org at fly.io
+        working-directory: ./fly_io/demo_signalk_org
         run: flyctl deploy --remote-only --build-arg SK_VERSION="$TAG"
         env:
           TAG: ${{ steps.vars.outputs.tag }}

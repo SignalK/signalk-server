@@ -1,11 +1,13 @@
-# fly.toml file generated for demo-signalk-org on 2022-09-23T17:08:59+03:00
-
 app = "demo-signalk-org"
 kill_signal = "SIGINT"
 kill_timeout = 5
 processes = []
 
 [env]
+  # Fly's proxy connects to the server and appends the app's own IP address
+  # to X-Forwarded-For, so the visitor's address is two hops back
+  # (https://fly.io/docs/networking/request-headers/)
+  TRUST_PROXY = "2"
 
 [experimental]
   allowed_public_ports = []
@@ -36,3 +38,7 @@ processes = []
     interval = "15s"
     restart_limit = 0
     timeout = "2s"
+
+[[vm]]
+  size = "performance-2x"
+  memory = "4gb"
