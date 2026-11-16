@@ -51,10 +51,14 @@ export const COURSE_POINT_TYPES = {
 }
 
 /** @category Course API */
+export type AutoAdvance = 'off' | 'arrivalCircle' | 'perpendicular' | 'either'
+
+/** @category Course API */
 export interface CourseInfo {
   startTime: string | null
   targetArrivalTime: string | null
   arrivalCircle: number
+  autoAdvance: AutoAdvance
   activeRoute: ActiveRoute | null
   nextPoint: NextPreviousPoint | null
   previousPoint: NextPreviousPoint | null

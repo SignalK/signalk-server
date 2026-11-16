@@ -111,6 +111,21 @@ To reverse the direction along the route:
 HTTP PUT 'http://hostname:3000/signalk/v2/api/vessels/self/navigation/course/activeRoute/reverse'
 ```
 
+#### Advancing automatically
+
+By default the server advances an active route to its next point when the vessel arrives at the current one. `autoAdvance` sets what counts as arriving:
+
+- `either` _(default)_: entering the arrival circle or passing the line through the point perpendicular to the leg, whichever comes first
+- `arrivalCircle`: entering the arrival circle (only when `arrivalCircle` is greater than 0)
+- `perpendicular`: passing the line through the point perpendicular to the leg
+- `off`: the route advances only through the endpoints above
+
+```typescript
+HTTP PUT 'http://hostname:3000/signalk/v2/api/vessels/self/navigation/course/autoAdvance' {"value": "perpendicular"}
+```
+
+The server never advances past the last point of a route. Like `arrivalCircle`, the setting is kept when the course is cleared.
+
 #### Delta Messages
 
 The Course API emits delta messages with the following paths when course information has been changed.
@@ -144,6 +159,7 @@ _Example response:_
   "startTime": "2023-01-27T01:47:39.785Z",
   "targetArrivalTime": "2022-06-10T01:29:27.592Z",
   "arrivalCircle": 4000,
+  "autoAdvance": "either",
   "activeRoute": null,
   "nextPoint": {
     "type": "Location",
@@ -171,6 +187,7 @@ _Example response:_
   "startTime": "2023-01-27T01:47:39.785Z",
   "targetArrivalTime": "2022-06-10T01:29:27.592Z",
   "arrivalCircle": 4000,
+  "autoAdvance": "either",
   "activeRoute": null,
   "nextPoint": {
     "href": "/resources/waypoints/f24d72e4-e04b-47b1-920f-66b78e7b033e",
@@ -199,6 +216,7 @@ _Example response:_
   "startTime": "2023-01-27T01:47:39.785Z",
   "targetArrivalTime": "2022-06-10T01:29:27.592Z",
   "arrivalCircle": 1000,
+  "autoAdvance": "either",
   "activeRoute": {
     "href": "/resources/routes/e24d72e4-e04b-47b1-920f-66b78e7b0331",
     "pointIndex": 0,

@@ -38,6 +38,7 @@ import { Store } from '../../serverstate/store'
 import { buildSchemaSync } from 'api-schema-builder'
 import { courseApiDoc } from './openApi'
 import { crossTrackDistance, rebasePreviousPointFromXte } from './xteGeometry'
+import { DEFAULT_AUTO_ADVANCE, hasArrived, isAutoAdvance } from './autoAdvance'
 import { ResourcesApi } from '../resources'
 import { ConfigApp, writeSettingsFile } from '../../config/config'
 
@@ -74,6 +75,7 @@ const NO_COURSE_INFO: CourseInfo = {
   startTime: null,
   targetArrivalTime: null,
   arrivalCircle: 0,
+  autoAdvance: DEFAULT_AUTO_ADVANCE,
   activeRoute: null,
   nextPoint: null,
   previousPoint: null
@@ -140,6 +142,7 @@ export class CourseApi {
   private externalNavTimer: ReturnType<typeof setTimeout> | null = null
   private externalNavLastUpdate = 0
   private xteRebaseMismatchCount = 0
+  private advancing = false
 
   constructor(
     private app: CourseApplication,
@@ -157,7 +160,12 @@ export class CourseApi {
       try {
         storeData = await this.store.read()
         debug('Found persisted course data')
-        this.courseInfo = await this.validateCourseInfo(storeData)
+        this.courseInfo = {
+          ...(await this.validateCourseInfo(storeData)),
+          autoAdvance: isAutoAdvance(storeData.autoAdvance)
+            ? storeData.autoAdvance
+            : DEFAULT_AUTO_ADVANCE
+        }
         this.cmdSource = this.courseInfo.nextPoint ? API_CMD_SRC : null
       } catch (_error) {
         debug('No persisted course data (using default)')
@@ -213,6 +221,21 @@ export class CourseApi {
         },
         (msg: Delta) => {
           this.processResourceDeltas(msg)
+        }
+      )
+      this.app.subscriptionmanager?.subscribe(
+        {
+          context: 'vessels.self' as Context,
+          subscribe: [{ path: 'navigation.position' as Path, period: 1000 }]
+        },
+        this.unsubscribes,
+        (err) => {
+          console.log(`Course API: Subscribe failed: ${err}`)
+        },
+        (msg: Delta) => {
+          void this.processPositionDeltas(msg).catch((error) => {
+            debug('Course API: route advance failed', error)
+          })
         }
       )
       resolve()
@@ -611,7 +634,8 @@ export class CourseApi {
     this.clearExternalNavigationState()
     this.courseInfo = {
       ...NO_COURSE_INFO,
-      arrivalCircle: this.courseInfo.arrivalCircle
+      arrivalCircle: this.courseInfo.arrivalCircle,
+      autoAdvance: this.courseInfo.autoAdvance
     }
     this.cmdSource = null
     this.emitCourseInfo(!persistState)
@@ -831,6 +855,24 @@ export class CourseApi {
         if (this.isValidArrivalCircle(req.body.value)) {
           this.courseInfo.arrivalCircle = req.body.value
           this.emitCourseInfo(false, 'arrivalCircle')
+          res.status(200).json(Responses.ok)
+        } else {
+          res.status(400).json(Responses.invalid)
+        }
+      }
+    )
+
+    this.app.put(
+      `${COURSE_API_PATH}/autoAdvance`,
+      async (req: Request, res: Response) => {
+        debug(`** ${req.method} ${req.path}`)
+        if (!this.updateAllowed(req)) {
+          res.status(403).json(Responses.unauthorised)
+          return
+        }
+        if (isAutoAdvance(req.body.value)) {
+          this.courseInfo.autoAdvance = req.body.value
+          this.persistCourseInfo()
           res.status(200).json(Responses.ok)
         } else {
           res.status(400).json(Responses.invalid)
@@ -1086,6 +1128,76 @@ export class CourseApi {
         res.status(200).json(Responses.ok)
       }
     )
+  }
+
+  private async processPositionDeltas(delta: Delta) {
+    for (const update of delta.updates ?? []) {
+      if (!hasValues(update)) {
+        continue
+      }
+      for (const pathValue of update.values) {
+        if (pathValue.path === 'navigation.position') {
+          await this.advanceOnArrival(pathValue.value as Position)
+        }
+      }
+    }
+  }
+
+  private async advanceOnArrival(position: Position) {
+    const route = this.courseInfo.activeRoute
+    const nextPoint = this.courseInfo.nextPoint?.position
+    const previousPoint = this.courseInfo.previousPoint?.position
+    if (
+      this.advancing ||
+      this.courseInfo.autoAdvance === 'off' ||
+      !route ||
+      !nextPoint ||
+      !previousPoint ||
+      !this.isValidPosition(position) ||
+      route.pointIndex + 1 >= route.pointTotal ||
+      !hasArrived(
+        this.courseInfo.autoAdvance,
+        position,
+        previousPoint,
+        nextPoint,
+        this.courseInfo.arrivalCircle
+      )
+    ) {
+      return
+    }
+
+    this.advancing = true
+    try {
+      const passedIndex = route.pointIndex
+      const rte = await this.getRoute(route.href)
+      // The route may have been changed or cleared while it was fetched.
+      if (
+        !rte ||
+        this.courseInfo.activeRoute !== route ||
+        route.pointIndex !== passedIndex
+      ) {
+        return
+      }
+      const pointIndex = this.parsePointIndex(passedIndex + 1, rte)
+      if (pointIndex === passedIndex) {
+        return
+      }
+      debug(`** advancing route to point ${pointIndex}`)
+      route.pointIndex = pointIndex
+      this.courseInfo.previousPoint = {
+        position: this.getRoutePoint(rte, passedIndex, route.reverse),
+        type: RoutePoint,
+        name: this.getRoutePointName(rte, passedIndex, route.reverse)
+      }
+      this.courseInfo.nextPoint = {
+        position: this.getRoutePoint(rte, pointIndex, route.reverse),
+        type: RoutePoint,
+        name: this.getRoutePointName(rte, pointIndex, route.reverse)
+      }
+      this.emitCourseInfo()
+    } finally {
+      this.advancing = false
+    }
   }
 
   private calcReversedIndex(activeRoute: ActiveRoute): number {
@@ -1546,12 +1658,16 @@ export class CourseApi {
 
     const p = typeof noSave === 'undefined' ? this.isAPICmdSource() : !noSave
     if (p) {
-      debug('*** persisting state **')
-      this.store.write(this.courseInfo).catch((error) => {
-        console.log('Course API: Unable to persist destination details!')
-        debug(error)
-      })
+      this.persistCourseInfo()
     }
+  }
+
+  private persistCourseInfo() {
+    debug('*** persisting state **')
+    this.store.write(this.courseInfo).catch((error) => {
+      console.log('Course API: Unable to persist destination details!')
+      debug(error)
+    })
   }
 
   private isAPICmdSource = () => this.cmdSource?.type === API_CMD_SRC.type
