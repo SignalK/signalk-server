@@ -733,6 +733,71 @@ describe('Course Api', () => {
     stop()
   })
 
+  it('does not advance when autoAdvance is switched off during the advance', async function () {
+    const { post, server, selfGetJson, selfPut, sendDelta, stop } =
+      await startServer()
+    await sendDelta('navigation.position', { latitude: 59.95, longitude: 3 })
+    const response = await post('/resources/routes', {
+      feature: {
+        type: 'Feature',
+        geometry: {
+          type: 'LineString',
+          coordinates: [
+            [3, 60],
+            [3, 60.1]
+          ]
+        }
+      }
+    })
+    const { id } = (await response.json()) as { id: string }
+    await selfPut('navigation/course/activeRoute', {
+      href: `/resources/routes/${id}`
+    }).then((response) => response.status.should.equal(200))
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const courseApi = server.app.courseApi as any
+    const getRoute = courseApi.getRoute.bind(courseApi)
+    courseApi.getRoute = async (href: string) => {
+      courseApi.courseInfo.autoAdvance = 'off'
+      return getRoute(href)
+    }
+    await courseApi.advanceOnArrival({ latitude: 60.001, longitude: 3 })
+
+    const data = (await selfGetJson('navigation/course')) as CourseInfo
+    expect(data.activeRoute?.pointIndex).to.equal(0)
+
+    stop()
+  })
+
+  it('saves autoAdvance without an external destination', async function () {
+    const { server, selfPut, sendDelta, stop } = await startServer()
+    await sendDelta('navigation.position', { latitude: 43.02, longitude: 7.84 })
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const courseApi = server.app.courseApi as any
+    await courseApi.parseStreamValue(
+      {
+        type: 'NMEA0183',
+        $source: 'nmea.external',
+        msg: 'RMB',
+        path: 'navigation.courseRhumbline.nextPoint.position'
+      },
+      { latitude: 43.03, longitude: 7.94 }
+    )
+
+    await selfPut('navigation/course/autoAdvance', { value: 'off' }).then(
+      (response) => response.status.should.equal(200)
+    )
+    let saved: CourseInfo | undefined
+    await persistedCourse((course) => {
+      saved = course
+      return course?.autoAdvance === 'off'
+    })
+    expect(saved?.nextPoint).to.equal(null)
+
+    stop()
+  })
+
   it('can restart the course from the vessel position', async function () {
     const { server, selfGetJson, selfPut, selfDelete, sendDelta, stop } =
       await startServer()

@@ -872,7 +872,7 @@ export class CourseApi {
         }
         if (isAutoAdvance(req.body.value)) {
           this.courseInfo.autoAdvance = req.body.value
-          this.persistCourseInfo()
+          this.persistSettings()
           res.status(200).json(Responses.ok)
         } else {
           res.status(400).json(Responses.invalid)
@@ -1169,12 +1169,15 @@ export class CourseApi {
     this.advancing = true
     try {
       const passedIndex = route.pointIndex
+      const mode = this.courseInfo.autoAdvance
       const rte = await this.getRoute(route.href)
-      // The route may have been changed or cleared while it was fetched.
+      // The route or the mode may have been changed while it was fetched; the
+      // next position update then decides afresh.
       if (
         !rte ||
         this.courseInfo.activeRoute !== route ||
-        route.pointIndex !== passedIndex
+        route.pointIndex !== passedIndex ||
+        this.courseInfo.autoAdvance !== mode
       ) {
         return
       }
@@ -1662,9 +1665,24 @@ export class CourseApi {
     }
   }
 
-  private persistCourseInfo() {
+  // Only a course set through the API is saved: a saved destination is
+  // restored as API-owned, which would shut out the external source.
+  private persistSettings() {
+    const external = this.cmdSource !== null && !this.isAPICmdSource()
+    this.persistCourseInfo(
+      external
+        ? {
+            ...NO_COURSE_INFO,
+            arrivalCircle: this.courseInfo.arrivalCircle,
+            autoAdvance: this.courseInfo.autoAdvance
+          }
+        : this.courseInfo
+    )
+  }
+
+  private persistCourseInfo(courseInfo: CourseInfo = this.courseInfo) {
     debug('*** persisting state **')
-    this.store.write(this.courseInfo).catch((error) => {
+    this.store.write(courseInfo).catch((error) => {
       console.log('Course API: Unable to persist destination details!')
       debug(error)
     })

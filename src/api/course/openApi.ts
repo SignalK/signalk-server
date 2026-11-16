@@ -101,7 +101,12 @@ export const courseApiDoc: any = {
             schema: {
               description: 'Course response',
               type: 'object',
-              required: ['activeRoute', 'nextPoint', 'previousPoint'],
+              required: [
+                'activeRoute',
+                'nextPoint',
+                'previousPoint',
+                'autoAdvance'
+              ],
               properties: {
                 activeRoute: {
                   anyOf: [{ $ref: '#/components/schemas/ActiveRoute' }]
@@ -126,6 +131,9 @@ export const courseApiDoc: any = {
                 },
                 arrivalCircle: {
                   $ref: '#/components/schemas/ArrivalCircle'
+                },
+                autoAdvance: {
+                  $ref: '#/components/schemas/AutoAdvance'
                 }
               }
             }
