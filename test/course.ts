@@ -858,6 +858,29 @@ describe('Course Api', () => {
       longitude: 3
     })
 
+    courseApi.getRoute = async (href: string) => {
+      const rte = await getRoute(href)
+      rte.feature.geometry.coordinates = rte.feature.geometry.coordinates.slice(
+        0,
+        2
+      )
+      courseApi.courseInfo.activeRoute.pointTotal = 2
+      return rte
+    }
+    await courseApi.advanceOnArrival({ latitude: 60.101, longitude: 3 })
+    data = (await selfGetJson('navigation/course')) as CourseInfo
+    expect(data.activeRoute?.pointIndex).to.equal(1)
+    courseApi.courseInfo.activeRoute.pointTotal = 3
+
+    courseApi.getRoute = async (href: string) => {
+      const rte = await getRoute(href)
+      rte.feature.geometry.coordinates[1] = [3, 60.15]
+      return rte
+    }
+    await courseApi.advanceOnArrival({ latitude: 60.101, longitude: 3 })
+    data = (await selfGetJson('navigation/course')) as CourseInfo
+    expect(data.activeRoute?.pointIndex).to.equal(1)
+
     stop()
   })
 
@@ -1145,6 +1168,27 @@ describe('Course Api arrival', () => {
       .be.false
     expect(hasArrived('perpendicular', before, previousPoint, nextPoint, 0)).to
       .be.false
+  })
+
+  it('takes the perpendicular at the point when the vessel is far abeam', () => {
+    expect(
+      hasArrived(
+        'perpendicular',
+        { latitude: 60.101, longitude: 4 },
+        previousPoint,
+        nextPoint,
+        0
+      )
+    ).to.be.true
+    expect(
+      hasArrived(
+        'perpendicular',
+        { latitude: 60.09, longitude: 4 },
+        previousPoint,
+        nextPoint,
+        0
+      )
+    ).to.be.false
   })
 
   it('takes the perpendicular at the point on a long leg', () => {

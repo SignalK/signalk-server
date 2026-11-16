@@ -130,6 +130,9 @@ const orderExternalNavigationValues = (values: PathValue[]) => [
   )
 ]
 
+const isSamePosition = (a: Position, b: Position) =>
+  a.latitude === b.latitude && a.longitude === b.longitude
+
 const isFiniteNumber = (value: unknown): value is number =>
   typeof value === 'number' && Number.isFinite(value)
 
@@ -1181,9 +1184,15 @@ export class CourseApi {
       const rte = await this.getRoute(route.href)
       // The route or the settings may have been changed while it was fetched;
       // the next position update then decides afresh.
+      const pointTotal = rte?.feature?.geometry?.coordinates?.length ?? 0
       if (
         !rte ||
-        rte.feature?.geometry?.coordinates?.length !== route.pointTotal ||
+        pointTotal !== route.pointTotal ||
+        passedIndex + 1 >= pointTotal ||
+        !isSamePosition(
+          this.getRoutePoint(rte, passedIndex, reverse),
+          nextPoint
+        ) ||
         this.courseInfo.activeRoute !== route ||
         route.pointIndex !== passedIndex ||
         route.reverse !== reverse ||

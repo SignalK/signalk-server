@@ -19,19 +19,17 @@ const isInsideArrivalCircle = (
   arrivalCircle: number
 ) => arrivalCircle > 0 && getDistance(position, nextPoint) <= arrivalCircle
 
-// The point is passed once it lies more than 90° off the leg's direction at the
-// point, as seen from the vessel: the vessel is then beyond the line through
-// the point perpendicular to the leg. On a great circle that direction differs
-// from the one the leg starts in.
+// Both bearings are taken at the point, so they share its meridian: the
+// vessel is past the line through the point perpendicular to the leg once it
+// lies more than 90° away from the direction back along the leg.
 const hasPassedPerpendicular = (
   position: Position,
   previousPoint: Position,
   nextPoint: Position
 ) => {
-  const legBearing =
-    (getGreatCircleBearing(nextPoint, previousPoint) + 180) % 360
-  const bearingToPoint = getGreatCircleBearing(position, nextPoint)
-  const offLeg = Math.abs(((bearingToPoint - legBearing + 540) % 360) - 180)
+  const backAlongLeg = getGreatCircleBearing(nextPoint, previousPoint)
+  const toVessel = getGreatCircleBearing(nextPoint, position)
+  const offLeg = Math.abs(((toVessel - backAlongLeg + 540) % 360) - 180)
   return offLeg > 90
 }
 
