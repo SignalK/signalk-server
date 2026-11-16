@@ -1176,23 +1176,23 @@ export class CourseApi {
     try {
       const passedIndex = route.pointIndex
       const mode = this.courseInfo.autoAdvance
+      const arrivalCircle = this.courseInfo.arrivalCircle
       const reverse = route.reverse
       const rte = await this.getRoute(route.href)
-      // The route or the mode may have been changed while it was fetched; the
-      // next position update then decides afresh.
+      // The route or the settings may have been changed while it was fetched;
+      // the next position update then decides afresh.
       if (
         !rte ||
+        rte.feature?.geometry?.coordinates?.length !== route.pointTotal ||
         this.courseInfo.activeRoute !== route ||
         route.pointIndex !== passedIndex ||
         route.reverse !== reverse ||
-        this.courseInfo.autoAdvance !== mode
+        this.courseInfo.autoAdvance !== mode ||
+        this.courseInfo.arrivalCircle !== arrivalCircle
       ) {
         return
       }
-      const pointIndex = this.parsePointIndex(passedIndex + 1, rte)
-      if (pointIndex === passedIndex) {
-        return
-      }
+      const pointIndex = passedIndex + 1
       debug(`** advancing route to point ${pointIndex}`)
       route.pointIndex = pointIndex
       this.courseInfo.previousPoint = {
@@ -1382,7 +1382,8 @@ export class CourseApi {
     if (this.isSourceChange(src)) {
       this.clearDestination(true)
     }
-    this.courseInfo = newCourse
+    // autoAdvance may have been changed while the waypoint was fetched.
+    this.courseInfo = { ...newCourse, autoAdvance: this.courseInfo.autoAdvance }
     this.cmdSource = src
     this.clearExternalNavigationState()
     if (isExternalCmdSource(src)) {

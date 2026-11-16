@@ -807,6 +807,99 @@ describe('Course Api', () => {
     stop()
   })
 
+  it('does not advance when the arrival circle or the route changes during the advance', async function () {
+    const { post, server, selfGetJson, selfPut, sendDelta, stop } =
+      await startServer()
+    await sendDelta('navigation.position', { latitude: 60.05, longitude: 3 })
+    const response = await post('/resources/routes', {
+      feature: {
+        type: 'Feature',
+        geometry: {
+          type: 'LineString',
+          coordinates: [
+            [3, 60],
+            [3, 60.1],
+            [3, 60.2]
+          ]
+        }
+      }
+    })
+    const { id } = (await response.json()) as { id: string }
+    await selfPut('navigation/course/activeRoute', {
+      href: `/resources/routes/${id}`,
+      pointIndex: 1
+    }).then((response) => response.status.should.equal(200))
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const courseApi = server.app.courseApi as any
+    const getRoute = courseApi.getRoute.bind(courseApi)
+    courseApi.getRoute = async (href: string) => {
+      courseApi.courseInfo.arrivalCircle = 0
+      return getRoute(href)
+    }
+    courseApi.courseInfo.arrivalCircle = 100
+    await courseApi.advanceOnArrival({ latitude: 60.0995, longitude: 3 })
+    let data = (await selfGetJson('navigation/course')) as CourseInfo
+    expect(data.activeRoute?.pointIndex).to.equal(1)
+
+    courseApi.getRoute = async (href: string) => {
+      const rte = await getRoute(href)
+      rte.feature.geometry.coordinates = rte.feature.geometry.coordinates.slice(
+        0,
+        2
+      )
+      return rte
+    }
+    await courseApi.advanceOnArrival({ latitude: 60.101, longitude: 3 })
+    data = (await selfGetJson('navigation/course')) as CourseInfo
+    expect(data.activeRoute?.pointIndex).to.equal(1)
+    expect(data.nextPoint?.position).to.deep.equal({
+      latitude: 60.1,
+      longitude: 3
+    })
+
+    stop()
+  })
+
+  it('keeps autoAdvance changed while a waypoint destination is fetched', async function () {
+    const { post, server, selfGetJson, selfPut, selfDelete, sendDelta, stop } =
+      await startServer()
+    await sendDelta('navigation.position', { latitude: 60.05, longitude: 3 })
+    const response = await post('/resources/waypoints', {
+      feature: {
+        type: 'Feature',
+        geometry: { type: 'Point', coordinates: [3, 60.1] }
+      }
+    })
+    const { id } = (await response.json()) as { id: string }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const courseApi = server.app.courseApi as any
+    const resourcesApi = courseApi.resourcesApi
+    const getResource = resourcesApi.getResource.bind(resourcesApi)
+    resourcesApi.getResource = async (type: string, resourceId: string) => {
+      courseApi.courseInfo.autoAdvance = 'off'
+      return getResource(type, resourceId)
+    }
+    try {
+      await selfPut('navigation/course/destination', {
+        href: `/resources/waypoints/${id}`
+      }).then((response) => response.status.should.equal(200))
+    } finally {
+      resourcesApi.getResource = getResource
+    }
+
+    const data = (await selfGetJson('navigation/course')) as CourseInfo
+    expect(data.nextPoint?.href).to.equal(`/resources/waypoints/${id}`)
+    expect(data.autoAdvance).to.equal('off')
+    await selfDelete('navigation/course').then((response) =>
+      response.status.should.equal(200)
+    )
+    await persistedCourse((course) => course?.nextPoint === null)
+
+    stop()
+  })
+
   it('saves autoAdvance without an external destination', async function () {
     const { server, selfPut, sendDelta, stop } = await startServer()
     await sendDelta('navigation.position', { latitude: 43.02, longitude: 7.84 })
@@ -1052,5 +1145,16 @@ describe('Course Api arrival', () => {
       .be.false
     expect(hasArrived('perpendicular', before, previousPoint, nextPoint, 0)).to
       .be.false
+  })
+
+  it('takes the perpendicular at the point on a long leg', () => {
+    const from = { latitude: 60, longitude: 0 }
+    const to = { latitude: 60, longitude: 90 }
+    expect(
+      hasArrived('perpendicular', { latitude: 59, longitude: 90 }, from, to, 0)
+    ).to.be.true
+    expect(
+      hasArrived('perpendicular', { latitude: 61, longitude: 89 }, from, to, 0)
+    ).to.be.false
   })
 })
