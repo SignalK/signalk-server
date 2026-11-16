@@ -656,9 +656,19 @@ module.exports = (server: CourseComputerApp): Plugin => {
     'either'
   ])
 
-  const isIntermediateRoutePoint = () => {
-    const route = srcPaths['activeRoute'] as ActiveRoute | null | undefined
-    return !!route && route.pointIndex + 1 < route.pointTotal
+  // The course is read from the server when the arrival is raised, so the
+  // route point and the advance mode belong to the same nextPoint.
+  const serverAdvancesFrom = (course: unknown) => {
+    const { autoAdvance, activeRoute } = (course ?? {}) as {
+      autoAdvance?: string
+      activeRoute?: { pointIndex?: number; pointTotal?: number } | null
+    }
+    return (
+      SERVER_ADVANCE_MODES.has(autoAdvance ?? '') &&
+      typeof activeRoute?.pointIndex === 'number' &&
+      typeof activeRoute?.pointTotal === 'number' &&
+      activeRoute.pointIndex + 1 < activeRoute.pointTotal
+    )
   }
 
   // An exit bumps the token, so a raise still waiting for the course cannot
@@ -670,18 +680,14 @@ module.exports = (server: CourseComputerApp): Plugin => {
         token++
       },
       raise: (raiseNotification: () => void) => {
-        if (!isIntermediateRoutePoint()) {
+        if (activeRouteId === undefined) {
           raiseNotification()
           return
         }
         const raisedAt = ++token
         server
           .getCourse()
-          .then((course) =>
-            SERVER_ADVANCE_MODES.has(
-              (course as { autoAdvance?: string } | null)?.autoAdvance ?? ''
-            )
-          )
+          .then(serverAdvancesFrom)
           .catch(() => false)
           .then((serverAdvances) => {
             if (!serverAdvances && raisedAt === token) {

@@ -64,6 +64,7 @@ function startPluginCapturingDelta(opts: StartOptions = {}): {
   const calcsSpy = spy<(src: SKPaths) => CourseData>(
     opts.calcsImpl ?? (() => fixed)
   )
+  restoreCourse?.()
   restoreCourse = mockModule(
     '../../packages/course-provider-plugin/src/course',
     {
@@ -547,7 +548,8 @@ describe('notification settings', () => {
   const arriveOnRoute = async (
     pointIndex: number,
     pointTotal: number,
-    autoAdvance: string | undefined
+    autoAdvance: string | undefined,
+    serverPointIndex = pointIndex
   ) => {
     const started = startPluginCapturingDelta({
       startArgs: {},
@@ -557,7 +559,16 @@ describe('notification settings', () => {
         passedPerpendicular: true
       } as CourseData
     })
-    started.server.getCourse = spy(() => Promise.resolve({ autoAdvance }))
+    started.server.getCourse = spy(() =>
+      Promise.resolve({
+        autoAdvance,
+        activeRoute: {
+          href: '/resources/routes/r1',
+          pointIndex: serverPointIndex,
+          pointTotal
+        }
+      })
+    )
     const flush = () => new Promise((resolve) => setImmediate(resolve))
     started.deltaCallback({
       updates: [
@@ -616,6 +627,13 @@ describe('notification settings', () => {
 
   it('raises at the last route point', async () => {
     expect(await arriveOnRoute(2, 3, 'either')).to.have.members([
+      ARRIVAL,
+      PERPENDICULAR
+    ])
+  })
+
+  it('raises at the last route point before the route update has been fetched', async () => {
+    expect(await arriveOnRoute(1, 3, 'either', 2)).to.have.members([
       ARRIVAL,
       PERPENDICULAR
     ])
