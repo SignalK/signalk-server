@@ -15,6 +15,8 @@ allow the following notifications to be raised:
 
 - **`notifications.navigation.perpendicularPassed`**: _alert_ message is sent when the perpendicular line (relative to `navigation.course.previousPoint.position` at the destination has been passed by the vessel.
 
+While a route is followed and the server advances it to the next point by itself (the Course API's `autoAdvance` is not `off`), neither notification is raised at the route's intermediate points, only at its last point.
+
 ## Configuration
 
 **Notifications:** provides configuration for generated notifications.

@@ -542,6 +542,85 @@ describe('notification settings', () => {
     ])
   })
 
+  // Arrive at route point pointIndex of pointTotal while the server reports
+  // the given autoAdvance mode.
+  const arriveOnRoute = async (
+    pointIndex: number,
+    pointTotal: number,
+    autoAdvance: string | undefined
+  ) => {
+    const started = startPluginCapturingDelta({
+      startArgs: {},
+      calcsReturn: {
+        gc: { distance: 20 },
+        rl: {},
+        passedPerpendicular: true
+      } as CourseData
+    })
+    started.server.getCourse = spy(() => Promise.resolve({ autoAdvance }))
+    const flush = () => new Promise((resolve) => setImmediate(resolve))
+    started.deltaCallback({
+      updates: [
+        {
+          values: [
+            {
+              path: 'navigation.course.activeRoute',
+              value: { href: '/resources/routes/r1', pointIndex, pointTotal }
+            }
+          ]
+        }
+      ]
+    })
+    await flush()
+    started.deltaCallback({
+      updates: [
+        {
+          values: [
+            { path: 'navigation.course.arrivalCircle', value: 50 },
+            {
+              path: 'navigation.position',
+              value: { latitude: 10, longitude: 20 }
+            }
+          ]
+        }
+      ]
+    })
+    await flush()
+    const raised = started.server.handleMessage.calls
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .flatMap((call: any[]) => call[1]?.updates ?? [])
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .flatMap((u: any) => u.values ?? [])
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .filter((v: any) => v.path?.startsWith('notifications.') && v.value)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .map((v: any) => v.path)
+    started.stop()
+    return raised
+  }
+
+  it('stays quiet at a route point the server advances from', async () => {
+    expect(await arriveOnRoute(0, 3, 'either')).to.deep.equal([])
+  })
+
+  it('raises at a route point when the server does not advance', async () => {
+    expect(await arriveOnRoute(0, 3, 'off')).to.have.members([
+      ARRIVAL,
+      PERPENDICULAR
+    ])
+    expect(await arriveOnRoute(0, 3, undefined)).to.have.members([
+      ARRIVAL,
+      PERPENDICULAR
+    ])
+  })
+
+  it('raises at the last route point', async () => {
+    expect(await arriveOnRoute(2, 3, 'either')).to.have.members([
+      ARRIVAL,
+      PERPENDICULAR
+    ])
+  })
+
   it('raises only the notifications left enabled', () => {
     expect(
       arrive({
