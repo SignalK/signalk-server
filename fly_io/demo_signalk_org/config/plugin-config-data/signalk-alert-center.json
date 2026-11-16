@@ -1,4 +1,10 @@
 {
   "enabled": true,
-  "configuration": {}
+  "configuration": {
+    "ignoredPaths": [
+      "navigation.closestApproach.*",
+      "navigation.course.arrivalCircleEntered",
+      "navigation.course.perpendicularPassed"
+    ]
+  }
 }
