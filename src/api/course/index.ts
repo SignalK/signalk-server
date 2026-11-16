@@ -1194,6 +1194,11 @@ export class CourseApi {
           nextPoint
         ) ||
         this.courseInfo.activeRoute !== route ||
+        !this.courseInfo.previousPoint ||
+        !isSamePosition(
+          this.courseInfo.previousPoint.position,
+          previousPoint
+        ) ||
         route.pointIndex !== passedIndex ||
         route.reverse !== reverse ||
         this.courseInfo.autoAdvance !== mode ||

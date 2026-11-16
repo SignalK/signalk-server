@@ -881,6 +881,19 @@ describe('Course Api', () => {
     data = (await selfGetJson('navigation/course')) as CourseInfo
     expect(data.activeRoute?.pointIndex).to.equal(1)
 
+    courseApi.getRoute = async (href: string) => {
+      await courseApi.restartCourse()
+      return getRoute(href)
+    }
+    await sendDelta('navigation.position', { latitude: 60.05, longitude: 3.01 })
+    await courseApi.advanceOnArrival({ latitude: 60.101, longitude: 3 })
+    data = (await selfGetJson('navigation/course')) as CourseInfo
+    expect(data.activeRoute?.pointIndex).to.equal(1)
+    expect(data.previousPoint?.position).to.deep.equal({
+      latitude: 60.05,
+      longitude: 3.01
+    })
+
     stop()
   })
 
