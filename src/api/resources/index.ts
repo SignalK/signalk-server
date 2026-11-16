@@ -151,27 +151,8 @@ export class ResourcesApi {
       if (this.resProvider[resourceType].has(pluginId)) {
         debug(`** Un-registering ${pluginId} as ${resourceType} provider....`)
         this.resProvider[resourceType].delete(pluginId)
-        // update default provider
-        if (
-          this.settings.defaultProviders[resourceType] &&
-          this.settings.defaultProviders[resourceType] === pluginId
-        ) {
-          const p = this.checkForProvider(resourceType as SignalKResourceType)
-          if (p) {
-            this.settings.defaultProviders[resourceType] = p
-            debug(
-              `Assigned ${pluginId} as default provider for ${resourceType}.`
-            )
-          } else {
-            delete this.settings.defaultProviders[resourceType]
-            debug(
-              `Removed ${pluginId} as default provider for ${resourceType}.`
-            )
-          }
-        }
       }
     }
-    this.saveSettings()
     debug(this.resProvider)
   }
 
@@ -417,10 +398,13 @@ export class ResourcesApi {
       `***** No providerId supplied...getting the default provider for ${resType}.`
     )
     if (this.settings.defaultProviders[resType]) {
-      const pv = this.checkForProvider(
-        resType,
-        this.settings.defaultProviders[resType]
-      )
+      // Fall back without saving, so the saved default applies again once
+      // its plugin is running.
+      const pv =
+        this.checkForProvider(
+          resType,
+          this.settings.defaultProviders[resType]
+        ) ?? this.checkForProvider(resType)
       debug('***** Using default provider ->', pv)
       return pv
     } else {

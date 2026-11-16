@@ -438,4 +438,46 @@ describe('Resources Api', () => {
       stop()
     }
   })
+
+  it('a stopped provider stays the saved default for its resource type', async function () {
+    const { server, get, post, stop } = await startServer()
+    const resourceType = 'testThings'
+    const writes: string[] = []
+    const registerProvider = (pluginId: string) =>
+      server.app.resourcesApi.register(pluginId, {
+        type: resourceType,
+        methods: {
+          listResources: () => Promise.resolve({}),
+          getResource: () => Promise.resolve({}),
+          setResource: () => {
+            writes.push(pluginId)
+            return Promise.resolve()
+          },
+          deleteResource: () => Promise.resolve()
+        }
+      })
+    const getDefault = async () =>
+      (await get(`/resources/${resourceType}/_providers/_default`)).json()
+
+    try {
+      registerProvider('provider-a')
+      registerProvider('provider-b')
+      const response = await post(
+        `/resources/${resourceType}/_providers/_default/provider-b`,
+        {}
+      )
+      response.status.should.equal(201)
+
+      server.app.resourcesApi.unRegister('provider-b')
+      ;(await getDefault()).should.equal('provider-b')
+      ;(await post(`/resources/${resourceType}`, {})).status.should.equal(201)
+      writes.should.deep.equal(['provider-a'])
+
+      registerProvider('provider-b')
+      ;(await post(`/resources/${resourceType}`, {})).status.should.equal(201)
+      writes.should.deep.equal(['provider-a', 'provider-b'])
+    } finally {
+      stop()
+    }
+  })
 })
