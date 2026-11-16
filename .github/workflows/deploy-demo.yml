@@ -1,7 +1,7 @@
 name: Deploy demo.signalk.org
 
 # The asset build takes long, so it runs apart from the release: after each
-# release, and on demand to try demo changes against a released server.
+# release, and on demand to pick up demo changes and the newest server master.
 on:
   workflow_run:
     workflows:
@@ -11,12 +11,22 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Signal K server release to deploy, e.g. v2.36.0'
+        description: 'Signal K server release for the chart conversion, e.g. v2.37.0'
         required: true
         type: string
 
 permissions:
   contents: read
+
+env:
+  FLY_APP: demo-signalk-org
+  # The demo runs on upstream master, which carries server changes the demo
+  # relies on before they are released.
+  SK_IMAGE_TAG: master-24.x
+  # Freeboard-SK built from this branch replaces the npm release, so the demo
+  # shows Freeboard changes still waiting for review. Empty uses npm.
+  FREEBOARD_REPO: dirkwa/freeboard-sk
+  FREEBOARD_REF: mets-demo
 
 # A run waits for the ones before it, so a manual run of a version that turns
 # out to be unpublished cannot cancel a release's deploy, and queue: max keeps
@@ -57,11 +67,9 @@ jobs:
           fi
           echo "tag=$VERSION" >> "$GITHUB_OUTPUT"
       - name: Check the server image is published
-        env:
-          TAG: ${{ steps.vars.outputs.tag }}
         run: |
-          if ! docker manifest inspect "signalk/signalk-server:$TAG" > /dev/null; then
-            echo "::error::signalk/signalk-server:$TAG is not on Docker Hub"
+          if ! docker manifest inspect "signalk/signalk-server:$SK_IMAGE_TAG" > /dev/null; then
+            echo "::error::signalk/signalk-server:$SK_IMAGE_TAG is not on Docker Hub"
             exit 1
           fi
       - name: Checkout
@@ -77,6 +85,14 @@ jobs:
         with:
           node-version: 24
           package-manager-cache: false
+      - name: Checkout Freeboard-SK
+        if: env.FREEBOARD_REF != ''
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ env.FREEBOARD_REPO }}
+          ref: ${{ env.FREEBOARD_REF }}
+          path: freeboard-src
+          persist-credentials: false
       - name: Test the demo director plugin
         working-directory: ./fly_io/demo_signalk_org/demo-director
         run: npm install --no-package-lock --no-audit --no-fund && npm test
@@ -85,9 +101,39 @@ jobs:
         run: node build-assets.ts "$TAG"
         env:
           TAG: ${{ steps.vars.outputs.tag }}
+      # npm pack builds the webapp and the helper (prepack); the demo config
+      # then installs that package instead of the release on npm.
+      - name: Build Freeboard-SK from ${{ env.FREEBOARD_REF }}
+        if: env.FREEBOARD_REF != ''
+        run: |
+          cd freeboard-src
+          npm ci --no-audit --no-fund
+          tgz=$(npm pack --silent | tail -n 1)
+          mv "$tgz" ../fly_io/demo_signalk_org/config/freeboard-sk.tgz
+          cd ../fly_io/demo_signalk_org/config
+          jq '.dependencies["@signalk/freeboard-sk"] = "file:freeboard-sk.tgz"' package.json > package.json.new
+          mv package.json.new package.json
+      # The history (signalk-parquet) lives on a volume, so it survives a deploy
+      - name: Keep the history on a volume
+        working-directory: ./fly_io/demo_signalk_org
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          if ! flyctl volumes list -a "$FLY_APP" --json | jq -e 'any(.[]; .name == "history")' > /dev/null; then
+            region=$(flyctl machines list -a "$FLY_APP" --json | jq -r '.[0].region')
+            flyctl volumes create history -a "$FLY_APP" -r "$region" -s 1 -y
+          fi
+          cat >> fly.toml <<'TOML'
+
+          [mounts]
+            source = "history"
+            destination = "/home/node/history"
+            initial_size = "1gb"
+          TOML
+      # A new DEMO_BUILD per run makes the builder install the newest plugin
+      # releases instead of reusing an earlier install.
       - name: Deploy demo.signalk.org at fly.io
         working-directory: ./fly_io/demo_signalk_org
-        run: flyctl deploy --remote-only --build-arg SK_VERSION="$TAG"
+        run: flyctl deploy --remote-only -a "$FLY_APP" --build-arg SK_VERSION="$SK_IMAGE_TAG" --build-arg DEMO_BUILD="$GITHUB_RUN_ID" --ha=false
         env:
-          TAG: ${{ steps.vars.outputs.tag }}
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
