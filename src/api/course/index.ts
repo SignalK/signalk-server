@@ -146,6 +146,9 @@ export class CourseApi {
   private externalNavLastUpdate = 0
   private xteRebaseMismatchCount = 0
   private advancing = false
+  // Bumped by every update of the followed route's resource, so an advance
+  // decided on an older copy of the route is dropped.
+  private routeRevision = 0
 
   constructor(
     private app: CourseApplication,
@@ -273,6 +276,7 @@ export class CourseApi {
         for (const pathValue of update.values) {
           if (ref === pathValue.path) {
             if (refType === 'routes') {
+              this.routeRevision++
               if (this.courseInfo.activeRoute) {
                 const rte = await this.getRoute(
                   this.courseInfo.activeRoute.href
@@ -1182,12 +1186,14 @@ export class CourseApi {
       const arrivalCircle = this.courseInfo.arrivalCircle
       const reverse = route.reverse
       const fromRoutePoint = this.courseInfo.previousPoint?.type === RoutePoint
+      const revision = this.routeRevision
       const rte = await this.getRoute(route.href)
       // The route or the settings may have been changed while it was fetched;
       // the next position update then decides afresh.
       const pointTotal = rte?.feature?.geometry?.coordinates?.length ?? 0
       if (
         !rte ||
+        this.routeRevision !== revision ||
         pointTotal !== route.pointTotal ||
         passedIndex + 1 >= pointTotal ||
         !isSamePosition(

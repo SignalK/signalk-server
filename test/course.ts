@@ -935,6 +935,54 @@ describe('Course Api', () => {
     stop()
   })
 
+  it('does not advance on a copy of the route fetched before it was edited', async function () {
+    const { post, put, server, selfGetJson, selfPut, sendDelta, stop } =
+      await startServer()
+    await sendDelta('navigation.position', { latitude: 59.95, longitude: 3 })
+    const route = (b: number[]) => ({
+      feature: {
+        type: 'Feature',
+        geometry: {
+          type: 'LineString',
+          coordinates: [[3, 60], b, [3, 60.2]]
+        }
+      }
+    })
+    const response = await post('/resources/routes', route([3, 60.1]))
+    const { id } = (await response.json()) as { id: string }
+    await selfPut('navigation/course/activeRoute', {
+      href: `/resources/routes/${id}`
+    }).then((response) => response.status.should.equal(200))
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const courseApi = server.app.courseApi as any
+    const getRoute = courseApi.getRoute.bind(courseApi)
+    courseApi.getRoute = async (href: string) => {
+      courseApi.getRoute = getRoute
+      const stale = await getRoute(href)
+      const revision = courseApi.routeRevision
+      await put(`/resources/routes/${id}`, route([3.05, 60.1])).then(
+        (response) => response.status.should.equal(200)
+      )
+      // Resource deltas reach the Course API at most every 500 ms.
+      const deadline = Date.now() + 2000
+      while (courseApi.routeRevision === revision && Date.now() < deadline) {
+        await new Promise((resolve) => setTimeout(resolve, 50))
+      }
+      return stale
+    }
+    await courseApi.advanceOnArrival({ latitude: 60.001, longitude: 3 })
+
+    const data = (await selfGetJson('navigation/course')) as CourseInfo
+    expect(data.activeRoute?.pointIndex).to.equal(0)
+    expect(data.nextPoint?.position).to.deep.equal({
+      latitude: 60,
+      longitude: 3
+    })
+
+    stop()
+  })
+
   it('keeps autoAdvance changed while a waypoint destination is fetched', async function () {
     const { post, server, selfGetJson, selfPut, selfDelete, sendDelta, stop } =
       await startServer()
