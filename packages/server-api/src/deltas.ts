@@ -193,6 +193,7 @@ export interface MetaValue {
     lower: number
     upper: number
     type?: 'linear' | 'logarithmic' | 'power' | 'squareroot'
+    power?: number
   }
   zones?: Zone[]
   supportsPut?: boolean
