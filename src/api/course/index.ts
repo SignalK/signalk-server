@@ -1201,6 +1201,8 @@ export class CourseApi {
               previousPoint
             ))) ||
         this.courseInfo.activeRoute !== route ||
+        !this.courseInfo.nextPoint ||
+        !isSamePosition(this.courseInfo.nextPoint.position, nextPoint) ||
         !this.courseInfo.previousPoint ||
         !isSamePosition(
           this.courseInfo.previousPoint.position,
@@ -1214,18 +1216,34 @@ export class CourseApi {
         return
       }
       const pointIndex = passedIndex + 1
+      // A provider's route is not validated on the way in.
+      const nextCoordinate: unknown =
+        rte.feature.geometry.coordinates[
+          reverse ? pointTotal - 1 - pointIndex : pointIndex
+        ]
+      if (
+        !Array.isArray(nextCoordinate) ||
+        !this.isValidPosition({
+          latitude: nextCoordinate[1],
+          longitude: nextCoordinate[0]
+        })
+      ) {
+        return
+      }
+      const previous: NextPreviousPoint = {
+        position: this.getRoutePoint(rte, passedIndex, reverse),
+        type: RoutePoint,
+        name: this.getRoutePointName(rte, passedIndex, reverse)
+      }
+      const next: NextPreviousPoint = {
+        position: this.getRoutePoint(rte, pointIndex, reverse),
+        type: RoutePoint,
+        name: this.getRoutePointName(rte, pointIndex, reverse)
+      }
       debug(`** advancing route to point ${pointIndex}`)
       route.pointIndex = pointIndex
-      this.courseInfo.previousPoint = {
-        position: this.getRoutePoint(rte, passedIndex, route.reverse),
-        type: RoutePoint,
-        name: this.getRoutePointName(rte, passedIndex, route.reverse)
-      }
-      this.courseInfo.nextPoint = {
-        position: this.getRoutePoint(rte, pointIndex, route.reverse),
-        type: RoutePoint,
-        name: this.getRoutePointName(rte, pointIndex, route.reverse)
-      }
+      this.courseInfo.previousPoint = previous
+      this.courseInfo.nextPoint = next
       this.emitCourseInfo()
     } finally {
       this.advancing = false

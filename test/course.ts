@@ -891,6 +891,35 @@ describe('Course Api', () => {
     expect(data.activeRoute?.pointIndex).to.equal(1)
 
     courseApi.getRoute = async (href: string) => {
+      const rte = await getRoute(href)
+      courseApi.courseInfo.nextPoint = {
+        ...courseApi.courseInfo.nextPoint,
+        position: { latitude: 60.15, longitude: 3 }
+      }
+      return rte
+    }
+    await courseApi.advanceOnArrival({ latitude: 60.101, longitude: 3 })
+    data = (await selfGetJson('navigation/course')) as CourseInfo
+    expect(data.activeRoute?.pointIndex).to.equal(1)
+    courseApi.courseInfo.nextPoint = {
+      ...courseApi.courseInfo.nextPoint,
+      position: { latitude: 60.1, longitude: 3 }
+    }
+
+    courseApi.getRoute = async (href: string) => {
+      const rte = await getRoute(href)
+      rte.feature.geometry.coordinates[2] = null
+      return rte
+    }
+    await courseApi.advanceOnArrival({ latitude: 60.101, longitude: 3 })
+    data = (await selfGetJson('navigation/course')) as CourseInfo
+    expect(data.activeRoute?.pointIndex).to.equal(1)
+    expect(data.nextPoint?.position).to.deep.equal({
+      latitude: 60.1,
+      longitude: 3
+    })
+
+    courseApi.getRoute = async (href: string) => {
       await courseApi.restartCourse()
       return getRoute(href)
     }
