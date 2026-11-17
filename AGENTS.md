@@ -52,7 +52,7 @@ The v2 APIs (`src/api/<name>/`) follow the provider pattern (Course, Autopilot, 
 - Define every request/response data shape as a **TypeBox schema** in `packages/server-api/src/typebox/<name>-schemas.ts`, each with a unique `$id`. These schemas — not hand-written interfaces or hand-written OpenAPI — are the source of truth.
 - Derive the TypeScript types plugins program against from the schemas with `Static<typeof XSchema>`. Do not hand-maintain a parallel `interface` that duplicates a schema; the two will drift. Only types TypeBox cannot express (anything with methods — `XApi`, `XProvider`, connection handles) are hand-written interfaces.
 - Create the OpenAPI `components.schemas` at runtime from the schemas via `typeboxToOpenApiSchemas()` (`src/api/openApiSchemas.ts`) and reference them from paths with `$ref: '#/components/schemas/<id>'`. Do not inline data shapes into the OpenAPI doc.
-- Validate request input against the schemas with `Value.Check` / `Value.Errors` (from `@sinclair/typebox/value`) — bodies **and** path/query parameters. See `src/api/ble/index.ts` and `src/api/course/index.ts`.
+- Validate request input against the schemas with `Value.Check` / `Value.Errors` (from `@sinclair/typebox/value`) — bodies **and** path/query parameters. See `src/api/ble/index.ts`.
 
 ### Keep documentation surfaces in sync
 
