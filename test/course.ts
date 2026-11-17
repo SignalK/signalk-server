@@ -983,6 +983,44 @@ describe('Course Api', () => {
     stop()
   })
 
+  it('advances again after a route lookup that never answered', async function () {
+    const { post, server, selfGetJson, selfPut, sendDelta, stop } =
+      await startServer()
+    await sendDelta('navigation.position', { latitude: 59.95, longitude: 3 })
+    const response = await post('/resources/routes', {
+      feature: {
+        type: 'Feature',
+        geometry: {
+          type: 'LineString',
+          coordinates: [
+            [3, 60],
+            [3, 60.1],
+            [3, 60.2]
+          ]
+        }
+      }
+    })
+    const { id } = (await response.json()) as { id: string }
+    await selfPut('navigation/course/activeRoute', {
+      href: `/resources/routes/${id}`
+    }).then((response) => response.status.should.equal(200))
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const courseApi = server.app.courseApi as any
+    const getRoute = courseApi.getRoute.bind(courseApi)
+    courseApi.getRoute = () => new Promise(() => undefined)
+    await courseApi.advanceOnArrival({ latitude: 60.001, longitude: 3 })
+    let data = (await selfGetJson('navigation/course')) as CourseInfo
+    expect(data.activeRoute?.pointIndex).to.equal(0)
+
+    courseApi.getRoute = getRoute
+    await courseApi.advanceOnArrival({ latitude: 60.001, longitude: 3 })
+    data = (await selfGetJson('navigation/course')) as CourseInfo
+    expect(data.activeRoute?.pointIndex).to.equal(1)
+
+    stop()
+  })
+
   it('keeps autoAdvance changed while a waypoint destination is fetched', async function () {
     const { post, server, selfGetJson, selfPut, selfDelete, sendDelta, stop } =
       await startServer()

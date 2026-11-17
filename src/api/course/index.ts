@@ -133,11 +133,15 @@ const orderExternalNavigationValues = (values: PathValue[]) => [
 const isSamePosition = (a: Position, b: Position) =>
   a.latitude === b.latitude && a.longitude === b.longitude
 
+// A route lookup that hangs must not hold up advancing for good; an
+// unanswered lookup counts as no route.
+const ARRIVAL_ROUTE_LOOKUP_TIMEOUT_MS = 5000
+
 const isFiniteNumber = (value: unknown): value is number =>
   typeof value === 'number' && Number.isFinite(value)
 
 export class CourseApi {
-  private courseInfo = NO_COURSE_INFO
+  private courseInfo: CourseInfo = { ...NO_COURSE_INFO }
 
   private store: Store
   private cmdSource: CommandSource | null = null // source which set the destination
@@ -1187,7 +1191,10 @@ export class CourseApi {
       const reverse = route.reverse
       const fromRoutePoint = this.courseInfo.previousPoint?.type === RoutePoint
       const revision = this.routeRevision
-      const rte = await this.getRoute(route.href)
+      const rte = await this.getRouteWithin(
+        route.href,
+        ARRIVAL_ROUTE_LOOKUP_TIMEOUT_MS
+      )
       // The route or the settings may have been changed while it was fetched;
       // the next position update then decides afresh.
       const pointTotal = rte?.feature?.geometry?.coordinates?.length ?? 0
@@ -1254,6 +1261,19 @@ export class CourseApi {
     } finally {
       this.advancing = false
     }
+  }
+
+  private async getRouteWithin(
+    href: string,
+    timeoutMs: number
+  ): Promise<Route | undefined> {
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const timedOut = new Promise<undefined>((resolve) => {
+      timer = setTimeout(() => resolve(undefined), timeoutMs)
+    })
+    return Promise.race([this.getRoute(href), timedOut]).finally(() =>
+      clearTimeout(timer)
+    )
   }
 
   private calcReversedIndex(activeRoute: ActiveRoute): number {
