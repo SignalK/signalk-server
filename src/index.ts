@@ -56,12 +56,7 @@ import { filterStaticSelfData } from './staticDataFilter'
 import { incDeltaStatistics, startDeltaStatistics } from './deltastats'
 import { checkForNewServerVersion } from './modules'
 import { ConnectionTracker } from './connectionTracker'
-import {
-  getExternalPort,
-  getPrimaryPort,
-  getSecondaryPort,
-  servesPlainHttpAlongsideSsl
-} from './ports'
+import { getExternalPort, getPrimaryPort, getSecondaryPort } from './ports'
 import {
   getCertificateOptions,
   getSecurityConfig,
@@ -177,13 +172,11 @@ class Server {
 
     // HSTS covers every port of a host, so a browser that saw it would
     // rewrite http:// on the plain port to https:// and fail. It is left out
-    // only while that port is served; a listener that failed to bind clears
-    // secondaryServer.
+    // only while the plain HTTP listener runs: a saved httpAlongsideSsl takes
+    // effect on restart, and a listener that failed to bind is cleared.
     const hsts = helmet.strictTransportSecurity()
     app.use((req: Request, res: Response, next: NextFunction) =>
-      servesPlainHttpAlongsideSsl(app) && app.secondaryServer
-        ? next()
-        : hsts(req, res, next)
+      app.plainHttpServer ? next() : hsts(req, res, next)
     )
 
     // Apply trust proxy setting if configured
@@ -801,9 +794,11 @@ class Server {
           if (app.config.settings.httpAlongsideSsl) {
             const plainServer = startPlainHttp(secondaryPort, server, () => {
               delete app.secondaryServer
+              delete app.plainHttpServer
               delete this.secondaryConnections
             })
             app.secondaryServer = plainServer
+            app.plainHttpServer = plainServer
             this.secondaryConnections = new ConnectionTracker(plainServer)
           } else {
             startRedirectToSsl(
@@ -910,6 +905,7 @@ class Server {
               secondaryConnections.close(CONNECTION_CLOSE_GRACE_MS, () => {
                 debug('Secondary server closed')
                 delete that.app.secondaryServer
+                delete that.app.plainHttpServer
                 delete that.secondaryConnections
                 that.app.started = false
                 cb && cb()

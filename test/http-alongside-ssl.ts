@@ -4,7 +4,7 @@ import net from 'net'
 import WebSocket from 'ws'
 import { freeport, SERVER_START_TIMEOUT } from './ts-servertestutilities'
 import { startServerP } from './servertestutilities'
-import { getMfdOrigin, servesPlainHttpAlongsideSsl } from '../dist/ports'
+import { getMfdOrigin } from '../dist/ports'
 
 const PORT_WAIT_MS = 5000
 const PORT_RETRY_MS = 50
@@ -173,7 +173,7 @@ describe('Plain HTTP alongside SSL', function () {
         settings: { ssl: true, sslport: sslPort, httpAlongsideSsl: true }
       })
       await waitUntil(
-        () => server.app.secondaryServer === undefined,
+        () => server.app.plainHttpServer === undefined,
         'the plain HTTP bind to fail'
       )
 
@@ -186,6 +186,38 @@ describe('Plain HTTP alongside SSL', function () {
     } finally {
       await new Promise((resolve) => blocker.close(resolve))
     }
+  })
+
+  it('keeps HSTS and the MFD origin with the running listener until restart', async function () {
+    server = await startServerP(port, false, {
+      settings: { ssl: true, sslport: sslPort, httpAlongsideSsl: true }
+    })
+    await waitForPort(port)
+    server.app.config.settings.httpAlongsideSsl = false
+
+    const tls = await httpsRequest(`https://localhost:${sslPort}/signalk`)
+    expect(tls.headers).not.to.have.property('strict-transport-security')
+    expect(getMfdOrigin(server.app)).to.deep.equal({
+      protocol: 'http',
+      port
+    })
+    await server.stop()
+    server = null
+
+    server = await startServerP(port, false, {
+      settings: { ssl: true, sslport: sslPort }
+    })
+    await waitForPort(port)
+    server.app.config.settings.httpAlongsideSsl = true
+
+    const redirected = await httpsRequest(
+      `https://localhost:${sslPort}/signalk`
+    )
+    expect(redirected.headers).to.have.property('strict-transport-security')
+    expect(getMfdOrigin(server.app)).to.deep.equal({
+      protocol: 'https',
+      port: sslPort
+    })
   })
 
   it('stops both ports when the server stops', async function () {
@@ -242,12 +274,12 @@ describe('Navico MFD tile origin', function () {
   const listening = (port: number) => ({ address: () => ({ port }) })
   const app = (
     settings: Record<string, unknown>,
-    secondaryServer?: object,
+    plainHttpServer?: object,
     externalSsl = false
   ) =>
     ({
       config: { settings, isExternalSsl: () => externalSsl },
-      secondaryServer
+      plainHttpServer
     }) as unknown as Parameters<typeof getMfdOrigin>[0]
 
   it('is plain HTTP without SSL', function () {
@@ -259,9 +291,7 @@ describe('Navico MFD tile origin', function () {
 
   it('is HTTPS on the SSL port with SSL', function () {
     expect(
-      getMfdOrigin(
-        app({ ssl: true, port: 3000, sslport: 3443 }, listening(3000))
-      )
+      getMfdOrigin(app({ ssl: true, port: 3000, sslport: 3443 }))
     ).to.deep.equal({ protocol: 'https', port: 3443 })
   })
 
@@ -283,42 +313,5 @@ describe('Navico MFD tile origin', function () {
     expect(
       getMfdOrigin(app({ port: 3000, proxy_port: 443 }, undefined, true))
     ).to.deep.equal({ protocol: 'https', port: 443 })
-  })
-})
-
-describe('Plain HTTP listener alongside SSL', function () {
-  const app = (settings: Record<string, unknown>) =>
-    ({ config: { settings } }) as unknown as Parameters<
-      typeof servesPlainHttpAlongsideSsl
-    >[0]
-  const enabled = { ssl: true, httpAlongsideSsl: true }
-  const listenFds = process.env.LISTEN_FDS
-
-  afterEach(function () {
-    if (listenFds === undefined) {
-      delete process.env.LISTEN_FDS
-    } else {
-      process.env.LISTEN_FDS = listenFds
-    }
-  })
-
-  it('is served when enabled with SSL', function () {
-    delete process.env.LISTEN_FDS
-    expect(servesPlainHttpAlongsideSsl(app(enabled))).to.equal(true)
-  })
-
-  it('is not served without SSL or when disabled', function () {
-    delete process.env.LISTEN_FDS
-    expect(
-      servesPlainHttpAlongsideSsl(app({ httpAlongsideSsl: true }))
-    ).to.equal(false)
-    expect(servesPlainHttpAlongsideSsl(app({ ssl: true }))).to.equal(false)
-  })
-
-  it('needs a second fd under socket activation', function () {
-    process.env.LISTEN_FDS = '1'
-    expect(servesPlainHttpAlongsideSsl(app(enabled))).to.equal(false)
-    process.env.LISTEN_FDS = '2'
-    expect(servesPlainHttpAlongsideSsl(app(enabled))).to.equal(true)
   })
 })

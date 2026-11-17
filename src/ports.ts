@@ -47,13 +47,6 @@ export function getSecondaryPort(app: WithConfig): any {
   return app.config.settings.ssl ? getHttpPort(app) : -7777
 }
 
-// Socket activation provides the plain HTTP listener only when it passes a
-// second fd.
-export function servesPlainHttpAlongsideSsl(app: WithConfig): boolean {
-  const { ssl, httpAlongsideSsl } = app.config.settings
-  return Boolean(ssl && httpAlongsideSsl && getSecondaryPort(app))
-}
-
 export function getExternalPort(app: WithConfig) {
   if (Number(process.env?.EXTERNALPORT) > 0) {
     return Number(process.env?.EXTERNALPORT)
@@ -67,22 +60,17 @@ export function getExternalPort(app: WithConfig) {
 // An MFD cannot install a local CA, so it is sent to the plain HTTP port
 // whenever one is served alongside SSL. Its port is read from the listening
 // server, because under systemd socket activation it is an inherited fd.
-export function getMfdOrigin(app: WithConfig & { secondaryServer?: Server }): {
+export function getMfdOrigin(app: WithConfig & { plainHttpServer?: Server }): {
   protocol: 'http' | 'https'
   port: number
 } {
-  const { ssl, httpAlongsideSsl } = app.config.settings
-  const plainAddress = app.secondaryServer?.address()
-  if (
-    ssl &&
-    httpAlongsideSsl &&
-    plainAddress &&
-    typeof plainAddress === 'object'
-  ) {
+  const plainAddress = app.plainHttpServer?.address()
+  if (plainAddress && typeof plainAddress === 'object') {
     return { protocol: 'http', port: plainAddress.port }
   }
   return {
-    protocol: ssl || app.config.isExternalSsl() ? 'https' : 'http',
+    protocol:
+      app.config.settings.ssl || app.config.isExternalSsl() ? 'https' : 'http',
     port: getExternalPort(app)
   }
 }

@@ -20,6 +20,8 @@ export interface ServerApp extends ServerAPI {
   }
   server: any
   secondaryServer?: Server
+  // Set only while plain HTTP is served alongside SSL
+  plainHttpServer?: Server
   deltaCache: DeltaCache
   stalenessEnforcer?: StalenessEnforcer
   getMaxFailoverTimeoutMs?: (path: string) => number
