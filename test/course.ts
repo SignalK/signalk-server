@@ -256,7 +256,7 @@ describe('Course Api', () => {
       previousPoint: null
     })
 
-    stop()
+    await stop()
   })
 
   it('can activate route and manipulate it', async function () {
@@ -420,7 +420,7 @@ describe('Course Api', () => {
       ][1]
     )
 
-    stop()
+    await stop()
   })
 
   it('updates previousPoint when active route point is moved', async function () {
@@ -498,7 +498,7 @@ describe('Course Api', () => {
     expect(data.previousPoint?.position?.latitude).to.equal(60.0)
     expect(data.previousPoint?.position?.longitude).to.equal(10.0)
 
-    stop()
+    await stop()
   })
 
   it('clears an external course when navigation updates stop', async function () {
@@ -543,7 +543,7 @@ describe('Course Api', () => {
       previousPoint: null
     })
 
-    stop()
+    await stop()
   })
 
   it('rebases external NMEA0183 previousPoint using Signal K XTE sign', async function () {
@@ -582,7 +582,7 @@ describe('Course Api', () => {
     ).to.be.closeTo(externalXte, 0.1)
     expect(data.previousPoint?.position).to.not.deep.equal(vesselPosition)
 
-    stop()
+    await stop()
   })
 
   it('uses external previousPoint position when provided', async function () {
@@ -632,7 +632,7 @@ describe('Course Api', () => {
     data = (await selfGetJson('navigation/course')) as CourseInfo
     expect(data.previousPoint?.position).to.deep.equal(previousPoint)
 
-    stop()
+    await stop()
   })
 
   it('can set arrivalCircle', async function () {
@@ -668,7 +668,7 @@ describe('Course Api', () => {
       previousPoint: null
     })
 
-    stop()
+    await stop()
   })
 
   it('advances an active route when the vessel passes a point', async function () {
@@ -730,7 +730,7 @@ describe('Course Api', () => {
     )
     expect((await course()).autoAdvance).to.equal('perpendicular')
 
-    stop()
+    await stop()
   })
 
   it('does not advance when autoAdvance is switched off during the advance', async function () {
@@ -766,7 +766,7 @@ describe('Course Api', () => {
     const data = (await selfGetJson('navigation/course')) as CourseInfo
     expect(data.activeRoute?.pointIndex).to.equal(0)
 
-    stop()
+    await stop()
   })
 
   it('does not advance when the route is reversed during the advance', async function () {
@@ -804,7 +804,7 @@ describe('Course Api', () => {
     const data = (await selfGetJson('navigation/course')) as CourseInfo
     expect(data.activeRoute?.pointIndex).to.equal(1)
 
-    stop()
+    await stop()
   })
 
   it('does not advance when the arrival circle or the route changes during the advance', async function () {
@@ -932,7 +932,7 @@ describe('Course Api', () => {
       longitude: 3.01
     })
 
-    stop()
+    await stop()
   })
 
   it('does not advance on a copy of the route fetched before it was edited', async function () {
@@ -980,7 +980,7 @@ describe('Course Api', () => {
       longitude: 3
     })
 
-    stop()
+    await stop()
   })
 
   it('advances again after a route lookup that never answered', async function () {
@@ -1018,7 +1018,7 @@ describe('Course Api', () => {
     data = (await selfGetJson('navigation/course')) as CourseInfo
     expect(data.activeRoute?.pointIndex).to.equal(1)
 
-    stop()
+    await stop()
   })
 
   it('keeps autoAdvance changed while a waypoint destination is fetched', async function () {
@@ -1057,7 +1057,7 @@ describe('Course Api', () => {
     )
     await persistedCourse((course) => course?.nextPoint === null)
 
-    stop()
+    await stop()
   })
 
   it('saves autoAdvance without an external destination', async function () {
@@ -1156,7 +1156,7 @@ describe('Course Api', () => {
       (err: Error) => err.message.should.equal('No active destination!')
     )
 
-    stop()
+    await stop()
   })
 
   it('restores a destination set by position after a restart', async function () {
