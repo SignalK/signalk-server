@@ -171,13 +171,22 @@ class Server {
     load(app)
 
     // HSTS covers every port of a host, so a browser that saw it would
-    // rewrite http:// on the plain port to https:// and fail. It is left out
-    // only while the plain HTTP listener runs: a saved httpAlongsideSsl takes
-    // effect on restart, and a listener that failed to bind is cleared.
+    // rewrite http:// on the plain port to https:// and fail. While the plain
+    // HTTP listener runs, HTTPS responses carry max-age=0 instead, which
+    // clears a policy a browser kept from before. The listener, not the saved
+    // httpAlongsideSsl, decides: the setting takes effect on restart, and a
+    // listener that failed to bind is cleared.
     const hsts = helmet.strictTransportSecurity()
-    app.use((req: Request, res: Response, next: NextFunction) =>
-      app.plainHttpServer ? next() : hsts(req, res, next)
-    )
+    const clearHsts = helmet.strictTransportSecurity({ maxAge: 0 })
+    app.use((req: Request, res: Response, next: NextFunction) => {
+      if (!app.plainHttpServer) {
+        hsts(req, res, next)
+      } else if (req.secure) {
+        clearHsts(req, res, next)
+      } else {
+        next()
+      }
+    })
 
     // Apply trust proxy setting if configured
     if (app.config.settings.trustProxy !== undefined) {

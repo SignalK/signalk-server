@@ -145,7 +145,7 @@ describe('Plain HTTP alongside SSL', function () {
 
     const tls = await httpsRequest(`https://localhost:${sslPort}/signalk`)
     expect(tls.status).to.equal(200)
-    expect(tls.headers).not.to.have.property('strict-transport-security')
+    expect(tls.headers['strict-transport-security']).to.match(/^max-age=0\b/)
     const tlsEndpoints = JSON.parse(tls.body).endpoints.v1
     expect(tlsEndpoints['signalk-http']).to.equal(
       `https://localhost:${sslPort}/signalk/v1/api/`
@@ -196,7 +196,7 @@ describe('Plain HTTP alongside SSL', function () {
     server.app.config.settings.httpAlongsideSsl = false
 
     const tls = await httpsRequest(`https://localhost:${sslPort}/signalk`)
-    expect(tls.headers).not.to.have.property('strict-transport-security')
+    expect(tls.headers['strict-transport-security']).to.match(/^max-age=0\b/)
     expect(getMfdOrigin(server.app)).to.deep.equal({
       protocol: 'http',
       port

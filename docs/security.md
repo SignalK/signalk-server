@@ -155,7 +155,7 @@ NMEA0183 connections over TCP and UDP are inherently unsafe. There are no option
 
 With SSL on, the HTTP port (3000 by default) only redirects to HTTPS. Some devices cannot follow that: a chartplotter (MFD) has no way to install a local certificate authority, so a self-signed or locally issued certificate leaves its Signal K tile blank.
 
-The _Server Settings_ option `httpAlongsideSsl` keeps serving the whole server, WebSockets included, as plain HTTP on the HTTP port, and points the Navico MFD tile there. Everything on that port is unencrypted, including logins and access tokens, for every device that can reach it. Session cookies set over plain HTTP are not marked `Secure`. With this option on the server sends no `Strict-Transport-Security` header, but a browser that received one earlier keeps rewriting `http://` to `https://` for that host name until it expires; such a browser can still reach the plain port by IP address.
+The _Server Settings_ option `httpAlongsideSsl` keeps serving the whole server, WebSockets included, as plain HTTP on the HTTP port, and points the Navico MFD tile there. Everything on that port is unencrypted, including logins and access tokens, for every device that can reach it. Session cookies set over plain HTTP are not marked `Secure`. With this option on, HTTPS responses carry `Strict-Transport-Security: max-age=0`, which clears a policy a browser received earlier; until such a browser opens the server over HTTPS once, it keeps rewriting `http://` to `https://` for that host name, and can still reach the plain port by IP address.
 
 ## Security Headers
 
