@@ -113,7 +113,7 @@ export default class TcpStream extends Transform {
           this.debug(
             `Idle timeout, closing socket ${this.options.host}:${this.options.port}`
           )
-          tcpStream.end()
+          tcpStream.destroy()
         })
       }
       tcpStream.on('data', (data: Buffer) => {
