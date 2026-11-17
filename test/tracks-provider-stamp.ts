@@ -168,7 +168,9 @@ describe('Track API provider stamping', () => {
       )
       expect(res.status).to.equal(400)
       const body = (await res.json()) as { error: string }
-      expect(body.error).to.match(/time window/)
+      expect(body.error).to.equal(
+        'contexts=* needs a time window (from or duration) when listing contexts'
+      )
     })
   })
 
