@@ -1181,6 +1181,7 @@ export class CourseApi {
       const mode = this.courseInfo.autoAdvance
       const arrivalCircle = this.courseInfo.arrivalCircle
       const reverse = route.reverse
+      const fromRoutePoint = this.courseInfo.previousPoint?.type === RoutePoint
       const rte = await this.getRoute(route.href)
       // The route or the settings may have been changed while it was fetched;
       // the next position update then decides afresh.
@@ -1193,6 +1194,12 @@ export class CourseApi {
           this.getRoutePoint(rte, passedIndex, reverse),
           nextPoint
         ) ||
+        (fromRoutePoint &&
+          (passedIndex < 1 ||
+            !isSamePosition(
+              this.getRoutePoint(rte, passedIndex - 1, reverse),
+              previousPoint
+            ))) ||
         this.courseInfo.activeRoute !== route ||
         !this.courseInfo.previousPoint ||
         !isSamePosition(
