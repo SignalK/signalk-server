@@ -219,17 +219,6 @@ export const UpdateContractSchema = Type.Union(
 export type UpdateContract = Static<typeof UpdateContractSchema>
 
 /**
- * Display Scale type enum.
- * @category Server API
- */
-export enum DISPLAY_SCALE_TYPE {
-  linear = 'linear',
-  logarithmic = 'logarithmic',
-  power = 'power',
-  squareroot = 'squareroot'
-}
-
-/**
  * Metadata payload for a Signal K path.
  * Contains display hints, units, timeout, and alarm zones.
  */
@@ -277,14 +266,22 @@ export const MetaValueSchema = Type.Object(
         lower: Type.Number({ description: 'Lower bound of display scale' }),
         upper: Type.Number({ description: 'Upper bound of display scale' }),
         type: Type.Optional(
-          Type.Enum(DISPLAY_SCALE_TYPE, {
-            description: 'Display scale progression curve'
-          })
+          Type.Union(
+            [
+              Type.Literal('linear'),
+              Type.Literal('logarithmic'),
+              Type.Literal('power'),
+              Type.Literal('squareroot')
+            ],
+            {
+              description:
+                'Scale type used to map values onto the display range'
+            }
+          )
         ),
         power: Type.Optional(
           Type.Number({
-            description:
-              'Power exponent. Required only when "type": "power" is used'
+            description: 'Exponent used when type is power'
           })
         )
       })
