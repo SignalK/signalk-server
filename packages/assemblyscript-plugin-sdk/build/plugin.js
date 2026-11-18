@@ -65,6 +65,20 @@ async function instantiate(module, imports = {}) {
         typeLen = typeLen >>> 0;
         return sk_register_resource_provider(typePtr, typeLen);
       },
+      sk_ble_subscribe_gatt(descPtr, descLen) {
+        // assembly/ble/sk_ble_subscribe_gatt_ffi(usize, usize) => i32
+        descPtr = descPtr >>> 0;
+        descLen = descLen >>> 0;
+        return sk_ble_subscribe_gatt(descPtr, descLen);
+      },
+      sk_ble_gatt_write(handle, uuidPtr, uuidLen, dataPtr, dataLen, withResponse) {
+        // assembly/ble/sk_ble_gatt_write_ffi(i32, usize, usize, usize, usize, i32) => i32
+        uuidPtr = uuidPtr >>> 0;
+        uuidLen = uuidLen >>> 0;
+        dataPtr = dataPtr >>> 0;
+        dataLen = dataLen >>> 0;
+        return sk_ble_gatt_write(handle, uuidPtr, uuidLen, dataPtr, dataLen, withResponse);
+      },
     }),
   };
   const { exports } = await WebAssembly.instantiate(module, adaptedImports);
@@ -148,6 +162,23 @@ async function instantiate(module, imports = {}) {
       // assembly/resources/hasResourceProviderCapability() => bool
       return exports.hasResourceProviderCapability() != 0;
     },
+    bleSubscribeGatt(descriptorJson) {
+      // assembly/ble/bleSubscribeGatt(~lib/string/String) => i32
+      descriptorJson = __lowerString(descriptorJson) || __notnull();
+      return exports.bleSubscribeGatt(descriptorJson);
+    },
+    bleGattWrite(handle, charUuid, data, withResponse) {
+      // assembly/ble/bleGattWrite(i32, ~lib/string/String, ~lib/typedarray/Uint8Array, bool?) => i32
+      charUuid = __retain(__lowerString(charUuid) || __notnull());
+      data = __lowerTypedArray(Uint8Array, 11, 0, data) || __notnull();
+      withResponse = withResponse ? 1 : 0;
+      try {
+        exports.__setArgumentsLength(arguments.length);
+        return exports.bleGattWrite(handle, charUuid, data, withResponse);
+      } finally {
+        __release(charUuid);
+      }
+    },
   }, exports);
   function __liftString(pointer) {
     if (!pointer) return null;
@@ -168,6 +199,19 @@ async function instantiate(module, imports = {}) {
       memoryU16 = new Uint16Array(memory.buffer);
     for (let i = 0; i < length; ++i) memoryU16[(pointer >>> 1) + i] = value.charCodeAt(i);
     return pointer;
+  }
+  function __lowerTypedArray(constructor, id, align, values) {
+    if (values == null) return 0;
+    const
+      length = values.length,
+      buffer = exports.__pin(exports.__new(length << align, 1)) >>> 0,
+      header = exports.__new(12, id) >>> 0;
+    __setU32(header + 0, buffer);
+    __dataview.setUint32(header + 4, buffer, true);
+    __dataview.setUint32(header + 8, length << align, true);
+    new constructor(memory.buffer, buffer, length).set(values);
+    exports.__unpin(buffer);
+    return header;
   }
   class Internref extends Number {}
   const registry = new FinalizationRegistry(__release);
@@ -202,6 +246,15 @@ async function instantiate(module, imports = {}) {
   function __notnull() {
     throw TypeError("value must not be null");
   }
+  let __dataview = new DataView(memory.buffer);
+  function __setU32(pointer, value) {
+    try {
+      __dataview.setUint32(pointer, value, true);
+    } catch {
+      __dataview = new DataView(memory.buffer);
+      __dataview.setUint32(pointer, value, true);
+    }
+  }
   return adaptedExports;
 }
 export const {
@@ -222,6 +275,16 @@ export const {
   hasNetworkCapability,
   registerResourceProvider,
   hasResourceProviderCapability,
+  BLE_ERR_NOT_PERMITTED,
+  BLE_ERR_UNAVAILABLE,
+  BLE_ERR_INVALID_ARGUMENT,
+  BLE_ERR_UNKNOWN_HANDLE,
+  BLE_ERR_NOT_CONNECTED,
+  bleSubscribeGatt,
+  bleGattWrite,
+  bleGattClose,
+  bleSubscribeAdvertisements,
+  bleUnsubscribeAdvertisements,
 } = await (async url => instantiate(
   await (async () => {
     const isNodeOrBun = typeof process != "undefined" && process.versions != null && (process.versions.node != null || process.versions.bun != null);

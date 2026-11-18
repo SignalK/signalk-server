@@ -19,6 +19,11 @@ import { updateWeatherProviderInstance } from '../bindings/weather-provider'
 import { updateRadarProviderInstance } from '../bindings/radar-provider'
 import { socketManager } from '../bindings/socket-manager'
 import { cleanupWasmPutHandlers } from '../bindings/env-imports'
+import {
+  closeAllBleForPlugin,
+  setBleEventSink,
+  WasmBleEvent
+} from '../bindings/ble'
 
 const debug = Debug('signalk:wasm:loader')
 
@@ -27,6 +32,12 @@ const pollTimers: Map<string, NodeJS.Timeout> = new Map()
 
 // Track delta subscription unsubscribe functions for plugins
 const deltaUnsubscribers: Map<string, () => void> = new Map()
+
+const MAX_STARTUP_BLE_EVENTS = 1000
+
+function isBleStreamEvent(event: WasmBleEvent): boolean {
+  return event.type === 'advertisement' || event.type === 'notify'
+}
 
 // Mutex for serializing network-capable plugin starts
 // as-fetch uses global state that gets corrupted with parallel plugin starts
@@ -92,6 +103,42 @@ async function startWasmPluginInternal(
     }
     const configJson = JSON.stringify(startConfig)
     debug(`Starting plugin with config: ${configJson}`)
+
+    // Registered before start() because the plugin subscribes from there.
+    // Events raised while start() runs are held until it has returned, as
+    // the instance cannot take calls in the middle of it
+    const startupBleEvents: WasmBleEvent[] = []
+    let startupBleOverflowLogged = false
+    const deliverBleEvent = (event: WasmBleEvent) => {
+      try {
+        plugin.instance?.exports?.ble_handler?.(JSON.stringify(event))
+      } catch (bleError) {
+        debug(`[${pluginId}] ble_handler error: ${bleError}`)
+      }
+    }
+    if (plugin.instance.exports.ble_handler) {
+      setBleEventSink(pluginId, (event) => {
+        if (plugin.status === 'running') {
+          deliverBleEvent(event)
+        } else if (plugin.status === 'starting') {
+          // Advertisements and notifications can arrive without limit, so
+          // only they are dropped once the queue is full. Connection changes
+          // and errors are few, and a plugin may be waiting for one.
+          if (
+            startupBleEvents.length < MAX_STARTUP_BLE_EVENTS ||
+            !isBleStreamEvent(event)
+          ) {
+            startupBleEvents.push(event)
+          } else if (!startupBleOverflowLogged) {
+            startupBleOverflowLogged = true
+            debug(
+              `[${pluginId}] more than ${MAX_STARTUP_BLE_EVENTS} BLE events during start(), dropping further advertisements and notifications`
+            )
+          }
+        }
+      })
+    }
+
     const result = await plugin.instance.exports.start(configJson)
 
     if (result !== 0) {
@@ -112,6 +159,9 @@ async function startWasmPluginInternal(
 
     setPluginStatus(plugin, 'running')
     plugin.statusMessage = 'Running'
+    for (const event of startupBleEvents.splice(0)) {
+      deliverBleEvent(event)
+    }
     plugin.crashCount = 0 // Reset crash count on successful start
     plugin.restartBackoff = 1000
 
@@ -176,6 +226,7 @@ async function startWasmPluginInternal(
 
     debug(`Successfully started WASM plugin: ${pluginId}`)
   } catch (error) {
+    closeAllBleForPlugin(pluginId)
     const errorMsg = error instanceof Error ? error.message : String(error)
     setPluginStatus(plugin, 'error')
     plugin.errorMessage = errorMsg
@@ -241,6 +292,8 @@ export async function stopWasmPlugin(pluginId: string): Promise<void> {
     setPluginStatus(plugin, 'error')
     plugin.errorMessage = errorMsg
     throw error
+  } finally {
+    closeAllBleForPlugin(pluginId)
   }
 }
 
@@ -348,7 +401,7 @@ export async function reloadWasmPlugin(
 
     // Reload WASM module
     const runtime = getWasmRuntime()
-    await runtime.reloadPlugin(pluginId)
+    await runtime.reloadPlugin(pluginId, app)
 
     // Get new instance
     const newInstance = runtime.getInstance(pluginId)
