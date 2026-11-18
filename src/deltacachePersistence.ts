@@ -65,6 +65,11 @@ export interface RestoreClock {
   restoredAtMonotonic: number
 }
 
+export interface StopOptions {
+  /** Save the cached values for the next start. */
+  saveCachedValues?: boolean
+}
+
 export function deltaCacheFilePath(configPath: string): string {
   return join(configPath, SERVERSTATEDIRNAME, FILE_NAME)
 }

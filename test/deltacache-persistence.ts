@@ -10,7 +10,8 @@ import {
   DeltaCachePersistenceApp,
   deltaCacheFilePath,
   restoreDeltaCache,
-  saveDeltaCache
+  saveDeltaCache,
+  StopOptions
 } from '../src/deltacachePersistence'
 import {
   freeport,
@@ -531,6 +532,44 @@ describe('delta cache persistence across a server restart', function () {
 
   it('starts empty when turned off', async function () {
     expect(await restartedValue(false)).to.equal(undefined)
+  })
+
+  async function savedAfterRestartRequest(body?: object) {
+    const { server, host, sendDelta, stop } = await startServer({
+      restoreOwnData: true
+    })
+    const filePath = deltaCacheFilePath(server.app.config.configPath)
+    try {
+      await sendDelta('tanks.fuel.0.currentLevel', 0.62)
+      server.app.securityStrategy.allowRestart = () => true
+      let requested: StopOptions | undefined
+      // The real restart exits the process; stop the server in its place.
+      server.app.stopAndExit = (options: StopOptions) => {
+        requested = options
+      }
+      const res = await fetch(`${host}/skServer/restart`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: body && JSON.stringify(body)
+      })
+      expect(res.status).to.equal(200)
+      while (!requested) {
+        await new Promise((resolve) => setTimeout(resolve, 50))
+      }
+      await server.stop(undefined, requested)
+      return fs.existsSync(filePath)
+    } finally {
+      await stop()
+      fs.rmSync(filePath, { force: true })
+    }
+  }
+
+  it('keeps data over a restart by default', async function () {
+    expect(await savedAfterRestartRequest()).to.equal(true)
+  })
+
+  it('restarts with no data when asked', async function () {
+    expect(await savedAfterRestartRequest({ keepData: false })).to.equal(false)
   })
 
   it('saves nothing when settings are reloaded in-process', async function () {

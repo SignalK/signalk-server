@@ -46,7 +46,11 @@ import { ServerApp, SignalKMessageHub, WithConfig } from './app'
 import { ConfigApp, load, sendBaseDeltas } from './config/config'
 import { createDebug } from './debug'
 import DeltaCache, { buildSrcToCanonicalMap } from './deltacache'
-import { restoreDeltaCache, saveDeltaCache } from './deltacachePersistence'
+import {
+  restoreDeltaCache,
+  saveDeltaCache,
+  StopOptions
+} from './deltacachePersistence'
 import DeltaChain from './deltachain'
 import {
   getToPreferredDelta,
@@ -831,7 +835,10 @@ class Server {
     // stop() resolves only once the plugins have stopped and the HTTP server
     // has closed; a start() before that would lose its port and its timers to
     // the stop still running.
-    this.stop(undefined, { reloading: true })
+    //
+    // A reload keeps the cache in memory, and a file saved for it would be
+    // restored stale on a later start that follows a power cut.
+    this.stop(undefined, { saveCachedValues: false })
       .catch((e) => console.error(e))
       .then(() => this.start())
       .catch((e) => console.error(e))
@@ -839,7 +846,7 @@ class Server {
     return this
   }
 
-  async stop(cb?: () => void, { reloading = false } = {}) {
+  async stop(cb?: () => void, { saveCachedValues = true }: StopOptions = {}) {
     this.providerStatusEmitter.cancel()
     const { connections, redirectConnections } = this
     if (!this.app.started || !connections) {
@@ -847,9 +854,7 @@ class Server {
     }
 
     try {
-      // A reload keeps the cache in memory, and a file saved for it would be
-      // restored stale on a later start that follows a power cut.
-      if (!reloading) {
+      if (saveCachedValues) {
         await saveDeltaCache(this.app).catch((err: Error) => {
           console.error(`Unable to save cached values: ${err.message}`)
         })
@@ -989,7 +994,9 @@ let currentShutdownHandlers:
 // stop` / `systemctl stop` waits out its grace period and ends in SIGKILL,
 // which reports exit 137 and reads as a crash rather than the clean stop it
 // was. Handling the signal also lets interfaces and providers close first.
-function installShutdownHandlers(server: { stop: () => Promise<unknown> }) {
+function installShutdownHandlers(server: {
+  stop: (cb?: () => void, options?: StopOptions) => Promise<unknown>
+}) {
   // Process-wide listeners, so the most recently constructed Server owns
   // them: tests build several instances in one process, and a stopped
   // instance's stop() resolves immediately, which would exit the process
@@ -1001,7 +1008,7 @@ function installShutdownHandlers(server: { stop: () => Promise<unknown> }) {
 
   let shuttingDown = false
 
-  const stopAndExit = (reason: string) => {
+  const stopAndExit = (reason: string, options?: StopOptions) => {
     shuttingDown = true
     console.log(`${reason}, shutting down`)
 
@@ -1020,7 +1027,7 @@ function installShutdownHandlers(server: { stop: () => Promise<unknown> }) {
     forceExit.unref()
 
     server
-      .stop()
+      .stop(undefined, options)
       .then(() => {
         clearTimeout(forceExit)
         process.exit(0)
@@ -1052,9 +1059,9 @@ function installShutdownHandlers(server: { stop: () => Promise<unknown> }) {
   // the server back, and must stop it the same way a signal does so plugins
   // and providers get to close. Like the signal handlers, it belongs to the
   // most recently constructed Server only.
-  return () => {
+  return (options?: StopOptions) => {
     if (currentShutdownHandlers === handlers && !shuttingDown) {
-      stopAndExit('Restart requested')
+      stopAndExit('Restart requested', options)
     }
   }
 }

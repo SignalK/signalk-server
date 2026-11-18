@@ -20,15 +20,29 @@ export async function logoutAction(): Promise<void> {
   await fetchLoginStatus()
 }
 
-export function restartAction(): void {
-  if (confirm('Are you sure you want to restart?')) {
-    fetch(`${window.serverRoutesPrefix}/restart`, {
-      credentials: 'include',
-      method: 'PUT'
-    }).then(() => {
-      useStore.getState().setRestarting(true)
-    })
-  }
+/**
+ * Ask before restarting. When the server keeps its latest values over a
+ * restart, the dialog also offers to start with no data.
+ */
+export async function restartAction(): Promise<void> {
+  const keepsData = await fetch(`${window.serverRoutesPrefix}/settings`, {
+    credentials: 'include'
+  })
+    .then((res) => (res.ok ? res.json() : undefined))
+    .then((settings) => Boolean(settings?.options?.restoreOwnData))
+    .catch(() => false)
+  useStore.getState().setRestartDialog({ keepsData })
+}
+
+export function requestRestart(keepData: boolean): void {
+  fetch(`${window.serverRoutesPrefix}/restart`, {
+    credentials: 'include',
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ keepData })
+  }).then(() => {
+    useStore.getState().setRestarting(true)
+  })
 }
 
 export async function loginAction(

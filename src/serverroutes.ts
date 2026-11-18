@@ -82,6 +82,7 @@ import {
   testedNodeVersions
 } from './version'
 import { Type } from '@sinclair/typebox'
+import type { StopOptions } from './deltacachePersistence'
 import { Value } from '@sinclair/typebox/value'
 import { HullTypeSchema, type HullType } from '@signalk/server-api/typebox'
 
@@ -322,7 +323,7 @@ interface App
     PluginManager,
     WithWrappedEmitter {
   webapps: Package[]
-  stopAndExit: () => void
+  stopAndExit: (options?: StopOptions) => void
   logging: {
     clearLog: () => void
     rememberDebug: (r: boolean) => void
@@ -517,8 +518,9 @@ module.exports = function (
   app.put(`${SERVERROUTESPREFIX}/restart`, (req: Request, res: Response) => {
     if (app.securityStrategy.allowRestart(req)) {
       res.json('Restarting...')
+      const saveCachedValues = req.body?.keepData !== false
       setTimeout(function () {
-        app.stopAndExit()
+        app.stopAndExit({ saveCachedValues })
       }, 2000)
     } else {
       res.status(401).json('Restart not allowed')
