@@ -29,8 +29,9 @@ export async function restartAction(): Promise<void> {
     credentials: 'include'
   })
     .then((res) => (res.ok ? res.json() : undefined))
-    .then((settings) => Boolean(settings?.options?.restoreOwnData))
-    .catch(() => false)
+    .then((settings) => settings?.options?.restoreOwnData)
+    .then((restore) => (typeof restore === 'boolean' ? restore : undefined))
+    .catch(() => undefined)
   useStore.getState().setRestartDialog({ keepsData })
 }
 

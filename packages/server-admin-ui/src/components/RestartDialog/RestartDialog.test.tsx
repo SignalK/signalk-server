@@ -59,6 +59,32 @@ describe('RestartDialog', () => {
     )
   })
 
+  it('offers both choices when the setting cannot be read', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => Promise.resolve(new Response('', { status: 500 })))
+    )
+    render(<RestartDialog />)
+    await restartAction()
+
+    expect(
+      await screen.findByRole('button', { name: 'Restart with no data' })
+    ).toBeDefined()
+    expect(
+      screen.getByRole('button', { name: 'Restart, keep data' })
+    ).toBeDefined()
+  })
+
+  it('names the dialog by its title', async () => {
+    mockServer(true)
+    render(<RestartDialog />)
+    await restartAction()
+
+    expect(
+      await screen.findByRole('dialog', { name: 'Restart server' })
+    ).toBeDefined()
+  })
+
   it('asks a plain question when data is not kept', async () => {
     const fetchMock = mockServer(false)
     render(<RestartDialog />)

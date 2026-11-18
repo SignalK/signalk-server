@@ -792,7 +792,6 @@ export default class DeltaCache {
     this.restoredValues = []
   }
 
-  /** Keep the restored values and stop tracking them. */
   forgetRestoredValues() {
     this.restoredValues = []
   }

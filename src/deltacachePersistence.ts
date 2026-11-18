@@ -66,7 +66,6 @@ export interface RestoreClock {
 }
 
 export interface StopOptions {
-  /** Save the cached values for the next start. */
   saveCachedValues?: boolean
 }
 

@@ -45,8 +45,8 @@ export type AppstoreView = 'All' | 'Installed' | 'Updates' | 'Installing'
  * badge on every restart.
  */
 export interface RestartDialogState {
-  /** The server keeps its latest values over a restart. */
-  keepsData: boolean
+  /** Whether the server keeps its latest values over a restart, if known. */
+  keepsData?: boolean
 }
 
 export interface HistoryProvidersState {
