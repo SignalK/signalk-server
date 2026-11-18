@@ -44,6 +44,37 @@ const convert = (formula: string, value: number) =>
   convertWithDisplayUnits(withFormula(formula), value)?.value
 
 describe('Display unit conversion', function () {
+  describe('shipped gallon-per-hour conversions', () => {
+    const definitions = JSON.parse(
+      fs.readFileSync(STANDARD_DEFINITIONS, 'utf-8')
+    ) as UnitDefinitions
+    for (const [unit, cubicMetersPerGallon] of [
+      ['gal/h', 0.003785411784],
+      ['gal-imp/h', 0.00454609]
+    ] as const) {
+      const conversion = definitions['m3/s'].conversions[unit]
+
+      it(`converts cubic meters per second to ${unit}`, () => {
+        for (const gallonsPerHour of [0, 0.5, 1, 10]) {
+          const siRate = (gallonsPerHour * cubicMetersPerGallon) / 3600
+          expect(convert(conversion.formula, siRate)).to.be.closeTo(
+            gallonsPerHour,
+            1e-8
+          )
+        }
+      })
+
+      it(`converts ${unit} back to cubic meters per second`, () => {
+        for (const gallonsPerHour of [0, 0.5, 1, 10]) {
+          const siRate = (gallonsPerHour * cubicMetersPerGallon) / 3600
+          expect(
+            convert(conversion.inverseFormula, gallonsPerHour)
+          ).to.be.closeTo(siRate, 1e-14)
+        }
+      })
+    }
+  })
+
   it('evaluates arithmetic formulas', () => {
     expect(convert('(value - 32) * 5 / 9', 212)).to.equal(100)
     expect(convert('-value ^ 2', 3)).to.equal(-9)

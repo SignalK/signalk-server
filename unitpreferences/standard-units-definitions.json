@@ -632,8 +632,8 @@
         "longName": "liters per minute"
       },
       "gal/h": {
-        "formula": "value * 264.17205236",
-        "inverseFormula": "value / 264.17205236",
+        "formula": "value * 264.17205236 * 3600",
+        "inverseFormula": "value / (264.17205236 * 3600)",
         "symbol": "gal/h",
         "longName": "gallons per hour"
       },
@@ -643,8 +643,8 @@
         "symbol": "m3/s"
       },
       "gal-imp/h": {
-        "formula": "value * 219.9692483",
-        "inverseFormula": "value / 219.9692483",
+        "formula": "value * 219.9692483 * 3600",
+        "inverseFormula": "value / (219.9692483 * 3600)",
         "symbol": "gal-imp/h"
       }
     }
