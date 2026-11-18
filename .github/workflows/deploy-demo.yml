@@ -121,14 +121,14 @@ jobs:
         run: |
           if ! flyctl volumes list -a "$FLY_APP" --json | jq -e 'any(.[]; .name == "history")' > /dev/null; then
             region=$(flyctl machines list -a "$FLY_APP" --json | jq -r '.[0].region')
-            flyctl volumes create history -a "$FLY_APP" -r "$region" -s 1 -y
+            flyctl volumes create history -a "$FLY_APP" -r "$region" -s 3 -y
           fi
           cat >> fly.toml <<'TOML'
 
           [mounts]
             source = "history"
             destination = "/home/node/history"
-            initial_size = "1gb"
+            initial_size = "3gb"
           TOML
       # A new DEMO_BUILD per run makes the builder install the newest plugin
       # releases instead of reusing an earlier install.
