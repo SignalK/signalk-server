@@ -176,6 +176,43 @@ describe('History API v2', () => {
       body.data.length.should.be.greaterThan(0)
     })
 
+    it('preserves hyphenated source references through the HTTP values endpoint', async function () {
+      const app = server.app as WithHistoryApi
+      const provider = await app.getHistoryApi!('testplugin')
+      const originalGetValues = provider.getValues
+      let received: ValuesRequest | undefined
+      provider.getValues = async (query) => {
+        received = query
+        return originalGetValues(query)
+      }
+      try {
+        const expressions = [
+          'navigation.speedOverGround|nmea0183-sample-data.II',
+          'environment.wind.speedApparent:sma:5|mast_sensor:wind-1'
+        ]
+        const res = await fetch(
+          `${api}/history/values?paths=${encodeURIComponent(expressions.join(','))}&from=${FROM}&to=${TO}&resolution=60`
+        )
+        res.status.should.equal(200)
+        chai.expect(received?.pathSpecs).to.deep.equal([
+          {
+            path: 'navigation.speedOverGround',
+            aggregate: 'average',
+            parameter: [],
+            sourceRef: 'nmea0183-sample-data.II'
+          },
+          {
+            path: 'environment.wind.speedApparent',
+            aggregate: 'sma',
+            parameter: ['5'],
+            sourceRef: 'mast_sensor:wind-1'
+          }
+        ])
+      } finally {
+        provider.getValues = originalGetValues
+      }
+    })
+
     it('passes sourcePolicy=all to the provider', async function () {
       const res = await fetch(
         `${api}/history/values?paths=navigation.speedOverGround&from=${FROM}&to=${TO}&resolution=60&sourcePolicy=all`
