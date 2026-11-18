@@ -8,6 +8,9 @@ processes = []
   # to X-Forwarded-For, so the visitor's address is two hops back
   # (https://fly.io/docs/networking/request-headers/)
   TRUST_PROXY = "2"
+  # Visitors at a boat show share the venue's address, and every open demo
+  # page holds several WebSockets
+  MAX_WS_CONNECTIONS_PER_IP = "200"
 
 [experimental]
   allowed_public_ports = []
@@ -20,8 +23,8 @@ processes = []
   protocol = "tcp"
   script_checks = []
   [services.concurrency]
-    hard_limit = 100
-    soft_limit = 20
+    hard_limit = 500
+    soft_limit = 400
     type = "connections"
 
   [[services.ports]]
