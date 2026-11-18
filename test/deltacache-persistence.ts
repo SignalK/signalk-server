@@ -2,9 +2,11 @@ import { expect } from 'chai'
 import fs from 'fs'
 import os from 'os'
 import path from 'path'
+import { performance } from 'perf_hooks'
 import { Delta, FullSignalK } from '@signalk/server-api'
 import DeltaCache from '../src/deltacache'
 import {
+  checkRestoreClock,
   DeltaCachePersistenceApp,
   deltaCacheFilePath,
   restoreDeltaCache,
@@ -19,6 +21,17 @@ import { startServerP } from './servertestutilities'
 
 const SELF = 'vessels.urn:mrn:imo:mmsi:230000001'
 const OTHER = 'vessels.urn:mrn:imo:mmsi:230000002'
+const MINUTE_MS = 60 * 1000
+const HOUR_MS = 60 * MINUTE_MS
+const BOOT_ID_PATH = '/proc/sys/kernel/random/boot_id'
+
+function currentBootId(): string | undefined {
+  try {
+    return fs.readFileSync(BOOT_ID_PATH, 'utf-8').trim()
+  } catch {
+    return undefined
+  }
+}
 
 function valueDelta(
   context: string,
@@ -64,6 +77,31 @@ describe('delta cache persistence', function () {
         true
       )
       .map((d) => ('values' in d.updates[0] ? d.updates[0].values[0] : null))
+  }
+
+  function writeSaved(
+    deltas: unknown[],
+    header: { savedAt?: number; bootId?: string; uptimeSeconds?: number } = {}
+  ) {
+    fs.mkdirSync(path.dirname(deltaCacheFilePath(configPath)), {
+      recursive: true
+    })
+    fs.writeFileSync(
+      deltaCacheFilePath(configPath),
+      JSON.stringify({
+        savedAt: Date.now(),
+        bootId: currentBootId(),
+        uptimeSeconds: os.uptime(),
+        ...header,
+        deltas
+      })
+    )
+  }
+
+  function fullTreeDepth(app: DeltaCachePersistenceApp) {
+    return (app.signalk as FullSignalK).retrieve().vessels[
+      'urn:mrn:imo:mmsi:230000001'
+    ]?.environment?.depth?.belowKeel?.value
   }
 
   beforeEach(function () {
@@ -270,21 +308,15 @@ describe('delta cache persistence', function () {
   })
 
   it('skips saved entries without a context', function () {
-    fs.mkdirSync(path.dirname(deltaCacheFilePath(configPath)), {
-      recursive: true
-    })
     const timestamp = new Date().toISOString()
-    fs.writeFileSync(
-      deltaCacheFilePath(configPath),
-      JSON.stringify([
-        { updates: [{ $source: 'can0.35', timestamp, values: [] }] },
-        {
-          context: 42,
-          updates: [{ $source: 'can0.35', timestamp, values: [] }]
-        },
-        valueDelta(SELF, 'environment.depth.belowKeel', 4.2, timestamp)
-      ])
-    )
+    writeSaved([
+      { updates: [{ $source: 'can0.35', timestamp, values: [] }] },
+      {
+        context: 42,
+        updates: [{ $source: 'can0.35', timestamp, values: [] }]
+      },
+      valueDelta(SELF, 'environment.depth.belowKeel', 4.2, timestamp)
+    ])
     const app = makeApp({ restoreOwnData: true, restoreOtherVessels: true })
     restoreDeltaCache(app)
     expect(cachedPaths(app, SELF)).to.deep.equal([
@@ -293,30 +325,162 @@ describe('delta cache persistence', function () {
   })
 
   it('does not mark a vessel restored when none of its values are usable', function () {
-    fs.mkdirSync(path.dirname(deltaCacheFilePath(configPath)), {
-      recursive: true
-    })
-    fs.writeFileSync(
-      deltaCacheFilePath(configPath),
-      JSON.stringify([
-        {
-          context: OTHER,
-          updates: [
-            {
-              $source: 'can0.35',
-              timestamp: new Date().toISOString(),
-              values: [{ path: 'navigation.speedOverGround' }]
-            }
-          ]
-        }
-      ])
-    )
+    writeSaved([
+      {
+        context: OTHER,
+        updates: [
+          {
+            $source: 'can0.35',
+            timestamp: new Date().toISOString(),
+            values: [{ path: 'navigation.speedOverGround' }]
+          }
+        ]
+      }
+    ])
     const app = makeApp({ restoreOwnData: true, restoreOtherVessels: true })
     restoreDeltaCache(app)
     expect(app.deltaCache.lastModifieds).to.not.have.property(OTHER)
     expect(
       (app.signalk as FullSignalK).retrieve().vessels
     ).to.not.have.property('urn:mrn:imo:mmsi:230000002')
+  })
+
+  it('does not restore after a longer downtime within the same boot', function () {
+    if (!currentBootId()) {
+      this.skip()
+    }
+    // Saved "two hours of uptime ago", with the wall clock claiming it was
+    // just now, as on a computer whose clock was set back meanwhile.
+    writeSaved(
+      [
+        valueDelta(
+          SELF,
+          'environment.depth.belowKeel',
+          4.2,
+          new Date().toISOString()
+        )
+      ],
+      { savedAt: Date.now(), uptimeSeconds: os.uptime() - 2 * 3600 }
+    )
+    const app = makeApp({ restoreOwnData: true, restoreMaxAgeMinutes: 60 })
+    restoreDeltaCache(app)
+    expect(cachedPaths(app, SELF)).to.deep.equal([])
+  })
+
+  it('restores within the same boot even if the clock jumped', function () {
+    if (!currentBootId()) {
+      this.skip()
+    }
+    writeSaved(
+      [
+        valueDelta(
+          SELF,
+          'environment.depth.belowKeel',
+          4.2,
+          new Date().toISOString()
+        )
+      ],
+      { savedAt: Date.now() - 30 * 24 * HOUR_MS, uptimeSeconds: os.uptime() }
+    )
+    const app = makeApp({ restoreOwnData: true })
+    restoreDeltaCache(app)
+    expect(cachedPaths(app, SELF)).to.deep.equal([
+      { path: 'environment.depth.belowKeel', value: 4.2 }
+    ])
+  })
+
+  it('does not restore after a reboot when the clock shows a long downtime', function () {
+    writeSaved(
+      [
+        valueDelta(
+          SELF,
+          'environment.depth.belowKeel',
+          4.2,
+          new Date().toISOString()
+        )
+      ],
+      { savedAt: Date.now() - 2 * HOUR_MS, bootId: 'an-earlier-boot' }
+    )
+    const app = makeApp({ restoreOwnData: true, restoreMaxAgeMinutes: 60 })
+    restoreDeltaCache(app)
+    expect(cachedPaths(app, SELF)).to.deep.equal([])
+  })
+
+  describe('after a reboot with an unset clock', function () {
+    const timestamp = new Date().toISOString()
+
+    function restoreAfterReboot() {
+      const savedAt = Date.now()
+      writeSaved(
+        [
+          valueDelta(SELF, 'environment.depth.belowKeel', 4.2, timestamp),
+          valueDelta(SELF, 'tanks.fuel.0.currentLevel', 0.62, timestamp)
+        ],
+        { savedAt, bootId: 'an-earlier-boot' }
+      )
+      const app = makeApp({ restoreOwnData: true, restoreMaxAgeMinutes: 60 })
+      restoreDeltaCache(app)
+      const clock = {
+        savedAt,
+        restoredAt: Date.now(),
+        restoredAtMonotonic: performance.now()
+      }
+      return { app, clock }
+    }
+
+    it('drops restored values when the clock is set and shows a long downtime', function () {
+      const { app, clock } = restoreAfterReboot()
+      app.deltaCache.ingestDelta(
+        valueDelta(
+          SELF,
+          'tanks.fuel.0.currentLevel',
+          0.5,
+          new Date().toISOString()
+        )
+      )
+
+      const done = checkRestoreClock(
+        app,
+        clock,
+        clock.restoredAt + 3 * 24 * HOUR_MS,
+        clock.restoredAtMonotonic + 2 * MINUTE_MS
+      )
+
+      expect(done).to.equal(true)
+      expect(cachedPaths(app, SELF)).to.deep.equal([
+        { path: 'tanks.fuel.0.currentLevel', value: 0.5 }
+      ])
+      expect(fullTreeDepth(app)).to.equal(undefined)
+    })
+
+    it('keeps restored values when the clock is set and the downtime was short', function () {
+      const { app, clock } = restoreAfterReboot()
+
+      const done = checkRestoreClock(
+        app,
+        clock,
+        clock.restoredAt + 20 * MINUTE_MS,
+        clock.restoredAtMonotonic + 2 * MINUTE_MS
+      )
+
+      expect(done).to.equal(true)
+      expect(fullTreeDepth(app)).to.equal(4.2)
+      expect(cachedPaths(app, SELF)).to.have.length(2)
+    })
+
+    it('keeps waiting while the clock runs evenly', function () {
+      const { app, clock } = restoreAfterReboot()
+
+      const done = checkRestoreClock(
+        app,
+        clock,
+        clock.restoredAt + 2 * MINUTE_MS,
+        clock.restoredAtMonotonic + 2 * MINUTE_MS
+      )
+
+      expect(done).to.equal(false)
+      expect(cachedPaths(app, SELF)).to.have.length(2)
+    })
   })
 
   it('starts empty when the saved file is broken', function () {

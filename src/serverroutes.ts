@@ -885,6 +885,7 @@ module.exports = function (
       },
       loggingDirectory: app.config.settings.loggingDirectory,
       pruneContextsMinutes: app.config.settings.pruneContextsMinutes || 60,
+      restoreMaxAgeMinutes: app.config.settings.restoreMaxAgeMinutes || 60,
       keepMostRecentLogsOnly:
         isUndefined(app.config.settings.keepMostRecentLogsOnly) ||
         app.config.settings.keepMostRecentLogsOnly,
@@ -1231,6 +1232,12 @@ module.exports = function (
     if (!isUndefined(settings.pruneContextsMinutes)) {
       updatedSettings.pruneContextsMinutes = Number(
         settings.pruneContextsMinutes
+      )
+    }
+
+    if (!isUndefined(settings.restoreMaxAgeMinutes)) {
+      updatedSettings.restoreMaxAgeMinutes = Number(
+        settings.restoreMaxAgeMinutes
       )
     }
 

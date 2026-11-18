@@ -118,6 +118,8 @@ export interface Config {
     restoreOwnData?: boolean
     /** With restoreOwnData, also save and restore other vessels. */
     restoreOtherVessels?: boolean
+    /** Saved values are not restored after a longer downtime, in minutes. */
+    restoreMaxAgeMinutes?: number
     mdns?: boolean
     sslport?: number
     port?: number

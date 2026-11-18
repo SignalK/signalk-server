@@ -23,6 +23,7 @@ interface ServerSettingsData {
   options?: Record<string, boolean>
   interfaces?: Record<string, boolean>
   pruneContextsMinutes?: string
+  restoreMaxAgeMinutes?: string
   loggingDirectory?: string
   keepMostRecentLogsOnly?: boolean
   logCountToKeep?: string
@@ -479,6 +480,35 @@ const ServerSettings: React.FC = () => {
                 <Form.Text muted>
                   Vessels that have not been updated after this many minutes
                   will be removed
+                </Form.Text>
+              </Col>
+            </Form.Group>
+            <Form.Group
+              as={Row}
+              style={
+                settings.options?.restoreOwnData
+                  ? undefined
+                  : { opacity: DISABLED_ROW_OPACITY }
+              }
+            >
+              <Col md="2">
+                <Form.Label htmlFor="restoreMaxAgeMinutes">
+                  Maximum age of restored data
+                </Form.Label>
+              </Col>
+              <Col xs="12" md={fieldColWidthMd}>
+                <Form.Control
+                  type="text"
+                  id="restoreMaxAgeMinutes"
+                  name="restoreMaxAgeMinutes"
+                  autoComplete="off"
+                  disabled={!settings.options?.restoreOwnData}
+                  onChange={handleChange}
+                  value={settings.restoreMaxAgeMinutes || ''}
+                />
+                <Form.Text muted>
+                  Kept values are not restored if the server was off for longer
+                  than this many minutes
                 </Form.Text>
               </Col>
             </Form.Group>
