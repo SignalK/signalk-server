@@ -43,6 +43,8 @@ Security can be enabled in several ways:
 
 When security is enabled, the next time you access the Admin UI it will prompt you to create an administrator account. During this setup you can optionally enable [Allow Readonly Access](#allow-readonly-access) if you want unauthenticated users to be able to view data.
 
+Until that account exists, whoever reaches the Admin UI first can create it. If you create it from an internet address rather than from the local network or a VPN, the Admin UI also asks for the setup code that the server prints in its log when it starts, so that a stranger who finds the server cannot claim it.
+
 ## Security Settings
 
 After enabling security, the following settings are available in **Security > Settings**. They are stored in the `security.json` file in the server configuration directory, and can also be overridden with environment variables.

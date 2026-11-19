@@ -78,6 +78,8 @@ import availableInterfaces from './interfaces'
 import redirects from './redirects.json'
 import rateLimit from 'express-rate-limit'
 import { execSync } from 'child_process'
+import { randomBytes, timingSafeEqual } from 'crypto'
+import { isInternetAddress } from './internetAddress'
 import {
   recommendedVersion as recommendedNodeVersion,
   testedNodeVersions
@@ -202,6 +204,7 @@ const MAX_STALE_CHECK_INTERVAL_MS = 60 * 1000
 const MIN_AUTO_TIMEOUT_SAMPLES = 2
 const MAX_AUTO_TIMEOUT_SAMPLES = 1000
 const MAX_AUTO_TIMEOUT_WARMUP_SECONDS = 3600
+const SETUP_CODE_BYTES = 6
 
 const stalenessSettingsSchema = Type.Object({
   enforceDataTimeouts: Type.Optional(Type.Boolean()),
@@ -531,12 +534,29 @@ module.exports = function (
     process.env.DISABLE_SECURITY_ACTIVATION === '1' ||
     process.env.DISABLE_SECURITY_ACTIVATION === 'true'
 
+  // Whoever creates the first admin account owns the server, so on a server
+  // reachable from the internet that must be someone who can read its log.
+  let firstAdminSetupCode: string | undefined
+  const needsSetupCode = (req: Request) =>
+    firstAdminSetupCode !== undefined && isInternetAddress(req.ip)
+  const matchesSetupCode = (code: unknown) => {
+    if (firstAdminSetupCode === undefined || typeof code !== 'string') {
+      return false
+    }
+    const expected = Buffer.from(firstAdminSetupCode)
+    const given = Buffer.from(code.trim().toLowerCase())
+    return given.length === expected.length && timingSafeEqual(given, expected)
+  }
+
   const getLoginStatus = (req: Request, res: Response) => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const result: any = app.securityStrategy.getLoginStatus(req)
     result.securityWasEnabled = securityWasEnabled
     if (securityActivationDisabled) {
       delete result.noUsers
+    }
+    if (needsSetupCode(req)) {
+      result.setupCodeRequired = true
     }
 
     setNoCache(res)
@@ -931,6 +951,10 @@ module.exports = function (
         }
       )
     } else {
+      firstAdminSetupCode = randomBytes(SETUP_CODE_BYTES).toString('hex')
+      console.log(
+        `To create the first admin account from an internet address, enter the setup code ${firstAdminSetupCode}`
+      )
       app.post(
         `${SERVERROUTESPREFIX}/enableSecurity`,
         (req: Request, res: Response) => {
@@ -997,6 +1021,7 @@ module.exports = function (
                         return
                       }
                       securityWasEnabled = true
+                      firstAdminSetupCode = undefined
                       res.send('Security restored, please restart the server')
                     }
                   )
@@ -1006,6 +1031,14 @@ module.exports = function (
                 }
               }
             )
+            return
+          }
+          if (needsSetupCode(req) && !matchesSetupCode(req.body.setupCode)) {
+            res
+              .status(403)
+              .send(
+                'Enter the setup code the server printed in its log when it started'
+              )
             return
           }
           if (app.securityStrategy.isDummy()) {
@@ -1072,6 +1105,7 @@ module.exports = function (
                     )
                   } else {
                     securityWasEnabled = true
+                    firstAdminSetupCode = undefined
                     response.send('Security enabled')
                   }
                 })
