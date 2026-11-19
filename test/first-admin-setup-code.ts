@@ -21,13 +21,19 @@ describe('Setup code for the first admin account', function () {
     configDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sk-setup-code-'))
     const port = await freeport()
     url = `http://127.0.0.1:${port}`
-    const log = console.log
-    console.log = (...args: unknown[]) => {
-      const match = /setup code (\w+)/.exec(String(args[0]))
+    const writeSync = fs.writeSync
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ;(fs as any).writeSync = (
+      fd: number,
+      data: unknown,
+      ...rest: unknown[]
+    ) => {
+      const match = /setup code (\w+)/.exec(String(data))
       if (match) {
         setupCode = match[1]
       }
-      log(...args)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return (writeSync as any)(fd, data, ...rest)
     }
     try {
       server = await startServerP(
@@ -38,7 +44,8 @@ describe('Setup code for the first admin account', function () {
         configDir
       )
     } finally {
-      console.log = log
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ;(fs as any).writeSync = writeSync
     }
   })
 
@@ -73,12 +80,24 @@ describe('Setup code for the first admin account', function () {
     expect(setupCode).to.match(/^[0-9a-f]{12}$/)
   })
 
+  it('keeps the setup code out of the server log the Admin UI shows', () => {
+    const log = server.app.logging.getLog() as { row: string }[]
+    expect(log.some(({ row }) => row.includes(setupCode!))).to.equal(false)
+  })
+
   it('asks only internet visitors for the setup code', async () => {
     expect((await loginStatusFrom(LAN_ADDRESS)).setupCodeRequired).to.equal(
       undefined
     )
     expect(
       (await loginStatusFrom(INTERNET_ADDRESS)).setupCodeRequired
+    ).to.equal(true)
+  })
+
+  it('is not fooled by a local address added in front of the real one', async () => {
+    expect(
+      (await loginStatusFrom(`${LAN_ADDRESS}, ${INTERNET_ADDRESS}`))
+        .setupCodeRequired
     ).to.equal(true)
   })
 

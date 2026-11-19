@@ -537,8 +537,18 @@ module.exports = function (
   // Whoever creates the first admin account owns the server, so on a server
   // reachable from the internet that must be someone who can read its log.
   let firstAdminSetupCode: string | undefined
+  // Every hop counts, whether or not the proxy settings trust it: a client
+  // can add made-up local addresses to X-Forwarded-For, but cannot remove
+  // the real ones its own connection or a proxy put there.
+  const crossesInternet = (req: Request) => {
+    const forwarded = req.headers['x-forwarded-for']
+    const hops = (Array.isArray(forwarded) ? forwarded : [forwarded ?? ''])
+      .flatMap((value) => value.split(','))
+      .map((hop) => hop.trim())
+    return [req.socket.remoteAddress, ...hops].some(isInternetAddress)
+  }
   const needsSetupCode = (req: Request) =>
-    firstAdminSetupCode !== undefined && isInternetAddress(req.ip)
+    firstAdminSetupCode !== undefined && crossesInternet(req)
   const matchesSetupCode = (code: unknown) => {
     if (firstAdminSetupCode === undefined || typeof code !== 'string') {
       return false
@@ -952,8 +962,11 @@ module.exports = function (
       )
     } else {
       firstAdminSetupCode = randomBytes(SETUP_CODE_BYTES).toString('hex')
-      console.log(
-        `To create the first admin account from an internet address, enter the setup code ${firstAdminSetupCode}`
+      // Straight to the process output: console output also lands in the
+      // server log, which the Admin UI shows to anyone while security is off.
+      fs.writeSync(
+        process.stdout.fd,
+        `To create the first admin account from an internet address, enter the setup code ${firstAdminSetupCode}\n`
       )
       app.post(
         `${SERVERROUTESPREFIX}/enableSecurity`,
