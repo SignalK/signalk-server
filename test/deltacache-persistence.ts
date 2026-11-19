@@ -291,6 +291,32 @@ describe('delta cache persistence', function () {
     ])
   })
 
+  it('saves the preferred source when it is cached under its numeric alias', async function () {
+    const before = makeApp({ restoreOwnData: true })
+    ;(before.signalk as FullSignalK).sources = {
+      can0: { '35': { n2k: { canName: 'c0ffee' } } }
+    }
+    const timestamp = new Date().toISOString()
+    const live = (sourceRef: string, value: number) =>
+      before.deltaCache.onValue({
+        context: SELF,
+        path: 'environment.depth.belowKeel',
+        value,
+        $source: sourceRef,
+        timestamp,
+        isMeta: false
+      } as unknown as Parameters<DeltaCache['onValue']>[0])
+    live('can0.36', 4.4)
+    live('can0.35', 4.2)
+    await saveDeltaCache(before)
+
+    const after = makeApp({ restoreOwnData: true })
+    restoreDeltaCache(after)
+    expect(cachedPaths(after, SELF)).to.deep.equal([
+      { path: 'environment.depth.belowKeel', value: 4.2 }
+    ])
+  })
+
   it('treats an invalid maximum age as the default', function () {
     writeSaved(
       [

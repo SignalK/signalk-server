@@ -1587,6 +1587,7 @@ export default class DeltaCache {
     deltas: NormalizedDelta[]
   ): NormalizedDelta[] {
     const byPath = new Map<string, NormalizedDelta>()
+    const hasPreferred = new Set<string>()
     const result: NormalizedDelta[] = []
     for (const d of deltas) {
       // Defensive: getCachedDeltas(key=...) can surface non-leaf branch
@@ -1608,8 +1609,15 @@ export default class DeltaCache {
         result.push(d)
         continue
       }
-      if (preferred === d.$source) {
-        byPath.set(key, d)
+      // preferredSources holds the canonical (canName) form, while a value
+      // may be cached under its numeric alias. Among several aliases of
+      // the winner the newest value is kept, whatever the cache order.
+      if (this.canonicaliseSourceRef(d.$source) === preferred) {
+        const kept = byPath.get(key)
+        if (!hasPreferred.has(key) || (kept && d.timestamp > kept.timestamp)) {
+          byPath.set(key, d)
+          hasPreferred.add(key)
+        }
       } else if (!byPath.has(key)) {
         byPath.set(key, d)
       }
