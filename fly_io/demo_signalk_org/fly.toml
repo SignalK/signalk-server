@@ -11,6 +11,9 @@ processes = []
   # Visitors at a boat show share the venue's address, and every open demo
   # page holds several WebSockets
   MAX_WS_CONNECTIONS_PER_IP = "200"
+  # Logs each WebSocket connect and refusal with the visitor's address and
+  # how many connections that address holds
+  DEBUG = "signalk-server:interfaces:ws:connections"
 
 [experimental]
   allowed_public_ports = []
