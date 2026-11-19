@@ -14,6 +14,10 @@ processes = []
   # Logs each WebSocket connect and refusal with the visitor's address and
   # how many connections that address holds
   DEBUG = "signalk-server:interfaces:ws:connections"
+  # Per address and 10 minutes the server allows 1000 login status checks
+  # and 100 logins. A venue address carries many visitors, each page load
+  # checks the login several times, and the demo has no admin to guess.
+  HTTP_RATE_LIMITS = "loginStatus=10000,login=1000"
 
 [experimental]
   allowed_public_ports = []
