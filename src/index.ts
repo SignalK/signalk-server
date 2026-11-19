@@ -66,6 +66,7 @@ import {
   WithSecurityStrategy
 } from './security.js'
 import { setupCors } from './cors'
+import { warnWhenOpenToInternet } from './exposureWarning'
 import SubscriptionManager from './subscriptionmanager'
 import { PluginId, PluginManager } from './interfaces/plugins'
 import { OpenApiDescription, OpenApiRecord } from './api/swagger'
@@ -180,6 +181,7 @@ class Server {
 
     setupCors(app, getSecurityConfig(app))
     startSecurity(app, opts ? opts.securityConfig : null)
+    app.use(warnWhenOpenToInternet(app))
 
     require('./serverroutes')(app, saveSecurityConfig, getSecurityConfig)
     require('./put').start(app)
