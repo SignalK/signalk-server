@@ -284,6 +284,178 @@ describe('Providers', (_) => {
   })
 })
 
+describe('Providers that run shell commands', () => {
+  let server, url
+
+  const savedExecute = {
+    id: 'savedExecute',
+    pipeElements: [
+      {
+        type: 'providers/simple',
+        options: {
+          logging: false,
+          type: 'Execute',
+          subOptions: { command: 'cat /dev/null' }
+        }
+      }
+    ],
+    enabled: false
+  }
+
+  before(async function () {
+    const port = await freeport()
+    url = `http://0.0.0.0:${port}`
+    const serverApp = new Server({
+      config: {
+        settings: {
+          port,
+          interfaces: { plugins: false },
+          pipedProviders: [savedExecute]
+        }
+      }
+    })
+    server = await serverApp.start()
+  })
+
+  after(async function () {
+    delete process.env.ALLOW_EXECUTE_CONNECTIONS
+    await server.stop()
+  })
+
+  const send = (method, path, body) =>
+    fetch(`${url}/skServer/providers${path}`, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    })
+  const ids = () => server.app.config.settings.pipedProviders.map((p) => p.id)
+  const savedCommand = (id) =>
+    server.app.config.settings.pipedProviders.find((p) => p.id === id)
+      .pipeElements[0].options.subOptions.command
+
+  it('refuses a new Execute connection', async function () {
+    const res = await send('post', '', {
+      id: 'planted',
+      enabled: true,
+      type: 'Execute',
+      options: { command: 'touch /tmp/planted', dataType: 'NMEA0183' }
+    })
+    res.status.should.equal(400)
+    ids().should.not.include('planted')
+  })
+
+  it('refuses turning a connection into an Execute connection', async function () {
+    let res = await send('post', '', {
+      id: 'plain',
+      enabled: false,
+      type: 'NMEA0183',
+      options: { type: 'tcp', host: 'localhost', port: 10110 }
+    })
+    res.status.should.equal(200)
+    res = await send('put', '/plain', {
+      id: 'plain',
+      enabled: false,
+      type: 'Execute',
+      options: { command: 'touch /tmp/planted' }
+    })
+    res.status.should.equal(400)
+    server.app.config.settings.pipedProviders
+      .find((p) => p.id === 'plain')
+      .pipeElements[0].options.type.should.equal('NMEA0183')
+  })
+
+  it('refuses changing the command of a saved Execute connection', async function () {
+    const res = await send('put', '/savedExecute', {
+      id: 'savedExecute',
+      enabled: false,
+      type: 'Execute',
+      options: { command: 'touch /tmp/planted' }
+    })
+    res.status.should.equal(400)
+    savedCommand('savedExecute').should.equal('cat /dev/null')
+  })
+
+  it('updates a saved Execute connection whose command stays the same', async function () {
+    const res = await send('put', '/savedExecute', {
+      id: 'savedExecute',
+      enabled: false,
+      logging: true,
+      type: 'Execute',
+      options: { command: 'cat /dev/null' }
+    })
+    res.status.should.equal(200)
+    server.app.config.settings.pipedProviders
+      .find((p) => p.id === 'savedExecute')
+      .pipeElements[0].options.logging.should.equal(true)
+  })
+
+  it('accepts Execute connections when the environment allows them', async function () {
+    process.env.ALLOW_EXECUTE_CONNECTIONS = 'true'
+    try {
+      const res = await send('put', '/savedExecute', {
+        id: 'savedExecute',
+        enabled: false,
+        type: 'Execute',
+        options: { command: 'cat /dev/zero' }
+      })
+      res.status.should.equal(200)
+      savedCommand('savedExecute').should.equal('cat /dev/zero')
+    } finally {
+      delete process.env.ALLOW_EXECUTE_CONNECTIONS
+    }
+  })
+
+  for (const [type, options] of [
+    ['NMEA2000', { type: 'ngt-1', device: '/dev/ttyUSB0;touch /tmp/planted' }],
+    [
+      'NMEA2000',
+      { type: 'ngt-1', device: '/dev/ttyUSB0', baudrate: '1 $(id)' }
+    ],
+    ['NMEA2000', { type: 'canbus', interface: 'can0|sh' }],
+    ['Seatalk', { type: 'gpiod', gpio: '4`id`' }],
+    ['Seatalk', { gpio: '4', gpioInvert: "false' x" }]
+  ]) {
+    it(`refuses shell syntax in ${type} ${JSON.stringify(options)}`, async function () {
+      const res = await send('post', '', {
+        id: 'injected',
+        enabled: false,
+        type,
+        options
+      })
+      res.status.should.equal(400)
+      ids().should.not.include('injected')
+    })
+  }
+
+  it('accepts ordinary device, interface and pin values', async function () {
+    let res = await send('post', '', {
+      id: 'ngt',
+      enabled: false,
+      type: 'NMEA2000',
+      options: {
+        type: 'ngt-1',
+        device: '/dev/serial/by-id/usb-Actisense_NGT-1_1A2B-if00-port0',
+        baudrate: 115200
+      }
+    })
+    res.status.should.equal(200)
+    res = await send('post', '', {
+      id: 'can',
+      enabled: false,
+      type: 'NMEA2000',
+      options: { type: 'canbus', interface: 'can0' }
+    })
+    res.status.should.equal(200)
+    res = await send('post', '', {
+      id: 'stalk',
+      enabled: false,
+      type: 'Seatalk',
+      options: { type: 'gpiod', gpio: 'GPIO4', gpioInvert: false }
+    })
+    res.status.should.equal(200)
+  })
+})
+
 function checkExistingProvider(existing) {
   existing.id.should.equal('existing')
   existing.enabled.should.equal(false)
