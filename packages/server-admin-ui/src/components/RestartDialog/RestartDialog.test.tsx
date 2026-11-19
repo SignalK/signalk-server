@@ -75,6 +75,22 @@ describe('RestartDialog', () => {
     ).toBeDefined()
   })
 
+  it('opens once when Restart is clicked again while settings load', async () => {
+    const fetchMock = mockServer(true)
+    render(<RestartDialog />)
+    const first = restartAction()
+    const second = restartAction()
+    await Promise.all([first, second])
+
+    fireEvent.click(await screen.findByText('Cancel'))
+    await waitFor(() => expect(useStore.getState().restartDialog).toBeNull())
+    await Promise.resolve()
+    expect(useStore.getState().restartDialog).toBeNull()
+    expect(
+      fetchMock.mock.calls.filter(([url]) => url.endsWith('/settings'))
+    ).toHaveLength(1)
+  })
+
   it('names the dialog by its title', async () => {
     mockServer(true)
     render(<RestartDialog />)
