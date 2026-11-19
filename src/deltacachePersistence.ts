@@ -81,6 +81,29 @@ function readBootId(): string | undefined {
   }
 }
 
+function restoreMaxAgeMs(minutes: number | undefined): number {
+  const validMinutes =
+    typeof minutes === 'number' && Number.isFinite(minutes) && minutes > 0
+      ? minutes
+      : DEFAULT_RESTORE_MAX_AGE_MINUTES
+  return validMinutes * MS_PER_MINUTE
+}
+
+function isRestorable(delta: Delta): boolean {
+  return (
+    typeof delta?.context === 'string' &&
+    Array.isArray(delta.updates) &&
+    delta.updates.every(
+      (update) =>
+        typeof update === 'object' &&
+        update !== null &&
+        'values' in update &&
+        Array.isArray(update.values) &&
+        update.values.every((pv) => typeof pv?.path === 'string')
+    )
+  )
+}
+
 function isSavedDeltaCache(data: unknown): data is SavedDeltaCache {
   const saved = data as SavedDeltaCache
   return (
@@ -116,7 +139,7 @@ export async function saveDeltaCache(
     ? () => true
     : ({ context }) => context === app.selfContext
   const deltas = app.deltaCache
-    .getCachedDeltas(matcher, undefined, undefined, 'all', true)
+    .getCachedDeltas(matcher, undefined, undefined, 'preferred', true)
     .filter(isWorthSaving)
   const filePath = deltaCacheFilePath(app.config.configPath)
   await mkdir(join(app.config.configPath, SERVERSTATEDIRNAME), {
@@ -177,8 +200,7 @@ export function restoreDeltaCache(app: DeltaCachePersistenceApp): void {
   }
 
   const now = Date.now()
-  const maxAgeMs =
-    (restoreMaxAgeMinutes || DEFAULT_RESTORE_MAX_AGE_MINUTES) * MS_PER_MINUTE
+  const maxAgeMs = restoreMaxAgeMs(restoreMaxAgeMinutes)
   const bootId = readBootId()
   const sameBoot = bootId !== undefined && bootId === saved.bootId
   const downtimeMs = sameBoot
@@ -197,7 +219,7 @@ export function restoreDeltaCache(app: DeltaCachePersistenceApp): void {
     now -
     (pruneContextsMinutes || DEFAULT_PRUNE_CONTEXTS_MINUTES) * MS_PER_MINUTE
   for (const delta of deltas as Delta[]) {
-    if (typeof delta?.context !== 'string') {
+    if (!isRestorable(delta)) {
       continue
     }
     const isSelf = delta.context === app.selfContext
@@ -255,9 +277,7 @@ export function checkRestoreClock(
   if (Math.abs(clockStepMs) < CLOCK_STEP_THRESHOLD_MS) {
     return false
   }
-  const maxAgeMs =
-    (app.config.settings.restoreMaxAgeMinutes ||
-      DEFAULT_RESTORE_MAX_AGE_MINUTES) * MS_PER_MINUTE
+  const maxAgeMs = restoreMaxAgeMs(app.config.settings.restoreMaxAgeMinutes)
   const downtimeMs = wallNow - sinceRestoreMs - clock.savedAt
   if (downtimeMs > maxAgeMs) {
     debug('Clock was set, dropping values restored after a long downtime')
