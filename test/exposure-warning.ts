@@ -1,4 +1,5 @@
 import { expect } from 'chai'
+import WebSocket from 'ws'
 import { freeport, SERVER_START_TIMEOUT } from './ts-servertestutilities'
 import { isInternetAddress } from '../src/internetAddress'
 import { EXPOSURE_STATUS_ID } from '../src/exposureWarning'
@@ -45,12 +46,11 @@ describe('isInternetAddress', () => {
 describe('Warning about a server without security on the internet', function () {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let server: any
-  let url: string
+  let port: number
 
-  before(async function () {
+  beforeEach(async function () {
     this.timeout(SERVER_START_TIMEOUT)
-    const port = await freeport()
-    url = `http://127.0.0.1:${port}`
+    port = await freeport()
     server = new Server({
       config: {
         settings: { port, trustProxy: true, interfaces: { plugins: false } }
@@ -59,22 +59,53 @@ describe('Warning about a server without security on the internet', function () 
     await server.start()
   })
 
-  after(async function () {
+  afterEach(async function () {
     await server.stop()
   })
 
-  const requestFrom = (address: string) =>
-    fetch(`${url}/signalk`, { headers: { 'X-Forwarded-For': address } })
+  const exposureStatus = () => server.app.providerStatus[EXPOSURE_STATUS_ID]
+  const requestFrom = (address: string, method = 'GET') =>
+    fetch(`http://127.0.0.1:${port}/signalk`, {
+      method,
+      headers: {
+        'X-Forwarded-For': address,
+        Origin: 'http://example.com',
+        'Access-Control-Request-Method': 'GET'
+      }
+    })
+  const connectWebSocketFrom = (address: string) =>
+    new Promise<void>((resolve, reject) => {
+      const ws = new WebSocket(
+        `ws://127.0.0.1:${port}/signalk/v1/stream?subscribe=none`,
+        { headers: { 'X-Forwarded-For': address } }
+      )
+      ws.on('open', () => {
+        ws.close()
+        resolve()
+      })
+      ws.on('error', reject)
+    })
 
   it('stays quiet for requests from the local network', async () => {
     await requestFrom('192.168.1.20')
-    expect(server.app.providerStatus[EXPOSURE_STATUS_ID]).to.equal(undefined)
+    await connectWebSocketFrom('192.168.1.20')
+    expect(exposureStatus()).to.equal(undefined)
   })
 
   it('warns once a request arrives from the internet', async () => {
     await requestFrom('203.0.113.7')
-    const status = server.app.providerStatus[EXPOSURE_STATUS_ID]
-    expect(status.type).to.equal('error')
-    expect(status.message).to.contain('203.0.113.7')
+    expect(exposureStatus().type).to.equal('error')
+    expect(exposureStatus().message).to.contain('203.0.113.7')
+  })
+
+  it('warns about a preflight request that CORS answers itself', async () => {
+    const res = await requestFrom('203.0.113.8', 'OPTIONS')
+    expect(res.status).to.equal(204)
+    expect(exposureStatus().message).to.contain('203.0.113.8')
+  })
+
+  it('warns about a client that only opens a WebSocket', async () => {
+    await connectWebSocketFrom('203.0.113.9')
+    expect(exposureStatus().message).to.contain('203.0.113.9')
   })
 })

@@ -179,9 +179,10 @@ class Server {
     app.logging = require('./logging')(app)
     app.version = '0.0.1'
 
+    // Ahead of CORS, which answers OPTIONS requests without passing them on.
+    app.use(warnWhenOpenToInternet(app))
     setupCors(app, getSecurityConfig(app))
     startSecurity(app, opts ? opts.securityConfig : null)
-    app.use(warnWhenOpenToInternet(app))
 
     require('./serverroutes')(app, saveSecurityConfig, getSecurityConfig)
     require('./put').start(app)
