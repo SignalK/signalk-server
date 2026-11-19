@@ -87,6 +87,10 @@ function sanitize(obj: any): any {
   for (const key of Object.keys(obj)) {
     if (NON_STANDARD_PROPS.has(key)) {
       delete obj[key]
+    } else if (key === 'properties') {
+      for (const name of Object.keys(obj.properties)) {
+        obj.properties[name] = sanitize(obj.properties[name])
+      }
     } else if (key === 'examples' && Array.isArray(obj[key])) {
       // OpenAPI 3.0 uses singular 'example', not 'examples'
       obj.example = obj[key][0]
