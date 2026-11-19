@@ -2,6 +2,13 @@ import { expect } from 'chai'
 import fs from 'fs'
 import path from 'path'
 import os from 'os'
+import { setTimeout as delay } from 'timers/promises'
+import CanboatJs from './canboatjs'
+import {
+  createMockApp,
+  collectStreamOutput,
+  createDebugStub
+} from './test-helpers'
 import { getFullLogDir, listLogFiles, getLogger } from './logging'
 import type { LoggingApp } from './logging'
 
@@ -110,6 +117,79 @@ describe('logging', () => {
 
     afterEach(() => {
       fs.rmSync(tmpDir, { recursive: true, force: true })
+    })
+
+    const readLogPayload = async () => {
+      const deadline = Date.now() + 1500
+      while (Date.now() < deadline) {
+        const file = fs
+          .readdirSync(tmpDir)
+          .find((name) => name.endsWith('.log'))
+        if (file) {
+          const content = fs.readFileSync(path.join(tmpDir, file), 'utf8')
+          if (content.endsWith('\n')) {
+            return content.trimEnd().split(';').slice(2).join(';')
+          }
+        }
+        await delay(10)
+      }
+      throw new Error('Timed out waiting for a complete log record')
+    }
+
+    it('retains a parsed NMEA 2000 message without updates', async () => {
+      const stream = new CanboatJs({
+        app: createMockApp(),
+        providerId: 'test-provider',
+        createDebug: createDebugStub()
+      })
+      const output = collectStreamOutput(stream)
+      stream.end(
+        '2024-01-01T00:00:00.000Z,2,127250,204,255,8,00,10,6e,01,00,ff,7f,fd'
+      )
+      const messages = await output
+      expect(messages).to.have.length(1)
+      expect(messages[0]).to.have.property('pgn', 127250)
+      expect(messages[0]).not.to.have.property('updates')
+      getLogger(
+        createLoggingApp({
+          configPath: tmpDir,
+          settings: { keepMostRecentLogsOnly: false }
+        }),
+        'A'
+      )(messages[0])
+      expect(JSON.parse(await readLogPayload())).to.deep.equal(messages[0])
+    })
+
+    it('retains object fields and embedded binary bytes', async () => {
+      const message = {
+        source: 'sensor',
+        data: Buffer.from([0, 128, 255]),
+        label: 'a;b'
+      }
+      getLogger(
+        createLoggingApp({
+          configPath: tmpDir,
+          settings: { keepMostRecentLogsOnly: false }
+        }),
+        'test'
+      )(message)
+      expect(JSON.parse(await readLogPayload())).to.deep.equal({
+        source: 'sensor',
+        data: { type: 'Buffer', data: [0, 128, 255] },
+        label: 'a;b'
+      })
+    })
+
+    it('keeps text buffers in the same format as text input', async () => {
+      const sentence = '$GPGLL,4916.45,N,12311.12,W,225444,A,*1D'
+      getLogger(
+        createLoggingApp({
+          configPath: tmpDir,
+          settings: { keepMostRecentLogsOnly: false }
+        }),
+        'N'
+      )(Buffer.from(sentence))
+      expect(await readLogPayload()).to.equal(sentence)
     })
 
     it('returns a function that writes log messages', function (done) {
