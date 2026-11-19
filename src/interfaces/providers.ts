@@ -146,6 +146,54 @@ function applyProviderSettings(
   return true
 }
 
+// The streams package puts these values into a shell command line, so they
+// may hold only what a device path, CAN interface, baud rate or GPIO pin needs.
+const SHELL_SAFE_VALUE = /^[\w./:@+-]*$/
+const SHELL_INTERPOLATED_OPTIONS = new Map([
+  ['NMEA2000/ngt-1', ['device', 'baudrate']],
+  ['NMEA2000/canbus', ['interface']],
+  ['Seatalk', ['gpio', 'gpioInvert']]
+])
+
+function allowsExecuteConnections(): boolean {
+  const value = process.env.ALLOW_EXECUTE_CONNECTIONS
+  return value === '1' || value === 'true'
+}
+
+function savedCommand(provider: PipedProvider | undefined): unknown {
+  const options = provider?.pipeElements[0]?.options
+  return options?.type === 'Execute' ? options.subOptions?.command : undefined
+}
+
+// A connection that runs an arbitrary command is code execution on the host,
+// so the API refuses to create one or change its command unless the operator
+// allows it where only they can: in the server's environment.
+function shellCommandRefusal(
+  provider: ProviderRequest,
+  existing: PipedProvider | undefined
+): string | undefined {
+  if (
+    provider.type === 'Execute' &&
+    !allowsExecuteConnections() &&
+    (savedCommand(existing) === undefined ||
+      savedCommand(existing) !== provider.options.command)
+  ) {
+    return 'Execute connections run a shell command on the server. Add them in settings.json, or start the server with ALLOW_EXECUTE_CONNECTIONS=true to manage them here.'
+  }
+
+  const keys =
+    SHELL_INTERPOLATED_OPTIONS.get(
+      `${provider.type}/${provider.options.type}`
+    ) ?? SHELL_INTERPOLATED_OPTIONS.get(provider.type)
+  for (const key of keys ?? []) {
+    const value = provider.options[key]
+    if (value !== undefined && !SHELL_SAFE_VALUE.test(String(value))) {
+      return `Invalid ${key}: only letters, digits and . _ / : @ + - are allowed`
+    }
+  }
+  return undefined
+}
+
 function isValidProviderBody(body: unknown): body is ProviderRequest {
   if (!body || typeof body !== 'object' || Array.isArray(body)) return false
   const b = body as Record<string, unknown>
@@ -260,6 +308,12 @@ module.exports = function (app: App) {
 
     if (!provider.id || provider.id.length === 0) {
       res.status(401).send('Please enter a provider ID')
+      return
+    }
+
+    const refusal = shellCommandRefusal(provider, existing)
+    if (refusal) {
+      res.status(400).send(refusal)
       return
     }
 
