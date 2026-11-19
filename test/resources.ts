@@ -19,6 +19,95 @@ const waypointsDir = () =>
   )
 
 describe('Resources Api', () => {
+  describe('provider selection through the server API', () => {
+    let running: Awaited<ReturnType<typeof startServer>>
+    const id = skUuid()
+    const calls: string[] = []
+    const primary = { name: 'Station', extremes: [{ height: 2.5 }] }
+    const secondary = { name: 'Station', extremes: [] }
+
+    before(async () => {
+      running = await startServer()
+      for (const [pluginId, resource] of [
+        ['tides-primary', primary],
+        ['tides-secondary', secondary]
+      ] as const) {
+        running.server.app.resourcesApi.register(pluginId, {
+          type: 'tides',
+          methods: {
+            listResources: (params: Record<string, unknown>) => {
+              calls.push(pluginId)
+              params.should.deep.equal({ station: 'Station' })
+              return Promise.resolve({ [id]: resource })
+            },
+            getResource: (resourceId: string) => {
+              calls.push(pluginId)
+              resourceId.should.equal(id)
+              return Promise.resolve(resource)
+            },
+            setResource: () => Promise.resolve(),
+            deleteResource: () => Promise.resolve()
+          }
+        })
+      }
+    })
+
+    after(async () => {
+      await running?.stop()
+    })
+
+    beforeEach(() => {
+      calls.length = 0
+    })
+
+    it('lists only the explicitly selected provider', async () => {
+      const result = await running.server.app.resourcesApi.listResources(
+        'tides',
+        { station: 'Station' },
+        'tides-primary'
+      )
+      result.should.deep.equal({ [id]: primary })
+      calls.should.deep.equal(['tides-primary'])
+    })
+
+    it('gets a resource only from the explicitly selected provider', async () => {
+      const result = await running.server.app.resourcesApi.getResource(
+        'tides',
+        id,
+        'tides-primary'
+      )
+      result.should.deep.equal(primary)
+      calls.should.deep.equal(['tides-primary'])
+    })
+
+    it('continues aggregating providers when none is specified', async () => {
+      const api = running.server.app.resourcesApi
+      ;(
+        await api.listResources('tides', { station: 'Station' })
+      ).should.deep.equal({ [id]: secondary })
+      calls.should.deep.equal(['tides-primary', 'tides-secondary'])
+      calls.length = 0
+      ;(await api.getResource('tides', id)).should.deep.equal(secondary)
+      calls.should.deep.equal(['tides-primary', 'tides-secondary'])
+    })
+
+    it('rejects an unknown provider without querying another', async () => {
+      const api = running.server.app.resourcesApi
+      for (const request of [
+        () => api.listResources('tides', { station: 'Station' }, 'missing'),
+        () => api.getResource('tides', id, 'missing')
+      ]) {
+        try {
+          await request()
+          chai.assert.fail('Expected unknown provider to be rejected')
+        } catch (error) {
+          ;(error as Error).message.should.equal('No provider for tides')
+        }
+      }
+      calls.should.deep.equal([])
+    })
+  })
+
   it('can put and get a waypoint', async function () {
     const { createWsPromiser, get, put, stop } = await startServer()
 
