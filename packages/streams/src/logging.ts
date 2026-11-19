@@ -37,10 +37,6 @@ let debug: (...args: unknown[]) => void = require('debug')(
 const filenamePattern = /skserver-raw_\d\d\d\d-\d\d-\d\dT\d\d\.log/
 const loggers: Record<string, FileTimestampStream> = {}
 
-interface LogMessage {
-  updates?: unknown[]
-}
-
 class FileTimestampStreamWithDelete extends FileTimestampStream {
   private readonly app: LoggingApp
   private readonly filesToKeep: number | undefined
@@ -135,13 +131,14 @@ export function getLogger(
 
   return (msg: unknown) => {
     try {
-      const logMsg = msg as LogMessage
       logger.write(
         Date.now() +
           ';' +
           discriminator +
           ';' +
-          (logMsg.updates ? JSON.stringify(msg) : String(msg)) +
+          (typeof msg === 'object' && msg !== null && !Buffer.isBuffer(msg)
+            ? JSON.stringify(msg)
+            : String(msg)) +
           '\n'
       )
     } catch (e) {
