@@ -264,7 +264,26 @@ export const MetaValueSchema = Type.Object(
     displayScale: Type.Optional(
       Type.Object({
         lower: Type.Number({ description: 'Lower bound of display scale' }),
-        upper: Type.Number({ description: 'Upper bound of display scale' })
+        upper: Type.Number({ description: 'Upper bound of display scale' }),
+        type: Type.Optional(
+          Type.Union(
+            [
+              Type.Literal('linear'),
+              Type.Literal('logarithmic'),
+              Type.Literal('power'),
+              Type.Literal('squareroot')
+            ],
+            {
+              description:
+                'Scale type used to map values onto the display range'
+            }
+          )
+        ),
+        power: Type.Optional(
+          Type.Number({
+            description: 'Exponent used when type is power'
+          })
+        )
       })
     ),
     zones: Type.Optional(
