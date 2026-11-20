@@ -60,6 +60,7 @@ describe('depth grid', () => {
 
   it('has no depth off the chart', () => {
     assert.equal(chartedDepth(grid, 52, 5.005), undefined)
+    assert.equal(chartedDepth(grid, 53.015, 4.999), undefined)
   })
 
   it('is missing without the build asset', () => {

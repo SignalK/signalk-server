@@ -49,6 +49,13 @@ export function chartedDepth(
   latitude: number,
   longitude: number
 ): number | undefined {
+  if (
+    longitude < grid.west ||
+    longitude > grid.west + grid.width * grid.dLon ||
+    latitude > grid.north ||
+    latitude < grid.north - grid.height * grid.dLat
+  )
+    return undefined
   const x = (longitude - grid.west) / grid.dLon - 0.5
   const y = (grid.north - latitude) / grid.dLat - 0.5
   const x0 = Math.floor(x)

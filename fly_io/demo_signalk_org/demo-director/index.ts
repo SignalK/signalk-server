@@ -5,7 +5,7 @@ import type {
   ServerAPI,
   Timestamp
 } from '@signalk/server-api'
-import { rmSync } from 'node:fs'
+import { cpSync, existsSync, rmSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { magvar } from 'magvar'
 import {
@@ -226,7 +226,10 @@ export default function (app: ServerAPI): Plugin {
   }
 
   function selfPosition() {
-    return app.getSelfPath('navigation.position.value') as Position | undefined
+    // a position the server lost is null
+    const position = app.getSelfPath('navigation.position.value') as
+      Position | null | undefined
+    return position ?? undefined
   }
 
   function publishVariation() {
@@ -402,26 +405,43 @@ export default function (app: ServerAPI): Plugin {
     })
     if (!login.ok) throw new Error(`login answered ${login.status}`)
     const { token } = (await login.json()) as { token: string }
+    // a visitor who steered while the login was under way is not idle
+    if (currentAutopilotSetting() !== autopilotSetting) return
     const resumed = await fetch(
       `${SERVER_URL}/signalk/v2/api/vessels/self/autopilots/_default/courseCurrentPoint`,
       { method: 'POST', headers: { Authorization: `Bearer ${token}` } }
     )
     if (!resumed.ok) throw new Error(`autopilot answered ${resumed.status}`)
     // visitors share the login, so the next one starts from the demo layout
-    rmSync(
-      resolve(
-        app.getDataDirPath(),
-        '../../applicationData/users',
-        DEMO_LOGIN.username
-      ),
-      { recursive: true, force: true }
+    rmSync(demoUserData(), { recursive: true, force: true })
+    seedDemoUser()
+  }
+
+  function applicationData() {
+    return resolve(app.getDataDirPath(), '../../applicationData')
+  }
+
+  function demoUserData() {
+    return resolve(applicationData(), 'users', DEMO_LOGIN.username)
+  }
+
+  // The demo login gets the SKIP dashboards anonymous visitors see, which
+  // SKIP reads from the global scope only for a visitor with no login
+  function seedDemoUser() {
+    const skip = resolve(applicationData(), 'global/skip')
+    const userSkip = resolve(demoUserData(), 'skip')
+    if (existsSync(skip) && !existsSync(userSkip))
+      cpSync(skip, userSkip, { recursive: true })
+  }
+
+  function currentAutopilotSetting() {
+    return JSON.stringify(
+      AUTOPILOT_PATHS.map((path) => app.getSelfPath(`${path}.value`))
     )
   }
 
   async function returnToRouteWhenIdle() {
-    const setting = JSON.stringify(
-      AUTOPILOT_PATHS.map((path) => app.getSelfPath(`${path}.value`))
-    )
+    const setting = currentAutopilotSetting()
     if (setting !== autopilotSetting) {
       autopilotSetting = setting
       autopilotChangedAt = Date.now()
@@ -480,6 +500,7 @@ export default function (app: ServerAPI): Plugin {
       gustedAt = Date.now()
       app.registerDeltaInputHandler(letTheWindGust)
       depthGrid = loadDepthGrid(app.getDataDirPath())
+      seedDemoUser()
       sounder.reset()
       sounderTimer = setInterval(sound, SOUNDER_MS)
       tick()

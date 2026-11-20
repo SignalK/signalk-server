@@ -1,5 +1,11 @@
 import { strict as assert } from 'node:assert'
-import { existsSync, mkdirSync, mkdtempSync } from 'node:fs'
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  writeFileSync
+} from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, it, mock } from 'node:test'
@@ -341,6 +347,57 @@ describe('demo director', () => {
         Authorization: 'Bearer demo-token'
       })
       assert.equal(existsSync(userData), false)
+    })
+
+    it('gives the next visitor the demo dashboards again', async () => {
+      const configDir = mkdtempSync(join(tmpdir(), 'director-'))
+      const globalSkip = join(configDir, 'applicationData/global/skip')
+      mkdirSync(globalSkip, { recursive: true })
+      writeFileSync(join(globalSkip, '11.0.0.json'), '{"default":{}}')
+      const userSkip = join(
+        configDir,
+        'applicationData/users',
+        DEMO_LOGIN.username,
+        'skip/11.0.0.json'
+      )
+      fakeServer()
+      const { app } = fakeApp(
+        { pointIndex: 2, pointTotal: 5, reverse: false },
+        FAR_FROM_FINAL,
+        steeredBy('compass'),
+        configDir
+      )
+      await startAt(app)
+      assert.equal(readFileSync(userSkip, 'utf8'), '{"default":{}}')
+      writeFileSync(userSkip, '{"default":{"changed":true}}')
+      await advance(FIVE_MINUTES)
+      assert.equal(readFileSync(userSkip, 'utf8'), '{"default":{}}')
+    })
+
+    it('stays off the autopilot when the visitor steers during the login', async () => {
+      const values = steeredBy('compass')
+      const calls: string[] = []
+      let answerLogin = () => {}
+      mock.method(globalThis, 'fetch', async (url: string) => {
+        calls.push(url.replace(/^http:\/\/[^/]+/, ''))
+        if (!url.endsWith('/auth/login')) return Response.json({})
+        await new Promise<void>((resolve) => {
+          answerLogin = resolve
+        })
+        return Response.json({ token: 'demo-token' })
+      })
+      const { app } = fakeApp(
+        { pointIndex: 2, pointTotal: 5, reverse: false },
+        FAR_FROM_FINAL,
+        values
+      )
+      await startAt(app)
+      await advance(FIVE_MINUTES)
+      assert.deepEqual(calls, ['/signalk/v1/auth/login'])
+      values['steering.autopilot.target.value'] = 1.4
+      answerLogin()
+      await advance(0)
+      assert.deepEqual(calls, ['/signalk/v1/auth/login'])
     })
 
     it('waits while the visitor keeps adjusting the autopilot', async () => {

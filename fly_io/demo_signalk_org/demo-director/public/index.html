@@ -12,6 +12,7 @@
         --muted: #5b6675;
         --card: #ffffff;
         --accent: #1565c0;
+        --on-accent: #ffffff;
       }
       @media (prefers-color-scheme: dark) {
         :root {
@@ -20,6 +21,7 @@
           --muted: #9aa6b4;
           --card: #1b232d;
           --accent: #64a8f0;
+          --on-accent: #10151c;
         }
       }
       body {
@@ -60,7 +62,7 @@
         border: 0;
         border-radius: 8px;
         background: var(--accent);
-        color: #fff;
+        color: var(--on-accent);
         cursor: pointer;
       }
       #status {
