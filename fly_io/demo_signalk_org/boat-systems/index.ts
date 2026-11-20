@@ -681,7 +681,11 @@ export default function (app: ServerAPI): Plugin {
       orionReading('orionStarter', starter, orionStarterA, houseV)
     ]
     gateways.send(victron, epochS)
-    if (gateways.refused) publish(victron.flatMap((reading) => reading.direct))
+    publish(
+      victron
+        .filter((reading) => !gateways.delivers(reading.device.mac))
+        .flatMap((reading) => reading.direct)
+    )
 
     const zigbeeReading: ZigbeeReading = {
       freezerC,
@@ -776,6 +780,7 @@ export default function (app: ServerAPI): Plugin {
       }
     }),
     start: (options: { gatewayLogin?: GatewayLogin }) => {
+      gateways.stop()
       gateways = new GatewaySimulator(app, options.gatewayLogin ?? {})
       lastTick = Date.now()
       zigbee
@@ -793,6 +798,7 @@ export default function (app: ServerAPI): Plugin {
     stop: () => {
       if (timer) clearInterval(timer)
       timer = undefined
+      gateways.stop()
       zigbee.stop()
       pushpitGnss.stop()
     }
@@ -1012,12 +1018,15 @@ const RSSI_JITTER_DB = 3
 const NEIGHBOUR_SEEN_SHARE = 0.4
 const SERVER_URL = `http://127.0.0.1:${Number(process.env.PORT ?? 3000)}`
 const LOGIN_RETRY_MS = 60_000
+// A gateway gives up on a request after this, as the ESP32 firmware does
+const REQUEST_TIMEOUT_MS = 5_000
 
 // The server takes advertisement posts only from a user who may write, as a
 // real gateway's device token allows. Until a post goes through, the readings
 // are published directly so the demo still shows them.
 class GatewaySimulator {
-  refused = false
+  private refused = new Set<string>()
+  private readonly stopped = new AbortController()
   private nonces = new Map<string, number>()
   private startedAt = Date.now()
   private token: string | undefined
@@ -1064,7 +1073,7 @@ class GatewaySimulator {
           })
         )
       ]
-      void this.post({
+      void this.post(gateway.id, {
         gateway_id: gateway.id,
         mac: gateway.id,
         hostname: gateway.hostname,
@@ -1076,7 +1085,25 @@ class GatewaySimulator {
     }
   }
 
-  private async post(body: object) {
+  // whether a gateway that hears the device is getting its posts through
+  delivers(mac: string) {
+    return GATEWAYS.some(
+      (gateway) => mac in gateway.hears && !this.refused.has(gateway.id)
+    )
+  }
+
+  stop() {
+    this.stopped.abort()
+  }
+
+  private signal() {
+    return AbortSignal.any([
+      this.stopped.signal,
+      AbortSignal.timeout(REQUEST_TIMEOUT_MS)
+    ])
+  }
+
+  private async post(gatewayId: string, body: object) {
     try {
       if (!this.token)
         await (this.loggingIn ??= this.logIn().finally(() => {
@@ -1091,19 +1118,21 @@ class GatewaySimulator {
             'Content-Type': 'application/json',
             ...(token ? { Authorization: `Bearer ${token}` } : {})
           },
-          body: JSON.stringify(body)
+          body: JSON.stringify(body),
+          signal: this.signal()
         }
       )
       if ((res.status === 401 || res.status === 403) && token === this.token)
         this.token = undefined
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      this.refused = false
+      this.refused.delete(gatewayId)
     } catch (error) {
-      if (!this.refused)
+      if (this.stopped.signal.aborted) return
+      if (!this.refused.has(gatewayId))
         this.app.error(
-          `BLE gateways refused, publishing directly: ${String(error)}`
+          `BLE gateway ${gatewayId} refused, publishing its devices directly: ${String(error)}`
         )
-      this.refused = true
+      this.refused.add(gatewayId)
     }
   }
 
@@ -1115,7 +1144,8 @@ class GatewaySimulator {
     const res = await fetch(`${SERVER_URL}/signalk/v1/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password })
+      body: JSON.stringify({ username, password }),
+      signal: this.signal()
     })
     if (res.ok) this.token = ((await res.json()) as { token?: string }).token
   }
@@ -1143,6 +1173,15 @@ function round(value: number, decimals: number) {
 export const ZIGBEE_BROKER_PORT = 1883
 export const ZIGBEE_NETWORK = 'boat'
 export const ZIGBEE_BASE_TOPIC = `zigbee2mqtt-${ZIGBEE_NETWORK}`
+
+// A topic the sensor readings arrive on, as opposed to the bridge's own
+export function isSensorTopic(topic: string) {
+  return (
+    topic === `${ZIGBEE_BASE_TOPIC}/#` ||
+    (topic.startsWith(`${ZIGBEE_BASE_TOPIC}/`) &&
+      !topic.startsWith(`${ZIGBEE_BASE_TOPIC}/bridge/`))
+  )
+}
 const ZIGBEE_REPORT_MS = 60_000
 const Z2M_VERSION = '2.6.2'
 const ESPOS_COORDINATOR = {
@@ -1291,10 +1330,10 @@ export function zigbeeDevices(names: Map<string, string>) {
 }
 
 interface RequestBody {
-  transaction?: string
-  time?: number
-  from?: string
-  to?: string
+  transaction?: unknown
+  time?: unknown
+  from?: unknown
+  to?: unknown
 }
 
 class ZigbeeSimulator {
@@ -1304,8 +1343,9 @@ class ZigbeeSimulator {
   private permitJoinEnd: number | undefined
   private permitJoinTimer: ReturnType<typeof setTimeout> | undefined
   private lastReport = 0
-  private stopped = false
-  private readonly followers = new Set<string>()
+  private run = 0
+  // the sensor topics each client subscribes to, by client id
+  private readonly followers = new Map<string, Set<string>>()
   private readonly app: ServerAPI
 
   constructor(app: ServerAPI) {
@@ -1319,25 +1359,37 @@ class ZigbeeSimulator {
   }
 
   async start() {
-    this.stopped = false
+    const run = ++this.run
     const broker = await Aedes.createBroker()
-    if (this.stopped) {
+    if (run !== this.run) {
       broker.close()
       return
     }
     broker.on('subscribe', (subscriptions, client) => {
-      if (subscriptions.some((s) => s.topic.startsWith(ZIGBEE_BASE_TOPIC)))
-        this.followers.add(client.id)
+      const topics = subscriptions.map((s) => s.topic).filter(isSensorTopic)
+      if (topics.length === 0) return
+      const followed = this.followers.get(client.id) ?? new Set<string>()
+      for (const topic of topics) followed.add(topic)
+      this.followers.set(client.id, followed)
+    })
+    broker.on('unsubscribe', (topics, client) => {
+      const followed = this.followers.get(client.id)
+      if (!followed) return
+      for (const topic of topics) followed.delete(topic)
+      if (followed.size === 0) this.followers.delete(client.id)
     })
     broker.on('clientDisconnect', (client) => this.followers.delete(client.id))
     broker.subscribe(
       `${ZIGBEE_BASE_TOPIC}/bridge/request/#`,
       (packet, done) => {
-        this.onRequest(
-          packet.topic.slice(`${ZIGBEE_BASE_TOPIC}/bridge/request/`.length),
-          packet.payload
-        )
-        done()
+        try {
+          this.onRequest(
+            packet.topic.slice(`${ZIGBEE_BASE_TOPIC}/bridge/request/`.length),
+            packet.payload
+          )
+        } finally {
+          done()
+        }
       },
       () => {}
     )
@@ -1354,8 +1406,10 @@ class ZigbeeSimulator {
   }
 
   stop() {
-    this.stopped = true
+    this.run++
     if (this.permitJoinTimer) clearTimeout(this.permitJoinTimer)
+    this.permitJoinTimer = undefined
+    this.permitJoinEnd = undefined
     this.server?.close()
     this.broker?.close()
     this.server = undefined
@@ -1457,14 +1511,17 @@ class ZigbeeSimulator {
   }
 
   private onRequest(name: string, payload: Buffer | string) {
-    let body: RequestBody
+    let parsed: unknown
     try {
-      body = JSON.parse(payload.toString()) as RequestBody
+      parsed = JSON.parse(payload.toString())
     } catch {
       return
     }
+    if (typeof parsed !== 'object' || parsed === null) return
+    const body = parsed as RequestBody
     if (name === 'permit_join') {
-      const seconds = clamp(Number(body.time ?? 0), 0, 254)
+      const time = Number(body.time ?? 0)
+      const seconds = Number.isFinite(time) ? clamp(time, 0, 254) : 0
       if (this.permitJoinTimer) clearTimeout(this.permitJoinTimer)
       this.permitJoinEnd = seconds > 0 ? Date.now() + seconds * 1000 : undefined
       if (seconds > 0) {
@@ -1476,11 +1533,11 @@ class ZigbeeSimulator {
       this.respond(name, body, { time: seconds })
       this.sendInfo()
     } else if (name === 'device/rename') {
+      const from = typeof body.from === 'string' ? body.from : undefined
       const sensor = ZIGBEE_SENSORS.find(
-        (s) =>
-          s.ieee === body.from?.toLowerCase() || this.nameOf(s) === body.from
+        (s) => s.ieee === from?.toLowerCase() || this.nameOf(s) === from
       )
-      const to = body.to?.trim()
+      const to = typeof body.to === 'string' ? body.to.trim() : undefined
       if (!sensor || !to) {
         this.respond(
           name,
@@ -1490,10 +1547,14 @@ class ZigbeeSimulator {
         )
         return
       }
-      const from = this.nameOf(sensor)
-      this.send(from, '')
+      const oldName = this.nameOf(sensor)
+      this.send(oldName, '')
       this.names.set(sensor.ieee, to)
-      this.respond(name, body, { from, to, homeassistant_rename: false })
+      this.respond(name, body, {
+        from: oldName,
+        to,
+        homeassistant_rename: false
+      })
       this.sendDevices()
       this.lastReport = 0
     } else if (name === 'options') {
