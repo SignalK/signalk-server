@@ -336,10 +336,7 @@ export async function reloadWasmPlugin(
   debug(`Reloading WASM plugin: ${pluginId}`)
 
   try {
-    const wasRunning = plugin.status === 'running'
-
-    // Stop the plugin
-    if (wasRunning) {
+    if (plugin.status === 'running') {
       await stopWasmPlugin(pluginId)
     }
 
@@ -366,8 +363,9 @@ export async function reloadWasmPlugin(
     const schemaJson = newInstance.exports.schema()
     plugin.schema = schemaJson ? JSON.parse(schemaJson) : {}
 
-    // Restart if it was running
-    if (wasRunning) {
+    // An enabled plugin that a failed reload left in error starts again
+    // once a reload succeeds
+    if (plugin.enabled) {
       await startWasmPlugin(app, pluginId)
     }
 

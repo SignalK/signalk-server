@@ -24,7 +24,7 @@ import {
   getAdminToken
 } from './servertestutilities'
 import type { PluginRoutePermission, SecurityStrategy } from '../src/security'
-import { reloadWasmPlugin } from '../dist/wasm/loader'
+import { getWasmPlugin, reloadWasmPlugin } from '../dist/wasm/loader'
 
 interface PluginInfo {
   id: string
@@ -668,6 +668,11 @@ export function plugin_stop(): i32 {
       expect(String(failure)).to.contain('HTTP endpoints')
       expect((await getBuildEndpoint('two')).status).to.equal(404)
       expect((await getBuildEndpoint('six')).status).to.equal(404)
+
+      buildProbe('seven')
+      await reloadWasmPlugin(server!.app, packageName)
+      expect(getWasmPlugin(packageName)?.status).to.equal('running')
+      expect((await getBuildEndpoint('seven')).status).to.equal(200)
     })
   })
 
