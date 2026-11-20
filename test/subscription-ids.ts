@@ -85,6 +85,14 @@ describe('Subscription ids', () => {
     return ws
   }
 
+  it('are listed in the hello capabilities', async () => {
+    const ws = connect('none')
+    const hello = JSON.parse(await ws.nthMessage(1))
+
+    expect(hello.capabilities).to.include('subscriptionIds')
+    ws.close()
+  })
+
   it('end only the named subscription and keep the connection open', async () => {
     const ws = await connectNone()
     await ws.send(subscribe('sog', SOG_PATH))
