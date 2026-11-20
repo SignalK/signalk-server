@@ -123,6 +123,49 @@ The final argument is a function that will be called every time an update is rec
 
 In the `stop()` method each subcription in the `unsubscribes` array is _unsubscribed_ and the resources released.
 
+### Ending a single subscription
+
+`subscribe()` returns a function that ends that subscription alone, for a plugin that changes what it listens to while it runs. The subscription is also in `unsubscribes`, so `stop()` still ends everything:
+
+```javascript
+const endDepth = app.subscriptionmanager.subscribe(
+  {
+    context: 'vessels.self',
+    subscribe: [{ path: 'environment.depth.belowKeel' }]
+  },
+  unsubscribes,
+  (error) => app.error(error),
+  (delta) => handleDepth(delta)
+)
+
+// later, when depth is no longer needed
+endDepth()
+```
+
+#### Over a WebSocket or TCP stream
+
+A client names a subscription with `subscriptionId`, unique on its connection, and ends it by that name; its other subscriptions keep running:
+
+```json
+{
+  "context": "vessels.self",
+  "subscriptionId": "depth",
+  "subscribe": [{ "path": "environment.depth.belowKeel" }]
+}
+```
+
+```json
+{
+  "context": "*",
+  "unsubscribe": [{ "subscriptionId": "depth" }]
+}
+```
+
+- A subscribe with an id already in use on the connection is refused, on a WebSocket with an error message, and the subscription holding that id keeps running.
+- An unsubscribe may list several ids. An id that names no subscription is ignored.
+- Unsubscribe-all (`"unsubscribe": [{ "path": "*" }]`) also ends the named subscriptions, and their ids can then be used again.
+- Servers that predate this close the connection on any unsubscribe other than unsubscribe-all. Check that the `capabilities` array of the hello message contains `subscriptionIds` first.
+
 ### Subscribing to `name`, `mmsi` and other root values
 
 Not all data in the model lives under a leaf path. Vessel identity fields — `name`, `mmsi`, `communication.callsignVhf` and similar attributes, typically sourced from AIS static reports — sit at the vessel root and are delivered as a _root delta_: a single update whose `path` is the empty string and whose `value` is an object holding the fields:

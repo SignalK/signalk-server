@@ -46,6 +46,7 @@ import {
   parseBackpressureThresholds
 } from '../BackpressureManager'
 import { getExternalPort } from '../ports'
+import { isUnsubscribeAll } from '../unsubscribe-message'
 import { resolvePathDisplayUnits, PathUnitsMetadata } from '../unitpreferences'
 import { Delta, hasMeta, hasValues } from '@signalk/server-api'
 
@@ -121,7 +122,7 @@ interface Spark {
 interface WsMessage {
   updates?: Delta['updates']
   subscribe?: Array<{ path: string }> | string
-  unsubscribe?: Array<{ path: string }>
+  unsubscribe?: Array<{ path: string } | { subscriptionId: string }>
   accessRequest?: unknown
   login?: { username: string; password: string }
   put?: { path: string; value: unknown; source?: string }
@@ -1317,6 +1318,7 @@ function processUnsubscribe(
     if (
       Array.isArray(msg.unsubscribe) &&
       msg.unsubscribe.length > 0 &&
+      'path' in msg.unsubscribe[0] &&
       msg.unsubscribe[0].path === 'log'
     ) {
       if (spark.logUnsubscribe) {
@@ -1325,10 +1327,13 @@ function processUnsubscribe(
       }
     } else {
       app.subscriptionmanager.unsubscribe(msg, unsubscribes)
-      const deltaEvent =
-        spark.sourcePolicy === 'all' ? 'unfilteredDelta' : 'delta'
-      app.signalk.removeListener(deltaEvent, onChange)
-      spark.sentMetaData = {}
+      // Ending single subscriptions leaves the ?subscribe= stream running
+      if (isUnsubscribeAll(msg)) {
+        const deltaEvent =
+          spark.sourcePolicy === 'all' ? 'unfilteredDelta' : 'delta'
+        app.signalk.removeListener(deltaEvent, onChange)
+        spark.sentMetaData = {}
+      }
     }
   } catch (e) {
     console.log(e)
