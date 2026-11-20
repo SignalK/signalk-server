@@ -386,7 +386,14 @@ export default class GpiodSeatalk extends Execute {
     super({
       ...options,
       debug: createDebug('signalk:streams:gpiod-seatalk'),
-      command: `python -u -c '${pythonScript}' ${options.gpio} ${options.gpioInvert} `
+      command: 'python',
+      args: [
+        '-u',
+        '-c',
+        pythonScript,
+        String(options.gpio),
+        String(options.gpioInvert)
+      ]
     })
   }
 }

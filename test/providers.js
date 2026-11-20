@@ -375,18 +375,17 @@ describe('Providers that run shell commands', () => {
     savedCommand('savedExecute').should.equal('cat /dev/null')
   })
 
-  it('updates a saved Execute connection whose command stays the same', async function () {
+  it('refuses any other update of a saved Execute connection', async function () {
     const res = await send('put', '/savedExecute', {
       id: 'savedExecute',
-      enabled: false,
-      logging: true,
+      enabled: true,
       type: 'Execute',
       options: { command: 'cat /dev/null' }
     })
-    res.status.should.equal(200)
+    res.status.should.equal(400)
     server.app.config.settings.pipedProviders
       .find((p) => p.id === 'savedExecute')
-      .pipeElements[0].options.logging.should.equal(true)
+      .enabled.should.equal(false)
   })
 
   it('accepts Execute connections when the environment allows them', async function () {
@@ -405,54 +404,27 @@ describe('Providers that run shell commands', () => {
     }
   })
 
-  for (const [type, options] of [
-    ['NMEA2000', { type: 'ngt-1', device: '/dev/ttyUSB0;touch /tmp/planted' }],
-    [
-      'NMEA2000',
-      { type: 'ngt-1', device: '/dev/ttyUSB0', baudrate: '1 $(id)' }
-    ],
-    ['NMEA2000', { type: 'canbus', interface: 'can0|sh' }],
-    ['Seatalk', { type: 'gpiod', gpio: '4`id`' }],
-    ['Seatalk', { gpio: '4', gpioInvert: "false' x" }]
-  ]) {
-    it(`refuses shell syntax in ${type} ${JSON.stringify(options)}`, async function () {
+  it('never lets a shell parse connection settings', async function () {
+    const marker = require('path').join(
+      require('os').tmpdir(),
+      `sk-provider-injection-${process.pid}`
+    )
+    const fs = require('fs')
+    fs.rmSync(marker, { force: true })
+    for (const [type, options] of [
+      ['NMEA2000', { type: 'ngt-1', device: `/dev/null; touch ${marker}` }],
+      ['NMEA2000', { type: 'canbus', interface: `can0; touch ${marker}` }]
+    ]) {
       const res = await send('post', '', {
-        id: 'injected',
-        enabled: false,
+        id: `injected-${options.type}`,
+        enabled: true,
         type,
         options
       })
-      res.status.should.equal(400)
-      ids().should.not.include('injected')
-    })
-  }
-
-  it('accepts ordinary device, interface and pin values', async function () {
-    let res = await send('post', '', {
-      id: 'ngt',
-      enabled: false,
-      type: 'NMEA2000',
-      options: {
-        type: 'ngt-1',
-        device: '/dev/serial/by-id/usb-Actisense_NGT-1_1A2B-if00-port0',
-        baudrate: 115200
-      }
-    })
-    res.status.should.equal(200)
-    res = await send('post', '', {
-      id: 'can',
-      enabled: false,
-      type: 'NMEA2000',
-      options: { type: 'canbus', interface: 'can0' }
-    })
-    res.status.should.equal(200)
-    res = await send('post', '', {
-      id: 'stalk',
-      enabled: false,
-      type: 'Seatalk',
-      options: { type: 'gpiod', gpio: 'GPIO4', gpioInvert: false }
-    })
-    res.status.should.equal(200)
+      res.status.should.equal(200)
+    }
+    await new Promise((resolve) => setTimeout(resolve, 1000))
+    fs.existsSync(marker).should.equal(false)
   })
 })
 

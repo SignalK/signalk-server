@@ -93,4 +93,52 @@ describe('Execute', () => {
     })
     exec.pipe(writable)
   })
+
+  it('passes args to the program without a shell', function (done) {
+    this.timeout(5000)
+    const app = createMockApp()
+    const exec = new Execute({
+      command: 'printf',
+      args: ['%s', '$(echo injected); echo injected'],
+      app,
+      providerId: 'test-exec',
+      restartOnClose: false,
+      createDebug: createDebugStub()
+    })
+
+    const writable = createCollectingWritable()
+    writable.on('chunk', () => {
+      const output = writable.chunks.join('')
+      if (output.includes('echo injected')) {
+        expect(output).to.equal('$(echo injected); echo injected')
+        exec.end()
+        done()
+      }
+    })
+    exec.pipe(writable)
+  })
+
+  it('reports a program that cannot be started', function (done) {
+    this.timeout(5000)
+    const app = createMockApp()
+    const origSetError = app.setProviderError.bind(app)
+    app.setProviderError = (id: string, msg: string) => {
+      origSetError(id, msg)
+      if (msg.includes('ENOENT')) {
+        exec.end()
+        done()
+      }
+    }
+
+    const exec = new Execute({
+      command: 'no-such-program-for-signalk-tests',
+      args: [],
+      app,
+      providerId: 'test-exec',
+      restartOnClose: false,
+      createDebug: createDebugStub()
+    })
+
+    exec.pipe(createCollectingWritable())
+  })
 })

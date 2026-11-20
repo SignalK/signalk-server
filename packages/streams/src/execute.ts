@@ -6,6 +6,9 @@ import type { CreateDebug, DebugLogger } from './types'
 
 interface ExecuteOptions {
   command: string
+  // With args, command is the program itself and no shell parses anything,
+  // so values from the settings can be passed safely.
+  args?: string[]
   app: {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     on(event: string, cb: (...args: any[]) => void): void
@@ -86,8 +89,12 @@ export default class Execute extends Transform {
   }
 
   private startProcess(command: string): void {
-    this.debug(`starting |${command}|`)
-    if (process.platform === 'win32') {
+    const { args } = this.options
+    const label = args ? [command, ...args].join(' ') : command
+    this.debug(`starting |${label}|`)
+    if (args) {
+      this.childProcess = spawn(command, args)
+    } else if (process.platform === 'win32') {
       this.childProcess = spawn('cmd', ['/c', command])
     } else {
       this.childProcess = spawn('sh', ['-c', command])
@@ -108,8 +115,17 @@ export default class Execute extends Transform {
       this.push(data)
     })
 
+    // Without a shell a missing program fails the spawn itself; 'close'
+    // follows and restarts it like any other exit.
+    this.childProcess.on('error', (err: Error) => {
+      this.options.app.setProviderError(
+        this.options.providerId,
+        `|${label}| ${err.message}`
+      )
+    })
+
     this.childProcess.on('close', (code: number | null) => {
-      const msg = `|${command}| exited with ${code}`
+      const msg = `|${label}| exited with ${code}`
       console.error(msg)
       if (this.stopped) return
       if (
