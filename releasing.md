@@ -38,4 +38,4 @@ This will trigger GH action that
 - builds and publishes all the submodules whose version does not match the latest version in npm
 - builds and publishes the server
 - builds docker images tagged with version and `latest`
-- deploys the version at fly.io as https://latest.signalk.org/ and, with the showcase, as https://demo.signalk.org/
+- deploys the version at fly.io as https://latest.signalk.org/, and starts the showcase deploy to https://demo.signalk.org/, which runs on the server's master image (`master-24.x`) rather than the tagged release
