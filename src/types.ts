@@ -16,6 +16,14 @@ export interface HelloMessage {
    * drop their own mirrors of paths the new instance may never re-publish.
    */
   serverStartId: string
+  /**
+   * Protocol features clients can check for before relying on them:
+   * - `subscriptionIds`: a subscribe may carry a `subscriptionId`, and an
+   *   unsubscribe listing subscriptionIds ends just those subscriptions.
+   *   Servers without it close the connection on any unsubscribe other
+   *   than unsubscribe-all.
+   */
+  capabilities: readonly string[]
 }
 
 export type ICallback<T> = (error?: Error | null, result?: T) => void
