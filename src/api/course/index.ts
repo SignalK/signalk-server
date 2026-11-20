@@ -507,6 +507,12 @@ export class CourseApi {
     }
   }
 
+  // A reload starts a new CourseApi; a timer left behind here would clear
+  // the course the new one keeps.
+  stop() {
+    this.clearExternalNavigationState()
+  }
+
   private markExternalNavigationUpdate() {
     this.externalNavLastUpdate = Date.now()
     this.scheduleExternalNavigationTimeout()

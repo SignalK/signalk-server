@@ -546,6 +546,27 @@ describe('Course Api', () => {
     await stop()
   })
 
+  it('keeps the external course of a stopped server from going stale', async function () {
+    const { server, sendDelta, stop } = await startServer()
+    await sendDelta('navigation.position', { latitude: 43.02, longitude: 7.84 })
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const courseApi = server.app.courseApi as any
+    await courseApi.parseStreamValue(
+      {
+        type: 'NMEA0183',
+        $source: 'nmea.external',
+        msg: 'RMB',
+        path: 'navigation.courseRhumbline.nextPoint.position'
+      },
+      { latitude: 43.03, longitude: 7.94 }
+    )
+    expect(courseApi.externalNavTimer).to.not.equal(null)
+
+    await stop()
+    expect(courseApi.externalNavTimer).to.equal(null)
+  })
+
   it('rebases external NMEA0183 previousPoint using Signal K XTE sign', async function () {
     const { server, selfGetJson, sendDelta, stop } = await startServer()
     const vesselPosition = { latitude: 43.02, longitude: 7.84 }
