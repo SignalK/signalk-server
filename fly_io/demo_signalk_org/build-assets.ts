@@ -65,8 +65,8 @@ const AREA = [4.6, 52.8, 5.95, 53.6] as const
 // The restricted areas are cut to a wider box than the chart, so zooming
 // out still shows the zones around the Wadden Sea
 const RESTRICTED_AREAS_BOX = [3.5, 52.5, 7.5, 54.0] as const
-const RESTRICTED_AREAS_RELEASE =
-  'https://github.com/dirkwa/restricted-areas-data/releases/latest/download'
+const RESTRICTED_AREAS_RELEASES =
+  'https://github.com/dirkwa/restricted-areas-data/releases'
 const RESTRICTED_AREAS_REGION = 'north-europe'
 
 const CONVERSION_TIMEOUT_MS = 60 * 60 * 1000
@@ -419,6 +419,21 @@ interface RestrictedAreasManifest {
   regions: { region: string; assets: { name: string; sha256: string }[] }[]
 }
 
+// One tag for the manifest and the dataset, so a release published between
+// the two downloads cannot mix them
+async function latestRestrictedAreasTag(): Promise<string> {
+  const url = `${RESTRICTED_AREAS_RELEASES}/latest`
+  const res = await fetch(url, {
+    redirect: 'manual',
+    signal: AbortSignal.timeout(60 * 1000)
+  })
+  const tag = res.headers
+    .get('location')
+    ?.match(/\/releases\/tag\/([^/]+)$/)?.[1]
+  if (!tag) throw new BuildFailure(`GET ${url}: no release tag (${res.status})`)
+  return tag
+}
+
 async function download(url: string): Promise<Buffer> {
   const res = await fetch(url, { signal: AbortSignal.timeout(10 * 60 * 1000) })
   if (!res.ok) throw new BuildFailure(`GET ${url}: ${res.status}`)
@@ -429,9 +444,8 @@ async function download(url: string): Promise<Buffer> {
 // to the sailing area it is a few MB. The plugin serves the files it finds
 // in its data directory when its auto-update is off.
 async function extractRestrictedAreas(runtime: string): Promise<void> {
-  const manifestBytes = await download(
-    `${RESTRICTED_AREAS_RELEASE}/manifest.json`
-  )
+  const release = `${RESTRICTED_AREAS_RELEASES}/download/${await latestRestrictedAreasTag()}`
+  const manifestBytes = await download(`${release}/manifest.json`)
   const manifest = JSON.parse(
     manifestBytes.toString('utf8')
   ) as RestrictedAreasManifest
@@ -441,7 +455,7 @@ async function extractRestrictedAreas(runtime: string): Promise<void> {
     ?.assets.find((a) => a.name === name)
   if (!asset)
     throw new BuildFailure(`the restricted areas release has no ${name}`)
-  const full = await download(`${RESTRICTED_AREAS_RELEASE}/${name}`)
+  const full = await download(`${release}/${name}`)
   if (createHash('sha256').update(full).digest('hex') !== asset.sha256)
     throw new BuildFailure(`${name} does not match its manifest`)
   writeFileSync(join(BUILD, name), full)
