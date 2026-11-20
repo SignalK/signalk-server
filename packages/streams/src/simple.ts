@@ -421,12 +421,26 @@ function nmea2000input(
     ]
   } else {
     let command: string
+    let args: string[]
     let toChildProcess: string | undefined
     if (subOptions.type === 'ngt-1') {
-      command = `actisense-serial -s ${subOptions.baudrate ?? 115200} ${subOptions.device}`
+      command = 'actisense-serial'
+      args = [
+        '-s',
+        String(subOptions.baudrate ?? 115200),
+        String(subOptions.device)
+      ]
       toChildProcess = 'nmea2000out'
     } else if (subOptions.type === 'canbus') {
-      command = `candump ${subOptions.interface} | candump2analyzer`
+      // The pipe needs a shell; the interface reaches it as "$1", never as
+      // part of the script.
+      command = 'sh'
+      args = [
+        '-c',
+        'candump "$1" | candump2analyzer',
+        'sh',
+        String(subOptions.interface)
+      ]
       toChildProcess = undefined
     } else {
       throw new Error(`unknown NMEA2000 type ${subOptions.type}`)
@@ -434,6 +448,7 @@ function nmea2000input(
     return [
       new Execute({
         command,
+        args,
         toChildProcess,
         app: subOptions.app,
         providerId: subOptions.providerId
