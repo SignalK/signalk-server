@@ -80,6 +80,7 @@ import rateLimit from 'express-rate-limit'
 import { execSync } from 'child_process'
 import { randomBytes, timingSafeEqual } from 'crypto'
 import { isInternetAddress } from './internetAddress'
+import { isIP } from 'net'
 import {
   recommendedVersion as recommendedNodeVersion,
   testedNodeVersions
@@ -539,13 +540,26 @@ module.exports = function (
   let firstAdminSetupCode: string | undefined
   // Every hop counts, whether or not the proxy settings trust it: a client
   // can add made-up local addresses to X-Forwarded-For, but cannot remove
-  // the real ones its own connection or a proxy put there.
+  // the real ones its own connection or a proxy put there. A port some
+  // proxies add is dropped, and a hop that still is no address counts as the
+  // internet, so a format not recognised here never skips the code.
+  const hopAddress = (hop: string) =>
+    /^\[([^\]]+)\](?::\d+)?$/.exec(hop)?.[1] ??
+    /^(\d{1,3}(?:\.\d{1,3}){3}):\d+$/.exec(hop)?.[1] ??
+    hop
+  const isInternetHop = (hop: string) => {
+    const address = hopAddress(hop)
+    return isIP(address) === 0 || isInternetAddress(address)
+  }
   const crossesInternet = (req: Request) => {
     const forwarded = req.headers['x-forwarded-for']
     const hops = (Array.isArray(forwarded) ? forwarded : [forwarded ?? ''])
       .flatMap((value) => value.split(','))
       .map((hop) => hop.trim())
-    return [req.socket.remoteAddress, ...hops].some(isInternetAddress)
+      .filter((hop) => hop.length > 0)
+    return (
+      isInternetAddress(req.socket.remoteAddress) || hops.some(isInternetHop)
+    )
   }
   const needsSetupCode = (req: Request) =>
     firstAdminSetupCode !== undefined && crossesInternet(req)
