@@ -25,32 +25,34 @@ interface ExposureApp {
   setProviderError(providerId: string, errorMessage: string): void
 }
 
-const lastWarnings = new WeakMap<ExposureApp, number>()
+export type ClientAddressObserver = (address: string | undefined) => void
 
 // A server without security gives every visitor admin rights, which on the
 // internet means anyone can run programs on it. Say so in the log and on the
 // dashboard as soon as a client connects from an internet address, over HTTP
-// or WebSocket.
-export function noteClientAddress(
-  app: ExposureApp,
-  address: string | undefined
-): void {
-  if (!app.securityStrategy.isDummy() || !isInternetAddress(address)) {
-    return
+// or WebSocket. One observer per server, so both share the hourly limit.
+export function createExposureObserver(
+  app: ExposureApp
+): ClientAddressObserver {
+  let lastWarning = -Infinity
+  return (address) => {
+    if (!app.securityStrategy.isDummy() || !isInternetAddress(address)) {
+      return
+    }
+    const now = Date.now()
+    if (now - lastWarning < WARNING_INTERVAL_MS) {
+      return
+    }
+    lastWarning = now
+    const message = `Security is not enabled and this server was reached from the internet address ${address}. Anyone who can reach it can change its settings and run programs on it. Enable security and keep the server off the public internet.`
+    console.warn(message)
+    app.setProviderError(EXPOSURE_STATUS_ID, message)
   }
-  const now = Date.now()
-  if (now - (lastWarnings.get(app) ?? -Infinity) < WARNING_INTERVAL_MS) {
-    return
-  }
-  lastWarnings.set(app, now)
-  const message = `Security is not enabled and this server was reached from the internet address ${address}. Anyone who can reach it can change its settings and run programs on it. Enable security and keep the server off the public internet.`
-  console.warn(message)
-  app.setProviderError(EXPOSURE_STATUS_ID, message)
 }
 
-export function warnWhenOpenToInternet(app: ExposureApp) {
+export function observeClientAddresses(observe: ClientAddressObserver) {
   return (req: Request, _res: Response, next: NextFunction) => {
-    noteClientAddress(app, req.ip)
+    observe(req.ip)
     next()
   }
 }

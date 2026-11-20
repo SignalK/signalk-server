@@ -104,6 +104,35 @@ describe('Warning about a server without security on the internet', function () 
     expect(exposureStatus().message).to.contain('203.0.113.8')
   })
 
+  it('warns about a request the JSON parser rejects', async () => {
+    const res = await fetch(`http://127.0.0.1:${port}/skServer/providers`, {
+      method: 'POST',
+      headers: {
+        'X-Forwarded-For': '203.0.113.10',
+        'Content-Type': 'application/json'
+      },
+      body: '{not json'
+    })
+    expect(res.status).to.equal(400)
+    expect(exposureStatus().message).to.contain('203.0.113.10')
+  })
+
+  it('warns once an hour across HTTP and WebSocket clients', async () => {
+    const warn = console.warn
+    const warnings: unknown[] = []
+    console.warn = (...args: unknown[]) => {
+      warnings.push(args[0])
+    }
+    try {
+      await requestFrom('203.0.113.11')
+      await connectWebSocketFrom('203.0.113.12')
+    } finally {
+      console.warn = warn
+    }
+    expect(warnings).to.have.length(1)
+    expect(exposureStatus().message).to.contain('203.0.113.11')
+  })
+
   it('warns about a client that only opens a WebSocket', async () => {
     await connectWebSocketFrom('203.0.113.9')
     expect(exposureStatus().message).to.contain('203.0.113.9')

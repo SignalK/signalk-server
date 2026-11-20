@@ -46,7 +46,7 @@ import {
   parseBackpressureThresholds
 } from '../BackpressureManager'
 import { getExternalPort } from '../ports'
-import { noteClientAddress } from '../exposureWarning'
+import { ClientAddressObserver } from '../exposureWarning'
 import { resolvePathDisplayUnits, PathUnitsMetadata } from '../unitpreferences'
 import { Delta, hasMeta, hasValues } from '@signalk/server-api'
 
@@ -241,6 +241,7 @@ type TrustProxyFn = (address: string, hop: number) => boolean
 
 interface WsApp {
   server: unknown
+  noteClientAddress: ClientAddressObserver
   config: WsAppConfig
   selfContext: string
   selfId: string
@@ -539,7 +540,7 @@ function wsInterface(app: WsApp): WsApi {
           const spark = primusSpark as Spark
           const sparkIp = spark.request._resolvedIp
           incrementIpCount(ipConnectionCounts, sparkIp)
-          noteClientAddress(app, sparkIp)
+          app.noteClientAddress(sparkIp)
 
           let principalId: string | undefined
           if (spark.request.skPrincipal) {
