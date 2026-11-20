@@ -8,14 +8,11 @@ processes = []
   # to X-Forwarded-For, so the visitor's address is two hops back
   # (https://fly.io/docs/networking/request-headers/)
   TRUST_PROXY = "2"
-  # Visitors at a boat show share the venue's address, and every open demo
-  # page holds several WebSockets
+  # Visitors on a shared network (a boat show, a marina, a club) reach the
+  # demo from one address, and every open demo page holds several WebSockets
   MAX_WS_CONNECTIONS_PER_IP = "200"
-  # Logs each WebSocket connect and refusal with the visitor's address and
-  # how many connections that address holds
-  DEBUG = "signalk-server:interfaces:ws:connections"
   # Per address and 10 minutes the server allows 1000 login status checks
-  # and 100 logins. A venue address carries many visitors, each page load
+  # and 100 logins. A shared address carries many visitors, each page load
   # checks the login several times, and the demo has no admin to guess.
   HTTP_RATE_LIMITS = "loginStatus=10000,login=1000"
 
