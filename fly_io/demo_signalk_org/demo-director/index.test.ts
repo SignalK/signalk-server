@@ -400,6 +400,32 @@ describe('demo director', () => {
       assert.deepEqual(calls, ['/signalk/v1/auth/login'])
     })
 
+    it('stays off the autopilot when a tick sees the visitor steer during the login', async () => {
+      const values = steeredBy('compass')
+      const calls: string[] = []
+      let answerLogin = () => {}
+      mock.method(globalThis, 'fetch', async (url: string) => {
+        calls.push(url.replace(/^http:\/\/[^/]+/, ''))
+        if (!url.endsWith('/auth/login')) return Response.json({})
+        await new Promise<void>((resolve) => {
+          answerLogin = resolve
+        })
+        return Response.json({ token: 'demo-token' })
+      })
+      const { app } = fakeApp(
+        { pointIndex: 2, pointTotal: 5, reverse: false },
+        FAR_FROM_FINAL,
+        values
+      )
+      await startAt(app)
+      await advance(FIVE_MINUTES)
+      values['steering.autopilot.target.value'] = 1.4
+      await advance(TICK)
+      answerLogin()
+      await advance(0)
+      assert.deepEqual(calls, ['/signalk/v1/auth/login'])
+    })
+
     it('waits while the visitor keeps adjusting the autopilot', async () => {
       const calls = fakeServer()
       const values = steeredBy('compass')

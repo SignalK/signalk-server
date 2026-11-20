@@ -398,6 +398,8 @@ export default function (app: ServerAPI): Plugin {
   // The plugin API has no autopilot commands, so the director steers through
   // the REST API with the same login the visitors use.
   async function resumeRoute() {
+    const idleSetting = autopilotSetting
+    const idleSince = autopilotChangedAt
     const login = await fetch(`${SERVER_URL}/signalk/v1/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -406,7 +408,11 @@ export default function (app: ServerAPI): Plugin {
     if (!login.ok) throw new Error(`login answered ${login.status}`)
     const { token } = (await login.json()) as { token: string }
     // a visitor who steered while the login was under way is not idle
-    if (currentAutopilotSetting() !== autopilotSetting) return
+    if (
+      currentAutopilotSetting() !== idleSetting ||
+      autopilotChangedAt !== idleSince
+    )
+      return
     const resumed = await fetch(
       `${SERVER_URL}/signalk/v2/api/vessels/self/autopilots/_default/courseCurrentPoint`,
       { method: 'POST', headers: { Authorization: `Bearer ${token}` } }
