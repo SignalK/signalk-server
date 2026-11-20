@@ -101,6 +101,25 @@ describe('Setup code for the first admin account', function () {
     ).to.equal(true)
   })
 
+  for (const forwarded of [
+    '203.0.113.7:12345',
+    '[2001:db8::1]:12345',
+    'unknown'
+  ]) {
+    it(`asks for the setup code behind a proxy that forwards ${forwarded}`, async () => {
+      expect((await loginStatusFrom(forwarded)).setupCodeRequired).to.equal(
+        true
+      )
+      expect((await enableSecurityFrom(forwarded, {})).status).to.equal(403)
+    })
+  }
+
+  it('does not ask a LAN visitor behind a proxy that adds the port', async () => {
+    expect(
+      (await loginStatusFrom('192.168.1.20:54321')).setupCodeRequired
+    ).to.equal(undefined)
+  })
+
   it('refuses an internet visitor without the right setup code', async () => {
     let res = await enableSecurityFrom(INTERNET_ADDRESS, {})
     expect(res.status).to.equal(403)
