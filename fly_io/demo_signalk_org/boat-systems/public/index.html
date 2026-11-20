@@ -147,7 +147,11 @@ function render() {
   for (const s of SENSORS) {
     const v = values.get(s.path)
     const n = nodes.get(s.key)
-    if (typeof v !== 'number') continue
+    if (typeof v !== 'number') {
+      n.t.textContent = '--'
+      n.g.classList.remove('warn', 'alarm')
+      continue
+    }
     const rh = s.rh ? values.get(s.rh) : undefined
     n.t.textContent = s.fmt(v) + (typeof rh === 'number' ? ` · ${Math.round(rh * 100)} %` : '')
     n.g.classList.toggle('warn', !!s.warn?.(v) && !s.alarm?.(v))

@@ -19,6 +19,8 @@ import boatSystems, {
   switchPath,
   victronManufacturerData,
   VICTRON_DEVICES,
+  isSensorTopic,
+  ZIGBEE_BASE_TOPIC,
   ZIGBEE_SENSORS,
   zigbeeDevices
 } from './index.ts'
@@ -246,6 +248,13 @@ describe('demo boat systems plugin', () => {
 })
 
 describe('simulated Zigbee network', () => {
+  it('counts only sensor topics as following the network', () => {
+    assert.ok(isSensorTopic(`${ZIGBEE_BASE_TOPIC}/#`))
+    assert.ok(isSensorTopic(`${ZIGBEE_BASE_TOPIC}/freezer`))
+    assert.ok(!isSensorTopic(`${ZIGBEE_BASE_TOPIC}/bridge/state`))
+    assert.ok(!isSensorTopic('other/#'))
+  })
+
   it('lists the espOS coordinator and both sensors with their exposes', () => {
     const devices = zigbeeDevices(new Map())
     assert.equal(devices[0].type, 'Coordinator')
