@@ -179,7 +179,7 @@ AssemblyScript plugins call `sseSend()` from the SDK (see [AssemblyScript](./ass
 - The server periodically sends a keep-alive comment so proxies and browsers do not close idle streams.
 - Closed connections leave their channel automatically.
 - A client that stops reading is disconnected once its queued output would exceed a fixed limit, so a stalled client cannot grow server memory. An event larger than that limit on its own is rejected, and a client whose initial response body exceeds it is disconnected.
-- When the plugin stops, all of its streams are closed. Browser `EventSource` clients reconnect on their own and are refused until the plugin runs again.
+- When the plugin stops, all of its streams are closed. Browser `EventSource` clients reconnect on their own, but a reconnect while the plugin is still stopped gets a `503`, and on that the browser closes the `EventSource` for good. A web page that should recover when the plugin runs again listens for `error`, and when `readyState` is `CLOSED` creates a new `EventSource` after a delay.
 - Stream routes use the same authentication as the plugin's other endpoints.
 
 ## String Memory Management
