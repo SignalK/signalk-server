@@ -1073,7 +1073,7 @@ module.exports = (theApp: any) => {
         // Plugin subscriptions get live deltas unfiltered and plugins read
         // the whole model through getPath, so the cache bootstrap is
         // filtered only for a subscription made on behalf of a user.
-        app.subscriptionmanager.subscribe(
+        return app.subscriptionmanager.subscribe(
           command,
           unsubscribes,
           errorCallback,

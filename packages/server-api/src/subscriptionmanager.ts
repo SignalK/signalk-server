@@ -3,13 +3,20 @@ import { Context, Delta, Path, SourceRef } from './deltas'
 
 /** @category Server API  */
 export interface SubscriptionManager {
+  /**
+   * Subscribe to deltas. The subscription's teardown is also added to
+   * `unsubscribes`, so running all of `unsubscribes` ends every
+   * subscription made with that array.
+   *
+   * @returns a function that ends this subscription only
+   */
   subscribe(
     command: SubscribeMessage,
     unsubscribes: Unsubscribes,
     errorCallback: (err: unknown) => void,
     callback: SubscribeCallback,
     user?: string
-  ): void
+  ): () => void
 
   unsubscribe(msg: UnsubscribeMessage, unsubscribes: Unsubscribes): void
 }
@@ -36,6 +43,15 @@ export interface SubscribeMessage {
    * An array of paths to subscribe to, with optional criteria
    */
   subscribe: SubscriptionOptions[]
+
+  /**
+   * A name the client gives this subscription, unique among the
+   * subscriptions made with the same `unsubscribes` (on a WebSocket or TCP
+   * stream: the same connection). An unsubscribe naming it ends this
+   * subscription and leaves the others running. A subscribe with a name
+   * already in use is refused through the error callback.
+   */
+  subscriptionId?: string
 
   /**
    * When true, the server will send cached values for ALL paths matching the context
@@ -135,27 +151,23 @@ export type SubscriptionOptions = (
 }
 
 /**
- * A message to allow a client to unsubscribe from data updates from a signalk server
+ * A message to allow a client to unsubscribe from data updates from a signalk server.
+ *
+ * Either ends every subscription (`{"context": "*", "unsubscribe": [{"path": "*"}]}`)
+ * or the subscriptions named by their `subscriptionId`
+ * (`{"context": "*", "unsubscribe": [{"subscriptionId": "depth"}]}`). An id that
+ * names no subscription is ignored.
  * @category Server API
  */
-export interface UnsubscribeMessage {
-  /**
-   * The root path for all subsequent paths, usually a vessel's path.
-   *
-   * > [!NOTE]
-   * > Currently only `*` is supported for the context.
-   */
-  context: '*'
-
-  /**
-   * An array of paths to unsubscribe from.
-
-  * > [!NOTE]
-   * > Currently only one entry is supported, and it must have `"path": "*"`.
-   */
-  unsubscribe: [
-    {
-      path: '*'
+export type UnsubscribeMessage =
+  | {
+      /**
+       * Only `*` is supported for the context.
+       */
+      context: '*'
+      unsubscribe: [{ path: '*' }]
     }
-  ]
-}
+  | {
+      context?: '*'
+      unsubscribe: { subscriptionId: string }[]
+    }
