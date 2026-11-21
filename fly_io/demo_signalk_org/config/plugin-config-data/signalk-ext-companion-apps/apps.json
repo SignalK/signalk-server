@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "revision": 1,
+  "apps": [
+    {
+      "id": "anchor-alarm",
+      "name": "Anchor Alarm",
+      "source": {
+        "type": "webapp",
+        "package": "hoekens-anchor-alarm"
+      },
+      "showIn": "panel",
+      "closeBehavior": "hide",
+      "startup": "never",
+      "icon": "anchor"
+    },
+    {
+      "id": "rpi-manager",
+      "name": "RPI Manager",
+      "source": {
+        "type": "webapp",
+        "package": "signalk-universal-installer-rpi-mgmt"
+      },
+      "showIn": "window",
+      "closeBehavior": "unload",
+      "startup": "never",
+      "icon": "memory"
+    }
+  ]
+}

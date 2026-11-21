@@ -1,0 +1,6 @@
+{
+  "enabled": true,
+  "configuration": {
+    "gatewayLogin": { "username": "demo", "password": "demo" }
+  }
+}

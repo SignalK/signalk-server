@@ -1,0 +1,8 @@
+{
+  "enabled": true,
+  "configuration": {
+    "chartResourceId": "wadden-coastline",
+    "tickIntervalMs": 1000,
+    "searchRadiusKm": 30
+  }
+}
