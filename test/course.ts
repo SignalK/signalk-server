@@ -562,9 +562,13 @@ describe('Course Api', () => {
       { latitude: 43.03, longitude: 7.94 }
     )
     expect(courseApi.externalNavTimer).to.not.equal(null)
+    while (courseApi.unsubscribes.length === 0) {
+      await new Promise((resolve) => setTimeout(resolve, 50))
+    }
 
     await stop()
     expect(courseApi.externalNavTimer).to.equal(null)
+    expect(courseApi.unsubscribes).to.have.length(0)
   })
 
   it('rebases external NMEA0183 previousPoint using Signal K XTE sign', async function () {
@@ -1040,6 +1044,46 @@ describe('Course Api', () => {
     expect(data.activeRoute?.pointIndex).to.equal(1)
 
     await stop()
+  })
+
+  it('does not advance after the server stopped during the route lookup', async function () {
+    const { post, server, selfPut, sendDelta, stop } = await startServer()
+    await sendDelta('navigation.position', { latitude: 59.95, longitude: 3 })
+    const response = await post('/resources/routes', {
+      feature: {
+        type: 'Feature',
+        geometry: {
+          type: 'LineString',
+          coordinates: [
+            [3, 60],
+            [3, 60.1],
+            [3, 60.2]
+          ]
+        }
+      }
+    })
+    const { id } = (await response.json()) as { id: string }
+    await selfPut('navigation/course/activeRoute', {
+      href: `/resources/routes/${id}`
+    }).then((response) => response.status.should.equal(200))
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const courseApi = server.app.courseApi as any
+    const route = await courseApi.getRoute(`/resources/routes/${id}`)
+    let answer: (value: unknown) => void = () => undefined
+    courseApi.getRoute = () =>
+      new Promise((resolve) => {
+        answer = resolve
+      })
+    const advance = courseApi.advanceOnArrival({
+      latitude: 60.001,
+      longitude: 3
+    })
+    await stop()
+    answer(route)
+    await advance
+
+    expect(courseApi.courseInfo.activeRoute.pointIndex).to.equal(0)
   })
 
   it('keeps autoAdvance changed while a waypoint destination is fetched', async function () {

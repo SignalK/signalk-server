@@ -153,6 +153,7 @@ export class CourseApi {
   // Bumped by every update of the followed route's resource, so an advance
   // decided on an older copy of the route is dropped.
   private routeRevision = 0
+  private stopped = false
 
   constructor(
     private app: CourseApplication,
@@ -510,6 +511,9 @@ export class CourseApi {
   // A reload starts a new CourseApi; a timer left behind here would clear
   // the course the new one keeps.
   stop() {
+    this.stopped = true
+    this.unsubscribes.forEach((unsubscribe) => unsubscribe())
+    this.unsubscribes.length = 0
     this.clearExternalNavigationState()
   }
 
@@ -1206,6 +1210,7 @@ export class CourseApi {
       const pointTotal = rte?.feature?.geometry?.coordinates?.length ?? 0
       if (
         !rte ||
+        this.stopped ||
         this.routeRevision !== revision ||
         pointTotal !== route.pointTotal ||
         passedIndex + 1 >= pointTotal ||
