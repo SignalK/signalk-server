@@ -16,6 +16,7 @@
 
 const moment = require('moment')
 const path = require('path')
+const { lstatSync } = require('node:fs')
 const { getFullLogDir, listLogFiles } = require('@signalk/streams/logging')
 import { SERVERROUTESPREFIX } from '../constants'
 import { sendZip } from '../zip'
@@ -74,7 +75,7 @@ function mountApi(app) {
 
     res.sendFile(resolvedPath)
   })
-  app.get(`${SERVERROUTESPREFIX}/ziplogs`, function (req, res) {
+  app.get(`${SERVERROUTESPREFIX}/ziplogs`, function (req, res, next) {
     const boatName = app.config.vesselName
       ? app.config.vesselName
       : app.config.vesselMMSI
@@ -83,9 +84,22 @@ function mountApi(app) {
     const sanitizedBoatName = boatName.replace(/\W/g, '_')
     const zipFileName = `sk-logs-${sanitizedBoatName}-${moment().format('YYYY-MM-DD-HH-mm')}`
 
-    sendZip(res, {
-      files: [{ path: getFullLogDir(app), name: zipFileName }],
-      filename: zipFileName + '.zip'
+    const logDir = getFullLogDir(app)
+    listLogFiles(app, (err, filenames) => {
+      if (err) return next(err)
+      try {
+        const files = []
+        for (const filename of filenames) {
+          const filePath = path.join(logDir, filename)
+          // sendZip recurses into directories, while the log list only checks names.
+          if (lstatSync(filePath, { throwIfNoEntry: false })?.isFile()) {
+            files.push({ path: filePath, name: `${zipFileName}/${filename}` })
+          }
+        }
+        sendZip(res, { files, filename: zipFileName + '.zip' })
+      } catch (err) {
+        next(err)
+      }
     })
   })
 }
