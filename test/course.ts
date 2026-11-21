@@ -548,21 +548,23 @@ describe('Course Api', () => {
 
   it('keeps the external course of a stopped server from going stale', async function () {
     const { server, sendDelta, stop } = await startServer()
-    await sendDelta('navigation.position', { latitude: 43.02, longitude: 7.84 })
-
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const courseApi = server.app.courseApi as any
-    await courseApi.parseStreamValue(
-      {
-        type: 'NMEA0183',
-        $source: 'nmea.external',
-        msg: 'RMB',
-        path: 'navigation.courseRhumbline.nextPoint.position'
-      },
-      { latitude: 43.03, longitude: 7.94 }
-    )
-    expect(courseApi.externalNavTimer).to.not.equal(null)
     try {
+      await sendDelta('navigation.position', {
+        latitude: 43.02,
+        longitude: 7.84
+      })
+      await courseApi.parseStreamValue(
+        {
+          type: 'NMEA0183',
+          $source: 'nmea.external',
+          msg: 'RMB',
+          path: 'navigation.courseRhumbline.nextPoint.position'
+        },
+        { latitude: 43.03, longitude: 7.94 }
+      )
+      expect(courseApi.externalNavTimer).to.not.equal(null)
       await subscribed(courseApi)
     } finally {
       await stop()
@@ -634,16 +636,16 @@ describe('Course Api', () => {
         new Promise((_resolve, reject) => {
           release = () => reject(new Error('no saved course'))
         })
-    } catch (error) {
+      const started = courseApi.start()
       await stop()
-      throw error
-    }
-    const started = courseApi.start()
-    await stop()
-    release()
-    await started
+      release()
+      await started
 
-    expect(courseApi.unsubscribes).to.have.length(0)
+      expect(courseApi.unsubscribes).to.have.length(0)
+    } finally {
+      release()
+      await stop()
+    }
   })
 
   it('does not save settings when the server stopped during the restore', async function () {
@@ -661,18 +663,18 @@ describe('Course Api', () => {
       courseApi.store.write = async () => {
         writes++
       }
-    } catch (error) {
+      const started = courseApi.start()
+      const saved = courseApi.persistSettings()
       await stop()
-      throw error
-    }
-    const started = courseApi.start()
-    const saved = courseApi.persistSettings()
-    await stop()
-    release()
-    await started
+      release()
+      await started
 
-    expect(await saved).to.equal(false)
-    expect(writes).to.equal(0)
+      expect(await saved).to.equal(false)
+      expect(writes).to.equal(0)
+    } finally {
+      release()
+      await stop()
+    }
   })
 
   it('rebases external NMEA0183 previousPoint using Signal K XTE sign', async function () {
