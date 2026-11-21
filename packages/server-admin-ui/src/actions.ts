@@ -27,15 +27,40 @@ export async function logoutAction(): Promise<void> {
   await fetchAppStore()
 }
 
-export function restartAction(): void {
-  if (confirm('Are you sure you want to restart?')) {
-    fetch(`${window.serverRoutesPrefix}/restart`, {
-      credentials: 'include',
-      method: 'PUT'
-    }).then(() => {
-      useStore.getState().setRestarting(true)
+// Repeated clicks while the settings load share one lookup, so a late
+// answer cannot reopen a dialog that was already cancelled.
+let pendingRestartDialog: Promise<void> | undefined
+
+/**
+ * Ask before restarting. When the server keeps its latest values over a
+ * restart, the dialog also offers to start with no data.
+ */
+export function restartAction(): Promise<void> {
+  pendingRestartDialog ??= fetch(`${window.serverRoutesPrefix}/settings`, {
+    credentials: 'include'
+  })
+    .then((res) => (res.ok ? res.json() : undefined))
+    .then((settings) => settings?.options?.restoreOwnData)
+    .then((restore) => (typeof restore === 'boolean' ? restore : undefined))
+    .catch(() => undefined)
+    .then((keepsData) => {
+      useStore.getState().setRestartDialog({ keepsData })
     })
-  }
+    .finally(() => {
+      pendingRestartDialog = undefined
+    })
+  return pendingRestartDialog
+}
+
+export function requestRestart(keepData: boolean): void {
+  fetch(`${window.serverRoutesPrefix}/restart`, {
+    credentials: 'include',
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ keepData })
+  }).then(() => {
+    useStore.getState().setRestarting(true)
+  })
 }
 
 export async function loginAction(

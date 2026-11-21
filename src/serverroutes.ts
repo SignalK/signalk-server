@@ -83,6 +83,7 @@ import {
   testedNodeVersions
 } from './version'
 import { Type } from '@sinclair/typebox'
+import type { StopOptions } from './deltacachePersistence'
 import { Value } from '@sinclair/typebox/value'
 import { HullTypeSchema, type HullType } from '@signalk/server-api/typebox'
 import { ManufacturerCodeValues } from '@canboat/ts-pgns'
@@ -324,7 +325,7 @@ interface App
     PluginManager,
     WithWrappedEmitter {
   webapps: Package[]
-  stopAndExit: () => void
+  stopAndExit: (options?: StopOptions) => void
   logging: {
     clearLog: () => void
     rememberDebug: (r: boolean) => void
@@ -519,8 +520,9 @@ module.exports = function (
   app.put(`${SERVERROUTESPREFIX}/restart`, (req: Request, res: Response) => {
     if (app.securityStrategy.allowRestart(req)) {
       res.json('Restarting...')
+      const saveCachedValues = req.body?.keepData !== false
       setTimeout(function () {
-        app.stopAndExit()
+        app.stopAndExit({ saveCachedValues })
       }, 2000)
     } else {
       res.status(401).json('Restart not allowed')
@@ -881,10 +883,13 @@ module.exports = function (
           app.config.settings.enablePluginLogging,
         trustProxy: app.config.settings.trustProxy || false,
         useBLEManager:
-          app.config.settings.bleApi?.localBluetoothManaged || false
+          app.config.settings.bleApi?.localBluetoothManaged || false,
+        restoreOwnData: app.config.settings.restoreOwnData || false,
+        restoreOtherVessels: app.config.settings.restoreOtherVessels || false
       },
       loggingDirectory: app.config.settings.loggingDirectory,
       pruneContextsMinutes: app.config.settings.pruneContextsMinutes || 60,
+      restoreMaxAgeMinutes: app.config.settings.restoreMaxAgeMinutes || 60,
       keepMostRecentLogsOnly:
         isUndefined(app.config.settings.keepMostRecentLogsOnly) ||
         app.config.settings.keepMostRecentLogsOnly,
@@ -1206,6 +1211,16 @@ module.exports = function (
       }
     }
 
+    if (!isUndefined(settings.options.restoreOwnData)) {
+      updatedSettings.restoreOwnData = Boolean(settings.options.restoreOwnData)
+    }
+
+    if (!isUndefined(settings.options.restoreOtherVessels)) {
+      updatedSettings.restoreOtherVessels = Boolean(
+        settings.options.restoreOtherVessels
+      )
+    }
+
     if (!isUndefined(settings.port)) {
       updatedSettings.port = Number(settings.port)
     }
@@ -1221,6 +1236,12 @@ module.exports = function (
     if (!isUndefined(settings.pruneContextsMinutes)) {
       updatedSettings.pruneContextsMinutes = Number(
         settings.pruneContextsMinutes
+      )
+    }
+
+    if (!isUndefined(settings.restoreMaxAgeMinutes)) {
+      updatedSettings.restoreMaxAgeMinutes = Number(
+        settings.restoreMaxAgeMinutes
       )
     }
 

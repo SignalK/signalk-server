@@ -26,6 +26,7 @@ import { toDelta, StreamBundle } from './streambundle'
 import { ContextMatcher, SignalKServer } from './types'
 import {
   Context,
+  Delta,
   FORBIDDEN_PATH_KEYS,
   NormalizedDelta,
   SourceRef
@@ -145,6 +146,7 @@ export function pruneSourcesByProvider(
 export default class DeltaCache {
   cache: StringKeyed = {}
   lastModifieds: StringKeyed = {}
+  private restoredValues: NormalizedDelta[] = []
   app: SignalKServer
   defaults: any
   sourceDeltas: StringKeyed = {}
@@ -699,6 +701,106 @@ export default class DeltaCache {
     if (delta.context) {
       this.lastModifieds[delta.context] = Date.now()
     }
+  }
+
+  /**
+   * Put values saved by an earlier run back into the cache without
+   * passing them through the delta chain, so plugins, the priority engine
+   * and source freshness do not treat them as live data. A value that
+   * arrived live before the restore is kept. Returns whether any value
+   * was usable.
+   */
+  restoreDelta(delta: Delta, lastModified: number): boolean {
+    if (typeof delta?.context !== 'string' || !Array.isArray(delta.updates)) {
+      return false
+    }
+    let restored = false
+    for (const update of delta.updates) {
+      if (!('values' in update) || !Array.isArray(update.values)) continue
+      for (const pathValue of update.values) {
+        if (typeof pathValue?.path !== 'string') continue
+        const usable = this.restoreValue({
+          context: delta.context,
+          source: update.source,
+          $source: update.$source,
+          timestamp: update.timestamp,
+          path: pathValue.path,
+          value: pathValue.value,
+          state: pathValue.state,
+          isMeta: false
+        } as NormalizedDelta)
+        restored ||= usable
+      }
+    }
+    if (restored) {
+      this.lastModifieds[delta.context] = Math.max(
+        this.lastModifieds[delta.context] ?? 0,
+        lastModified
+      )
+    }
+    return restored
+  }
+
+  private restoreValue(msg: NormalizedDelta): boolean {
+    if (typeof msg.$source !== 'string' || msg.value === undefined) {
+      return false
+    }
+    const leaf = getLeafObject(
+      this.cache,
+      this.getContextAndPathParts(msg),
+      true
+    )
+    if (!leaf) {
+      return false
+    }
+    if (msg.path.length !== 0) {
+      if (leaf[msg.$source] === undefined) {
+        leaf[msg.$source] = msg
+        this.restoredValues.push(msg)
+      }
+      return true
+    }
+    if (typeof msg.value !== 'object' || msg.value === null) {
+      return false
+    }
+    let restored = false
+    for (const key of Object.keys(msg.value)) {
+      if (FORBIDDEN_PATH_KEYS.has(key)) continue
+      leaf[key] ??= {}
+      leaf[key][msg.$source] ??= msg
+      restored = true
+    }
+    return restored
+  }
+
+  /**
+   * Remove the restored values that live data has not replaced yet, from
+   * both the cache and the FullSignalK tree. A live value from the same
+   * source replaces the cached message object and carries a newer
+   * timestamp, so it is never removed.
+   */
+  dropRestoredValues() {
+    const root = (this.app.signalk as any)?.root ?? {}
+    for (const msg of this.restoredValues) {
+      const parts = this.getContextAndPathParts(msg)
+      const leaf = getLeafObject(this.cache, parts, false)
+      if (leaf?.[msg.$source] !== msg) continue
+      delete leaf[msg.$source]
+      const treeLeaf = getLeafObject(root, parts, false)
+      const treeEntry = treeLeaf?.values
+        ? treeLeaf.values[msg.$source]
+        : treeLeaf?.$source === msg.$source
+          ? treeLeaf
+          : undefined
+      if (treeEntry?.timestamp === msg.timestamp) {
+        pruneSourceFromLeaf(treeLeaf, msg.$source)
+      }
+    }
+    this.restoredValues = []
+  }
+
+  forgetRestoredValues() {
+    this.restoredValues = []
   }
 
   setSourceDelta(key: string, delta: any) {
@@ -1492,6 +1594,7 @@ export default class DeltaCache {
     deltas: NormalizedDelta[]
   ): NormalizedDelta[] {
     const byPath = new Map<string, NormalizedDelta>()
+    const hasPreferred = new Set<string>()
     const result: NormalizedDelta[] = []
     for (const d of deltas) {
       // Defensive: getCachedDeltas(key=...) can surface non-leaf branch
@@ -1513,8 +1616,15 @@ export default class DeltaCache {
         result.push(d)
         continue
       }
-      if (preferred === d.$source) {
-        byPath.set(key, d)
+      // preferredSources holds the canonical (canName) form, while a value
+      // may be cached under its numeric alias. Among several aliases of
+      // the winner the newest value is kept, whatever the cache order.
+      if (this.canonicaliseSourceRef(d.$source) === preferred) {
+        const kept = byPath.get(key)
+        if (!hasPreferred.has(key) || (kept && d.timestamp > kept.timestamp)) {
+          byPath.set(key, d)
+          hasPreferred.add(key)
+        }
       } else if (!byPath.has(key)) {
         byPath.set(key, d)
       }
@@ -1728,53 +1838,57 @@ function getLeafObject(
  * REST and WS-replay views keep serving stale values for the evicted
  * source even though the deltacache is empty.
  */
+function pruneSourceFromLeaf(node: any, sourceRef: string): void {
+  // Multi-source leaf: { values: { <sourceRef>: {...}, ... }, ... }
+  if (node.values && typeof node.values === 'object') {
+    if (node.values[sourceRef] !== undefined) {
+      delete node.values[sourceRef]
+      const remainingRefs = Object.keys(node.values)
+      // If the singleton-form fields point at the source we just
+      // removed, replace them with another remaining source so the
+      // leaf stays consistent — otherwise downstream readers see a
+      // stale $source that no longer exists in `values`.
+      if (node['$source'] === sourceRef) {
+        if (remainingRefs.length > 0) {
+          const survivor = remainingRefs[0]!
+          const survivorLeaf = node.values[survivor]
+          if (survivorLeaf && typeof survivorLeaf === 'object') {
+            if ('value' in survivorLeaf) node.value = survivorLeaf.value
+            node['$source'] = survivor
+            if (survivorLeaf.timestamp) {
+              node.timestamp = survivorLeaf.timestamp
+            }
+          }
+        } else {
+          delete node.value
+          delete node['$source']
+          delete node.timestamp
+          delete node.values
+        }
+      } else if (remainingRefs.length === 0) {
+        delete node.values
+      }
+    }
+  }
+  // Singleton-form leaf with no `values` map: drop it outright if
+  // the lone source is the one we're evicting.
+  if (
+    node['$source'] === sourceRef &&
+    node.value !== undefined &&
+    !node.values
+  ) {
+    delete node.value
+    delete node['$source']
+    delete node.timestamp
+  }
+}
+
 function pruneSourceFromFullSignalK(root: any, sourceRef: string): void {
   if (!root || typeof root !== 'object') return
   const visit = (node: any): void => {
     if (!node || typeof node !== 'object') return
     if (Array.isArray(node)) return
-    // Multi-source leaf: { values: { <sourceRef>: {...}, ... }, ... }
-    if (node.values && typeof node.values === 'object') {
-      if (node.values[sourceRef] !== undefined) {
-        delete node.values[sourceRef]
-        const remainingRefs = Object.keys(node.values)
-        // If the singleton-form fields point at the source we just
-        // removed, replace them with another remaining source so the
-        // leaf stays consistent — otherwise downstream readers see a
-        // stale $source that no longer exists in `values`.
-        if (node['$source'] === sourceRef) {
-          if (remainingRefs.length > 0) {
-            const survivor = remainingRefs[0]!
-            const survivorLeaf = node.values[survivor]
-            if (survivorLeaf && typeof survivorLeaf === 'object') {
-              if ('value' in survivorLeaf) node.value = survivorLeaf.value
-              node['$source'] = survivor
-              if (survivorLeaf.timestamp) {
-                node.timestamp = survivorLeaf.timestamp
-              }
-            }
-          } else {
-            delete node.value
-            delete node['$source']
-            delete node.timestamp
-            delete node.values
-          }
-        } else if (remainingRefs.length === 0) {
-          delete node.values
-        }
-      }
-    }
-    // Singleton-form leaf with no `values` map: drop it outright if
-    // the lone source is the one we're evicting.
-    if (
-      node['$source'] === sourceRef &&
-      node.value !== undefined &&
-      !node.values
-    ) {
-      delete node.value
-      delete node['$source']
-      delete node.timestamp
-    }
+    pruneSourceFromLeaf(node, sourceRef)
     for (const key of Object.keys(node)) {
       // Skip leaf-internal fields and the source-meta tree (cleaned
       // separately by removeSourceDelta and the route handler).

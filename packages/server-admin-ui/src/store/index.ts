@@ -239,6 +239,10 @@ export function useRestarting() {
   return useStore((s) => s.restarting)
 }
 
+export function useRestartDialog() {
+  return useStore((s) => s.restartDialog)
+}
+
 export function useRestartRequired() {
   return useStore((s) => s.restartRequired)
 }

@@ -458,6 +458,33 @@ export class FullSignalK extends EventEmitter {
     }
   }
 
+  /**
+   * Add values saved by an earlier run without emitting them as a delta
+   * or marking their sources as seen, so nothing treats them as live data.
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  restoreDelta(delta: Record<string, any>, lastModified: number): void {
+    const context = findContext(this.root, delta.context)
+    if (!context || !Array.isArray(delta.updates)) {
+      return
+    }
+    for (const update of delta.updates) {
+      if (Array.isArray(update.values)) {
+        addValues(
+          context,
+          delta.context,
+          update.source || update['$source'],
+          update.timestamp,
+          update.values
+        )
+      }
+    }
+    this.lastModifieds[delta.context] = Math.max(
+      this.lastModifieds[delta.context] ?? 0,
+      lastModified
+    )
+  }
+
   updateLastModified(contextKey: string): void {
     this.lastModifieds[contextKey] = Date.now()
   }

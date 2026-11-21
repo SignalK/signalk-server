@@ -15,6 +15,7 @@ import {
   useBackpressureWarning
 } from '../../store'
 import { logoutAction, restartAction } from '../../actions'
+import RestartDialog from '../RestartDialog/RestartDialog'
 
 // Header banners are absolutely positioned just below the navbar. The
 // stacked offset places a second banner below the first when both show.
@@ -200,6 +201,7 @@ export default function Header() {
           </Dropdown>
         </div>
       </Nav>
+      <RestartDialog />
     </header>
   )
 }
