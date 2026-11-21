@@ -562,12 +562,35 @@ describe('Course Api', () => {
       { latitude: 43.03, longitude: 7.94 }
     )
     expect(courseApi.externalNavTimer).to.not.equal(null)
-    while (courseApi.unsubscribes.length === 0) {
-      await new Promise((resolve) => setTimeout(resolve, 50))
+    try {
+      await subscribed(courseApi)
+    } finally {
+      await stop()
     }
-
-    await stop()
     expect(courseApi.externalNavTimer).to.equal(null)
+    expect(courseApi.unsubscribes).to.have.length(0)
+  })
+
+  it('does not subscribe when the server stopped during the restore', async function () {
+    const { server, stop } = await startServer()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const courseApi = server.app.courseApi as any
+    let release: () => void = () => undefined
+    try {
+      await subscribed(courseApi)
+      courseApi.store.read = () =>
+        new Promise((_resolve, reject) => {
+          release = () => reject(new Error('no saved course'))
+        })
+    } catch (error) {
+      await stop()
+      throw error
+    }
+    const started = courseApi.start()
+    await stop()
+    release()
+    await started
+
     expect(courseApi.unsubscribes).to.have.length(0)
   })
 
@@ -1351,6 +1374,14 @@ const courseFile = () =>
     'course',
     'settings.json'
   )
+
+async function subscribed(courseApi: { unsubscribes: unknown[] }) {
+  const deadline = Date.now() + 5000
+  while (courseApi.unsubscribes.length === 0) {
+    if (Date.now() > deadline) throw new Error('course API did not subscribe')
+    await new Promise((resolve) => setTimeout(resolve, 50))
+  }
+}
 
 // The course is written to disk after the request that changed it has been
 // answered; wait for it before stopping the server.

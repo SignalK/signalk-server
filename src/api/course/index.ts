@@ -188,6 +188,10 @@ export class CourseApi {
       } catch (_error) {
         debug('No persisted course data (using default)')
       }
+      if (this.stopped) {
+        resolve()
+        return
+      }
       debug(
         '** courseInfo **',
         this.courseInfo,
