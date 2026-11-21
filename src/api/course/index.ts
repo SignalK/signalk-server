@@ -174,7 +174,9 @@ export class CourseApi {
         // The settings are kept apart from the destination, which may have
         // been saved without one or dropped as invalid.
         this.courseInfo = {
-          ...(await this.validateCourseInfo(storeData)),
+          ...(await this.validateCourseInfo(storeData).catch(
+            () => NO_COURSE_INFO
+          )),
           arrivalCircle: this.isValidArrivalCircle(storeData.arrivalCircle)
             ? storeData.arrivalCircle
             : NO_COURSE_INFO.arrivalCircle,

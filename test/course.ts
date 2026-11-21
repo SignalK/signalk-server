@@ -1,6 +1,6 @@
 import { strict as assert } from 'assert'
 import chai, { expect } from 'chai'
-import { mkdir, readFile, writeFile } from 'fs/promises'
+import { mkdir, readFile, rm, writeFile } from 'fs/promises'
 import path from 'path'
 import {
   DATETIME_REGEX,
@@ -1096,6 +1096,43 @@ describe('Course Api', () => {
       (response) => response.status.should.equal(500)
     )
     await stop()
+  })
+
+  it('restores autoAdvance when the saved waypoint is gone', async function () {
+    const { post, selfPut, sendDelta, stop } = await startServer()
+    await sendDelta('navigation.position', { latitude: 60.05, longitude: 3 })
+    const response = await post('/resources/waypoints', {
+      feature: {
+        type: 'Feature',
+        geometry: { type: 'Point', coordinates: [3, 60.1] }
+      }
+    })
+    const { id } = (await response.json()) as { id: string }
+    await selfPut('navigation/course/destination', {
+      href: `/resources/waypoints/${id}`
+    }).then((response) => response.status.should.equal(200))
+    await selfPut('navigation/course/autoAdvance', { value: 'off' }).then(
+      (response) => response.status.should.equal(200)
+    )
+    await persistedCourse((course) => course?.autoAdvance === 'off')
+    await stop()
+    await rm(
+      path.join(
+        serverTestConfigDirectory(),
+        'plugin-config-data',
+        'resources-provider',
+        'resources',
+        'waypoints'
+      ),
+      {
+        recursive: true,
+        force: true
+      }
+    )
+
+    const course = await courseAfterRestart()
+    expect(course.nextPoint).to.equal(null)
+    expect(course.autoAdvance).to.equal('off')
   })
 
   it('keeps autoAdvance changed while a waypoint destination is fetched', async function () {
