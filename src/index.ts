@@ -66,6 +66,10 @@ import {
   WithSecurityStrategy
 } from './security.js'
 import { setupCors } from './cors'
+import {
+  createExposureObserver,
+  observeClientAddresses
+} from './exposureWarning'
 import SubscriptionManager from './subscriptionmanager'
 import { PluginId, PluginManager } from './interfaces/plugins'
 import { OpenApiDescription, OpenApiRecord } from './api/swagger'
@@ -140,6 +144,9 @@ class Server {
     const FILEUPLOADSIZELIMIT = process.env.FILEUPLOADSIZELIMIT || '10mb'
     const bodyParser = require('body-parser')
     const app = express() as any
+    // First, so that requests CORS or the body parsers end are noted too.
+    app.noteClientAddress = createExposureObserver(app)
+    app.use(observeClientAddresses(app.noteClientAddress))
     app.use(require('compression')())
     app.use(
       helmet({
