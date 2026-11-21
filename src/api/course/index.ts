@@ -38,6 +38,7 @@ import { Store } from '../../serverstate/store'
 import { buildSchemaSync } from 'api-schema-builder'
 import { courseApiDoc } from './openApi'
 import { crossTrackDistance, rebasePreviousPointFromXte } from './xteGeometry'
+import { DEFAULT_AUTO_ADVANCE, hasArrived, isAutoAdvance } from './autoAdvance'
 import { ResourcesApi } from '../resources'
 import { ConfigApp, writeSettingsFile } from '../../config/config'
 
@@ -74,6 +75,7 @@ const NO_COURSE_INFO: CourseInfo = {
   startTime: null,
   targetArrivalTime: null,
   arrivalCircle: 0,
+  autoAdvance: DEFAULT_AUTO_ADVANCE,
   activeRoute: null,
   nextPoint: null,
   previousPoint: null
@@ -128,11 +130,18 @@ const orderExternalNavigationValues = (values: PathValue[]) => [
   )
 ]
 
+const isSamePosition = (a: Position, b: Position) =>
+  a.latitude === b.latitude && a.longitude === b.longitude
+
+// A route lookup that hangs must not hold up advancing for good; an
+// unanswered lookup counts as no route.
+const ARRIVAL_ROUTE_LOOKUP_TIMEOUT_MS = 5000
+
 const isFiniteNumber = (value: unknown): value is number =>
   typeof value === 'number' && Number.isFinite(value)
 
 export class CourseApi {
-  private courseInfo = NO_COURSE_INFO
+  private courseInfo: CourseInfo = { ...NO_COURSE_INFO }
 
   private store: Store
   private cmdSource: CommandSource | null = null // source which set the destination
@@ -140,6 +149,17 @@ export class CourseApi {
   private externalNavTimer: ReturnType<typeof setTimeout> | null = null
   private externalNavLastUpdate = 0
   private xteRebaseMismatchCount = 0
+  private advancing = false
+  // Bumped by every update of the followed route's resource, so an advance
+  // decided on an older copy of the route is dropped.
+  private routeRevision = 0
+  private stopped = false
+  // Settings set through the API while the saved course is still being
+  // restored, which must not be overwritten by the saved values.
+  private changedSettings = new Set<'arrivalCircle' | 'autoAdvance'>()
+  // Settings are saved only once the restore is done, so a save cannot
+  // write the course before its restored destination is back.
+  private restored: Promise<void> = Promise.resolve()
 
   constructor(
     private app: CourseApplication,
@@ -151,16 +171,41 @@ export class CourseApi {
 
   async start() {
     return new Promise<void>(async (resolve) => {
+      let markRestored: () => void = () => undefined
+      this.restored = new Promise((done) => {
+        markRestored = done
+      })
       this.initCourseRoutes()
 
       let storeData
       try {
         storeData = await this.store.read()
         debug('Found persisted course data')
-        this.courseInfo = await this.validateCourseInfo(storeData)
+        // The settings are kept apart from the destination, which may have
+        // been saved without one or dropped as invalid.
+        this.courseInfo = {
+          ...(await this.validateCourseInfo(storeData).catch(
+            () => NO_COURSE_INFO
+          )),
+          arrivalCircle: this.changedSettings.has('arrivalCircle')
+            ? this.courseInfo.arrivalCircle
+            : this.isValidArrivalCircle(storeData.arrivalCircle)
+              ? storeData.arrivalCircle
+              : NO_COURSE_INFO.arrivalCircle,
+          autoAdvance: this.changedSettings.has('autoAdvance')
+            ? this.courseInfo.autoAdvance
+            : isAutoAdvance(storeData.autoAdvance)
+              ? storeData.autoAdvance
+              : DEFAULT_AUTO_ADVANCE
+        }
         this.cmdSource = this.courseInfo.nextPoint ? API_CMD_SRC : null
       } catch (_error) {
         debug('No persisted course data (using default)')
+      }
+      markRestored()
+      if (this.stopped) {
+        resolve()
+        return
       }
       debug(
         '** courseInfo **',
@@ -215,6 +260,21 @@ export class CourseApi {
           this.processResourceDeltas(msg)
         }
       )
+      this.app.subscriptionmanager?.subscribe(
+        {
+          context: 'vessels.self' as Context,
+          subscribe: [{ path: 'navigation.position' as Path, period: 1000 }]
+        },
+        this.unsubscribes,
+        (err) => {
+          console.log(`Course API: Subscribe failed: ${err}`)
+        },
+        (msg: Delta) => {
+          void this.processPositionDeltas(msg).catch((error) => {
+            debug('Course API: route advance failed', error)
+          })
+        }
+      )
       resolve()
     })
   }
@@ -242,6 +302,7 @@ export class CourseApi {
         for (const pathValue of update.values) {
           if (ref === pathValue.path) {
             if (refType === 'routes') {
+              this.routeRevision++
               if (this.courseInfo.activeRoute) {
                 const rte = await this.getRoute(
                   this.courseInfo.activeRoute.href
@@ -468,6 +529,15 @@ export class CourseApi {
     }
   }
 
+  // A reload starts a new CourseApi; a timer left behind here would clear
+  // the course the new one keeps. A write already started is not waited for.
+  stop() {
+    this.stopped = true
+    this.unsubscribes.forEach((unsubscribe) => unsubscribe())
+    this.unsubscribes.length = 0
+    this.clearExternalNavigationState()
+  }
+
   private markExternalNavigationUpdate() {
     this.externalNavLastUpdate = Date.now()
     this.scheduleExternalNavigationTimeout()
@@ -611,7 +681,8 @@ export class CourseApi {
     this.clearExternalNavigationState()
     this.courseInfo = {
       ...NO_COURSE_INFO,
-      arrivalCircle: this.courseInfo.arrivalCircle
+      arrivalCircle: this.courseInfo.arrivalCircle,
+      autoAdvance: this.courseInfo.autoAdvance
     }
     this.cmdSource = null
     this.emitCourseInfo(!persistState)
@@ -830,8 +901,27 @@ export class CourseApi {
         }
         if (this.isValidArrivalCircle(req.body.value)) {
           this.courseInfo.arrivalCircle = req.body.value
-          this.emitCourseInfo(false, 'arrivalCircle')
-          res.status(200).json(Responses.ok)
+          this.changedSettings.add('arrivalCircle')
+          this.emitCourseInfo(true, 'arrivalCircle')
+          this.replySaved(res, await this.persistSettings())
+        } else {
+          res.status(400).json(Responses.invalid)
+        }
+      }
+    )
+
+    this.app.put(
+      `${COURSE_API_PATH}/autoAdvance`,
+      async (req: Request, res: Response) => {
+        debug(`** ${req.method} ${req.path}`)
+        if (!this.updateAllowed(req)) {
+          res.status(403).json(Responses.unauthorised)
+          return
+        }
+        if (isAutoAdvance(req.body.value)) {
+          this.courseInfo.autoAdvance = req.body.value
+          this.changedSettings.add('autoAdvance')
+          this.replySaved(res, await this.persistSettings())
         } else {
           res.status(400).json(Responses.invalid)
         }
@@ -1088,6 +1178,136 @@ export class CourseApi {
     )
   }
 
+  private async processPositionDeltas(delta: Delta) {
+    for (const update of delta.updates ?? []) {
+      if (!hasValues(update)) {
+        continue
+      }
+      for (const pathValue of update.values) {
+        if (pathValue.path === 'navigation.position') {
+          await this.advanceOnArrival(pathValue.value as Position)
+        }
+      }
+    }
+  }
+
+  private async advanceOnArrival(position: Position) {
+    const route = this.courseInfo.activeRoute
+    const nextPoint = this.courseInfo.nextPoint?.position
+    const previousPoint = this.courseInfo.previousPoint?.position
+    if (
+      this.advancing ||
+      this.courseInfo.autoAdvance === 'off' ||
+      !route ||
+      !nextPoint ||
+      !previousPoint ||
+      !this.isValidPosition(position) ||
+      route.pointIndex + 1 >= route.pointTotal ||
+      !hasArrived(
+        this.courseInfo.autoAdvance,
+        position,
+        previousPoint,
+        nextPoint,
+        this.courseInfo.arrivalCircle
+      )
+    ) {
+      return
+    }
+
+    this.advancing = true
+    try {
+      const passedIndex = route.pointIndex
+      const mode = this.courseInfo.autoAdvance
+      const arrivalCircle = this.courseInfo.arrivalCircle
+      const reverse = route.reverse
+      const fromRoutePoint = this.courseInfo.previousPoint?.type === RoutePoint
+      const revision = this.routeRevision
+      const rte = await this.getRouteWithin(
+        route.href,
+        ARRIVAL_ROUTE_LOOKUP_TIMEOUT_MS
+      )
+      // The route or the settings may have been changed while it was fetched;
+      // the next position update then decides afresh.
+      const pointTotal = rte?.feature?.geometry?.coordinates?.length ?? 0
+      if (
+        !rte ||
+        this.stopped ||
+        this.routeRevision !== revision ||
+        pointTotal !== route.pointTotal ||
+        passedIndex + 1 >= pointTotal ||
+        !isSamePosition(
+          this.getRoutePoint(rte, passedIndex, reverse),
+          nextPoint
+        ) ||
+        (fromRoutePoint &&
+          (passedIndex < 1 ||
+            !isSamePosition(
+              this.getRoutePoint(rte, passedIndex - 1, reverse),
+              previousPoint
+            ))) ||
+        this.courseInfo.activeRoute !== route ||
+        !this.courseInfo.nextPoint ||
+        !isSamePosition(this.courseInfo.nextPoint.position, nextPoint) ||
+        !this.courseInfo.previousPoint ||
+        !isSamePosition(
+          this.courseInfo.previousPoint.position,
+          previousPoint
+        ) ||
+        route.pointIndex !== passedIndex ||
+        route.reverse !== reverse ||
+        this.courseInfo.autoAdvance !== mode ||
+        this.courseInfo.arrivalCircle !== arrivalCircle
+      ) {
+        return
+      }
+      const pointIndex = passedIndex + 1
+      // A provider's route is not validated on the way in.
+      const nextCoordinate: unknown =
+        rte.feature.geometry.coordinates[
+          reverse ? pointTotal - 1 - pointIndex : pointIndex
+        ]
+      if (
+        !Array.isArray(nextCoordinate) ||
+        !this.isValidPosition({
+          latitude: nextCoordinate[1],
+          longitude: nextCoordinate[0]
+        })
+      ) {
+        return
+      }
+      const previous: NextPreviousPoint = {
+        position: this.getRoutePoint(rte, passedIndex, reverse),
+        type: RoutePoint,
+        name: this.getRoutePointName(rte, passedIndex, reverse)
+      }
+      const next: NextPreviousPoint = {
+        position: this.getRoutePoint(rte, pointIndex, reverse),
+        type: RoutePoint,
+        name: this.getRoutePointName(rte, pointIndex, reverse)
+      }
+      debug(`** advancing route to point ${pointIndex}`)
+      route.pointIndex = pointIndex
+      this.courseInfo.previousPoint = previous
+      this.courseInfo.nextPoint = next
+      this.emitCourseInfo()
+    } finally {
+      this.advancing = false
+    }
+  }
+
+  private async getRouteWithin(
+    href: string,
+    timeoutMs: number
+  ): Promise<Route | undefined> {
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const timedOut = new Promise<undefined>((resolve) => {
+      timer = setTimeout(() => resolve(undefined), timeoutMs)
+    })
+    return Promise.race([this.getRoute(href), timedOut]).finally(() =>
+      clearTimeout(timer)
+    )
+  }
+
   private calcReversedIndex(activeRoute: ActiveRoute): number {
     return (
       (activeRoute.pointTotal as number) -
@@ -1259,7 +1479,8 @@ export class CourseApi {
     if (this.isSourceChange(src)) {
       this.clearDestination(true)
     }
-    this.courseInfo = newCourse
+    // autoAdvance may have been changed while the waypoint was fetched.
+    this.courseInfo = { ...newCourse, autoAdvance: this.courseInfo.autoAdvance }
     this.cmdSource = src
     this.clearExternalNavigationState()
     if (isExternalCmdSource(src)) {
@@ -1546,10 +1767,53 @@ export class CourseApi {
 
     const p = typeof noSave === 'undefined' ? this.isAPICmdSource() : !noSave
     if (p) {
-      debug('*** persisting state **')
-      this.store.write(this.courseInfo).catch((error) => {
+      void this.persistCourseInfo()
+    }
+  }
+
+  // Only a course set through the API is saved: a saved destination is
+  // restored as API-owned, which would shut out the external source.
+  private async persistSettings(): Promise<boolean> {
+    await this.restored
+    if (this.stopped) {
+      return false
+    }
+    const external = this.cmdSource !== null && !this.isAPICmdSource()
+    return this.persistCourseInfo(
+      external
+        ? {
+            ...NO_COURSE_INFO,
+            arrivalCircle: this.courseInfo.arrivalCircle,
+            autoAdvance: this.courseInfo.autoAdvance
+          }
+        : this.courseInfo
+    )
+  }
+
+  private persistCourseInfo(
+    courseInfo: CourseInfo = this.courseInfo
+  ): Promise<boolean> {
+    debug('*** persisting state **')
+    return this.store.write(courseInfo).then(
+      () => true,
+      (error) => {
         console.log('Course API: Unable to persist destination details!')
         debug(error)
+        return false
+      }
+    )
+  }
+
+  // The setting is in effect either way; the client learns whether it
+  // survives a restart.
+  private replySaved(res: Response, saved: boolean) {
+    if (saved) {
+      res.status(200).json(Responses.ok)
+    } else {
+      res.status(500).json({
+        state: 'FAILED',
+        statusCode: 500,
+        message: 'The setting could not be saved.'
       })
     }
   }
