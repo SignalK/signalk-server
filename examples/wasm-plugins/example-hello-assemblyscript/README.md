@@ -113,7 +113,7 @@ Example heartbeat delta:
 
 ### HTTP Endpoints
 
-The plugin exposes two REST API endpoints:
+The plugin exposes three REST API endpoints:
 
 **GET /plugins/\_signalk_example-hello-assemblyscript/api/info**
 
@@ -148,6 +148,10 @@ Returns:
   "memory": "sandboxed"
 }
 ```
+
+**GET /plugins/\_signalk_example-hello-assemblyscript/api/icon.png**
+
+Returns a 1x1 PNG image as raw bytes. The plugin hands the server a base64 body with `"bodyEncoding": "base64"`, and the server decodes it before sending the response.
 
 ## Configuration
 
