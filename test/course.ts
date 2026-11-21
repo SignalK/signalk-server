@@ -643,6 +643,35 @@ describe('Course Api', () => {
     expect(courseApi.unsubscribes).to.have.length(0)
   })
 
+  it('does not save settings when the server stopped during the restore', async function () {
+    const { server, stop } = await startServer()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const courseApi = server.app.courseApi as any
+    let release: () => void = () => undefined
+    let writes = 0
+    try {
+      await subscribed(courseApi)
+      courseApi.store.read = () =>
+        new Promise((_resolve, reject) => {
+          release = () => reject(new Error('no saved course'))
+        })
+      courseApi.store.write = async () => {
+        writes++
+      }
+    } catch (error) {
+      await stop()
+      throw error
+    }
+    const started = courseApi.start()
+    const saved = courseApi.persistSettings()
+    await stop()
+    release()
+    await started
+
+    expect(await saved).to.equal(false)
+    expect(writes).to.equal(0)
+  })
+
   it('rebases external NMEA0183 previousPoint using Signal K XTE sign', async function () {
     const { server, selfGetJson, sendDelta, stop } = await startServer()
     const vesselPosition = { latitude: 43.02, longitude: 7.84 }

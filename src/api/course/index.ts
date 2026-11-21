@@ -530,7 +530,7 @@ export class CourseApi {
   }
 
   // A reload starts a new CourseApi; a timer left behind here would clear
-  // the course the new one keeps.
+  // the course the new one keeps. A write already started is not waited for.
   stop() {
     this.stopped = true
     this.unsubscribes.forEach((unsubscribe) => unsubscribe())
@@ -1775,6 +1775,9 @@ export class CourseApi {
   // restored as API-owned, which would shut out the external source.
   private async persistSettings(): Promise<boolean> {
     await this.restored
+    if (this.stopped) {
+      return false
+    }
     const external = this.cmdSource !== null && !this.isAPICmdSource()
     return this.persistCourseInfo(
       external
