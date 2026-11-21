@@ -5,6 +5,7 @@ import {
   PositionSchema,
   SignalKHrefRouteSchema,
   ArrivalCircleSchema,
+  AutoAdvanceSchema,
   HrefDestinationSchema,
   PositionDestinationSchema,
   ActiveRouteSchema,
@@ -45,6 +46,7 @@ export const courseApiDoc: any = {
         SignalKHrefRouteSchema,
         PositionSchema,
         ArrivalCircleSchema,
+        AutoAdvanceSchema,
         HrefDestinationSchema,
         PositionDestinationSchema,
         ActiveRouteSchema,
@@ -99,7 +101,12 @@ export const courseApiDoc: any = {
             schema: {
               description: 'Course response',
               type: 'object',
-              required: ['activeRoute', 'nextPoint', 'previousPoint'],
+              required: [
+                'activeRoute',
+                'nextPoint',
+                'previousPoint',
+                'autoAdvance'
+              ],
               properties: {
                 activeRoute: {
                   anyOf: [{ $ref: '#/components/schemas/ActiveRoute' }]
@@ -124,6 +131,9 @@ export const courseApiDoc: any = {
                 },
                 arrivalCircle: {
                   $ref: '#/components/schemas/ArrivalCircle'
+                },
+                autoAdvance: {
+                  $ref: '#/components/schemas/AutoAdvance'
                 }
               }
             }
@@ -181,6 +191,32 @@ export const courseApiDoc: any = {
                 required: ['value'],
                 properties: {
                   value: { $ref: '#/components/schemas/ArrivalCircle' }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          '200': { $ref: '#/components/responses/200Ok' },
+          default: { $ref: '#/components/responses/ErrorResponse' }
+        }
+      }
+    },
+    '/course/autoAdvance': {
+      put: {
+        tags: ['course'],
+        summary: 'Set when an active route advances to its next point.',
+        description:
+          'The server advances an active route to its next point when the vessel arrives at the current one. It never advances past the last point.',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['value'],
+                properties: {
+                  value: { $ref: '#/components/schemas/AutoAdvance' }
                 }
               }
             }

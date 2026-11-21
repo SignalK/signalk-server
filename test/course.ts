@@ -1,6 +1,6 @@
 import { strict as assert } from 'assert'
 import chai, { expect } from 'chai'
-import { mkdir, readFile, writeFile } from 'fs/promises'
+import { mkdir, readFile, rm, writeFile } from 'fs/promises'
 import path from 'path'
 import {
   DATETIME_REGEX,
@@ -11,6 +11,7 @@ import {
 import { serverTestConfigDirectory, startServerP } from './servertestutilities'
 import { CourseInfo, Position } from '@signalk/server-api'
 import { crossTrackDistance } from '../src/api/course/xteGeometry'
+import { hasArrived } from '../src/api/course/autoAdvance'
 chai.should()
 
 describe('Course Api', () => {
@@ -68,6 +69,7 @@ describe('Course Api', () => {
       startTime: data.startTime,
       targetArrivalTime: null,
       arrivalCircle: 0,
+      autoAdvance: 'either',
       activeRoute: null,
       nextPoint: {
         type: 'Location',
@@ -198,6 +200,7 @@ describe('Course Api', () => {
     expect(data).to.deep.equal({
       startTime: data.startTime,
       arrivalCircle: 99,
+      autoAdvance: 'either',
       targetArrivalTime: null,
       activeRoute: null,
       nextPoint: {
@@ -248,11 +251,12 @@ describe('Course Api', () => {
       targetArrivalTime: null,
       activeRoute: null,
       arrivalCircle: 99,
+      autoAdvance: 'either',
       nextPoint: null,
       previousPoint: null
     })
 
-    stop()
+    await stop()
   })
 
   it('can activate route and manipulate it', async function () {
@@ -344,6 +348,7 @@ describe('Course Api', () => {
       startTime: data.startTime,
       targetArrivalTime: data.targetArrivalTime,
       arrivalCircle: 0,
+      autoAdvance: 'either',
       activeRoute: {
         href,
         pointIndex: 0,
@@ -415,7 +420,7 @@ describe('Course Api', () => {
       ][1]
     )
 
-    stop()
+    await stop()
   })
 
   it('updates previousPoint when active route point is moved', async function () {
@@ -493,7 +498,7 @@ describe('Course Api', () => {
     expect(data.previousPoint?.position?.latitude).to.equal(60.0)
     expect(data.previousPoint?.position?.longitude).to.equal(10.0)
 
-    stop()
+    await stop()
   })
 
   it('clears an external course when navigation updates stop', async function () {
@@ -533,11 +538,143 @@ describe('Course Api', () => {
       targetArrivalTime: null,
       activeRoute: null,
       arrivalCircle: 0,
+      autoAdvance: 'either',
       nextPoint: null,
       previousPoint: null
     })
 
-    stop()
+    await stop()
+  })
+
+  it('keeps the external course of a stopped server from going stale', async function () {
+    const { server, sendDelta, stop } = await startServer()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const courseApi = server.app.courseApi as any
+    try {
+      await sendDelta('navigation.position', {
+        latitude: 43.02,
+        longitude: 7.84
+      })
+      await courseApi.parseStreamValue(
+        {
+          type: 'NMEA0183',
+          $source: 'nmea.external',
+          msg: 'RMB',
+          path: 'navigation.courseRhumbline.nextPoint.position'
+        },
+        { latitude: 43.03, longitude: 7.94 }
+      )
+      expect(courseApi.externalNavTimer).to.not.equal(null)
+      await subscribed(courseApi)
+    } finally {
+      await stop()
+    }
+    expect(courseApi.externalNavTimer).to.equal(null)
+    expect(courseApi.unsubscribes).to.have.length(0)
+  })
+
+  it('keeps settings set while the saved course is restored', async function () {
+    const { server, selfPut, stop } = await startServer()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const courseApi = server.app.courseApi as any
+    let release: () => void = () => undefined
+    try {
+      await subscribed(courseApi)
+      courseApi.store.read = () =>
+        new Promise((resolve) => {
+          release = () =>
+            resolve({
+              startTime: null,
+              targetArrivalTime: null,
+              activeRoute: null,
+              nextPoint: {
+                type: 'Location',
+                position: { latitude: -35.5, longitude: 138.7 }
+              },
+              previousPoint: {
+                type: 'VesselPosition',
+                position: { latitude: -35.45, longitude: 138.0 }
+              },
+              arrivalCircle: 99,
+              autoAdvance: 'perpendicular'
+            })
+        })
+      const started = courseApi.start()
+      const put = selfPut('navigation/course/autoAdvance', { value: 'off' })
+      const deadline = Date.now() + 5000
+      while (courseApi.courseInfo.autoAdvance !== 'off') {
+        if (Date.now() > deadline) throw new Error('autoAdvance was not set')
+        await new Promise((resolve) => setTimeout(resolve, 10))
+      }
+      release()
+      await started
+      await put.then((response) => response.status.should.equal(200))
+
+      expect(courseApi.courseInfo.autoAdvance).to.equal('off')
+      expect(courseApi.courseInfo.arrivalCircle).to.equal(99)
+      const saved = JSON.parse(await readFile(courseFile(), 'utf8'))
+      expect(saved.autoAdvance).to.equal('off')
+      expect(saved.arrivalCircle).to.equal(99)
+      expect(saved.nextPoint?.position).to.deep.equal({
+        latitude: -35.5,
+        longitude: 138.7
+      })
+    } finally {
+      release()
+      await stop()
+    }
+  })
+
+  it('does not subscribe when the server stopped during the restore', async function () {
+    const { server, stop } = await startServer()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const courseApi = server.app.courseApi as any
+    let release: () => void = () => undefined
+    try {
+      await subscribed(courseApi)
+      courseApi.store.read = () =>
+        new Promise((_resolve, reject) => {
+          release = () => reject(new Error('no saved course'))
+        })
+      const started = courseApi.start()
+      await stop()
+      release()
+      await started
+
+      expect(courseApi.unsubscribes).to.have.length(0)
+    } finally {
+      release()
+      await stop()
+    }
+  })
+
+  it('does not save settings when the server stopped during the restore', async function () {
+    const { server, stop } = await startServer()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const courseApi = server.app.courseApi as any
+    let release: () => void = () => undefined
+    let writes = 0
+    try {
+      await subscribed(courseApi)
+      courseApi.store.read = () =>
+        new Promise((_resolve, reject) => {
+          release = () => reject(new Error('no saved course'))
+        })
+      courseApi.store.write = async () => {
+        writes++
+      }
+      const started = courseApi.start()
+      const saved = courseApi.persistSettings()
+      await stop()
+      release()
+      await started
+
+      expect(await saved).to.equal(false)
+      expect(writes).to.equal(0)
+    } finally {
+      release()
+      await stop()
+    }
   })
 
   it('rebases external NMEA0183 previousPoint using Signal K XTE sign', async function () {
@@ -576,7 +713,7 @@ describe('Course Api', () => {
     ).to.be.closeTo(externalXte, 0.1)
     expect(data.previousPoint?.position).to.not.deep.equal(vesselPosition)
 
-    stop()
+    await stop()
   })
 
   it('uses external previousPoint position when provided', async function () {
@@ -626,7 +763,7 @@ describe('Course Api', () => {
     data = (await selfGetJson('navigation/course')) as CourseInfo
     expect(data.previousPoint?.position).to.deep.equal(previousPoint)
 
-    stop()
+    await stop()
   })
 
   it('can set arrivalCircle', async function () {
@@ -656,12 +793,527 @@ describe('Course Api', () => {
       startTime: null,
       targetArrivalTime: null,
       arrivalCircle: 98,
+      autoAdvance: 'either',
       activeRoute: null,
       nextPoint: null,
       previousPoint: null
     })
 
-    stop()
+    await stop()
+  })
+
+  it('advances an active route when the vessel passes a point', async function () {
+    const { post, selfDelete, selfGetJson, selfPut, sendDelta, stop } =
+      await startServer()
+    await sendDelta('navigation.position', { latitude: 59.95, longitude: 3 })
+
+    const response = await post('/resources/routes', {
+      feature: {
+        type: 'Feature',
+        geometry: {
+          type: 'LineString',
+          coordinates: [
+            [3, 60],
+            [3, 60.1],
+            [3, 60.2]
+          ]
+        }
+      }
+    })
+    response.status.should.equal(201)
+    const { id } = (await response.json()) as { id: string }
+    await selfPut('navigation/course/activeRoute', {
+      href: `/resources/routes/${id}`
+    }).then((response) => response.status.should.equal(200))
+
+    const course = async () =>
+      (await selfGetJson('navigation/course')) as CourseInfo
+    const pointIndexAfter = async (latitude: number) => {
+      await sendDelta('navigation.position', { latitude, longitude: 3 })
+      await new Promise((resolve) => setTimeout(resolve, 1500))
+      return (await course()).activeRoute?.pointIndex
+    }
+
+    expect(await pointIndexAfter(59.99)).to.equal(0)
+    expect(await pointIndexAfter(60.001)).to.equal(1)
+    expect((await course()).previousPoint).to.deep.equal({
+      position: { latitude: 60, longitude: 3 },
+      type: 'RoutePoint',
+      name: ''
+    })
+
+    await selfPut('navigation/course/autoAdvance', { value: 'off' }).then(
+      (response) => response.status.should.equal(200)
+    )
+    expect(await pointIndexAfter(60.101)).to.equal(1)
+
+    await selfPut('navigation/course/autoAdvance', {
+      value: 'perpendicular'
+    }).then((response) => response.status.should.equal(200))
+    expect(await pointIndexAfter(60.102)).to.equal(2)
+    expect(await pointIndexAfter(60.3)).to.equal(2)
+
+    await selfPut('navigation/course/autoAdvance', { value: 'always' }).then(
+      (response) => response.status.should.equal(400)
+    )
+    await selfDelete('navigation/course').then((response) =>
+      response.status.should.equal(200)
+    )
+    expect((await course()).autoAdvance).to.equal('perpendicular')
+
+    await stop()
+  })
+
+  it('does not advance when autoAdvance is switched off during the advance', async function () {
+    const { post, server, selfGetJson, selfPut, sendDelta, stop } =
+      await startServer()
+    await sendDelta('navigation.position', { latitude: 59.95, longitude: 3 })
+    const response = await post('/resources/routes', {
+      feature: {
+        type: 'Feature',
+        geometry: {
+          type: 'LineString',
+          coordinates: [
+            [3, 60],
+            [3, 60.1]
+          ]
+        }
+      }
+    })
+    const { id } = (await response.json()) as { id: string }
+    await selfPut('navigation/course/activeRoute', {
+      href: `/resources/routes/${id}`
+    }).then((response) => response.status.should.equal(200))
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const courseApi = server.app.courseApi as any
+    const getRoute = courseApi.getRoute.bind(courseApi)
+    courseApi.getRoute = async (href: string) => {
+      courseApi.courseInfo.autoAdvance = 'off'
+      return getRoute(href)
+    }
+    await courseApi.advanceOnArrival({ latitude: 60.001, longitude: 3 })
+
+    const data = (await selfGetJson('navigation/course')) as CourseInfo
+    expect(data.activeRoute?.pointIndex).to.equal(0)
+
+    await stop()
+  })
+
+  it('does not advance when the route is reversed during the advance', async function () {
+    const { post, server, selfGetJson, selfPut, sendDelta, stop } =
+      await startServer()
+    await sendDelta('navigation.position', { latitude: 60.05, longitude: 3 })
+    const response = await post('/resources/routes', {
+      feature: {
+        type: 'Feature',
+        geometry: {
+          type: 'LineString',
+          coordinates: [
+            [3, 60],
+            [3, 60.1],
+            [3, 60.2]
+          ]
+        }
+      }
+    })
+    const { id } = (await response.json()) as { id: string }
+    await selfPut('navigation/course/activeRoute', {
+      href: `/resources/routes/${id}`,
+      pointIndex: 1
+    }).then((response) => response.status.should.equal(200))
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const courseApi = server.app.courseApi as any
+    const getRoute = courseApi.getRoute.bind(courseApi)
+    courseApi.getRoute = async (href: string) => {
+      courseApi.courseInfo.activeRoute.reverse = true
+      return getRoute(href)
+    }
+    await courseApi.advanceOnArrival({ latitude: 60.101, longitude: 3 })
+
+    const data = (await selfGetJson('navigation/course')) as CourseInfo
+    expect(data.activeRoute?.pointIndex).to.equal(1)
+
+    await stop()
+  })
+
+  it('does not advance when the arrival circle or the route changes during the advance', async function () {
+    const { post, server, selfGetJson, selfPut, sendDelta, stop } =
+      await startServer()
+    await sendDelta('navigation.position', { latitude: 60.05, longitude: 3 })
+    const response = await post('/resources/routes', {
+      feature: {
+        type: 'Feature',
+        geometry: {
+          type: 'LineString',
+          coordinates: [
+            [3, 60],
+            [3, 60.1],
+            [3, 60.2]
+          ]
+        }
+      }
+    })
+    const { id } = (await response.json()) as { id: string }
+    await selfPut('navigation/course/activeRoute', {
+      href: `/resources/routes/${id}`,
+      pointIndex: 1
+    }).then((response) => response.status.should.equal(200))
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const courseApi = server.app.courseApi as any
+    const getRoute = courseApi.getRoute.bind(courseApi)
+    courseApi.getRoute = async (href: string) => {
+      courseApi.courseInfo.arrivalCircle = 0
+      return getRoute(href)
+    }
+    courseApi.courseInfo.arrivalCircle = 100
+    await courseApi.advanceOnArrival({ latitude: 60.0995, longitude: 3 })
+    let data = (await selfGetJson('navigation/course')) as CourseInfo
+    expect(data.activeRoute?.pointIndex).to.equal(1)
+
+    courseApi.getRoute = async (href: string) => {
+      const rte = await getRoute(href)
+      rte.feature.geometry.coordinates = rte.feature.geometry.coordinates.slice(
+        0,
+        2
+      )
+      return rte
+    }
+    await courseApi.advanceOnArrival({ latitude: 60.101, longitude: 3 })
+    data = (await selfGetJson('navigation/course')) as CourseInfo
+    expect(data.activeRoute?.pointIndex).to.equal(1)
+    expect(data.nextPoint?.position).to.deep.equal({
+      latitude: 60.1,
+      longitude: 3
+    })
+
+    courseApi.getRoute = async (href: string) => {
+      const rte = await getRoute(href)
+      rte.feature.geometry.coordinates = rte.feature.geometry.coordinates.slice(
+        0,
+        2
+      )
+      courseApi.courseInfo.activeRoute.pointTotal = 2
+      return rte
+    }
+    await courseApi.advanceOnArrival({ latitude: 60.101, longitude: 3 })
+    data = (await selfGetJson('navigation/course')) as CourseInfo
+    expect(data.activeRoute?.pointIndex).to.equal(1)
+    courseApi.courseInfo.activeRoute.pointTotal = 3
+
+    courseApi.getRoute = async (href: string) => {
+      const rte = await getRoute(href)
+      rte.feature.geometry.coordinates[1] = [3, 60.15]
+      return rte
+    }
+    await courseApi.advanceOnArrival({ latitude: 60.101, longitude: 3 })
+    data = (await selfGetJson('navigation/course')) as CourseInfo
+    expect(data.activeRoute?.pointIndex).to.equal(1)
+
+    courseApi.getRoute = async (href: string) => {
+      const rte = await getRoute(href)
+      rte.feature.geometry.coordinates[0] = [3, 60.2]
+      return rte
+    }
+    await courseApi.advanceOnArrival({ latitude: 60.101, longitude: 3 })
+    data = (await selfGetJson('navigation/course')) as CourseInfo
+    expect(data.activeRoute?.pointIndex).to.equal(1)
+
+    courseApi.getRoute = async (href: string) => {
+      const rte = await getRoute(href)
+      courseApi.courseInfo.nextPoint = {
+        ...courseApi.courseInfo.nextPoint,
+        position: { latitude: 60.15, longitude: 3 }
+      }
+      return rte
+    }
+    await courseApi.advanceOnArrival({ latitude: 60.101, longitude: 3 })
+    data = (await selfGetJson('navigation/course')) as CourseInfo
+    expect(data.activeRoute?.pointIndex).to.equal(1)
+    courseApi.courseInfo.nextPoint = {
+      ...courseApi.courseInfo.nextPoint,
+      position: { latitude: 60.1, longitude: 3 }
+    }
+
+    courseApi.getRoute = async (href: string) => {
+      const rte = await getRoute(href)
+      rte.feature.geometry.coordinates[2] = null
+      return rte
+    }
+    await courseApi.advanceOnArrival({ latitude: 60.101, longitude: 3 })
+    data = (await selfGetJson('navigation/course')) as CourseInfo
+    expect(data.activeRoute?.pointIndex).to.equal(1)
+    expect(data.nextPoint?.position).to.deep.equal({
+      latitude: 60.1,
+      longitude: 3
+    })
+
+    courseApi.getRoute = async (href: string) => {
+      await courseApi.restartCourse()
+      return getRoute(href)
+    }
+    await sendDelta('navigation.position', { latitude: 60.05, longitude: 3.01 })
+    await courseApi.advanceOnArrival({ latitude: 60.101, longitude: 3 })
+    data = (await selfGetJson('navigation/course')) as CourseInfo
+    expect(data.activeRoute?.pointIndex).to.equal(1)
+    expect(data.previousPoint?.position).to.deep.equal({
+      latitude: 60.05,
+      longitude: 3.01
+    })
+
+    await stop()
+  })
+
+  it('does not advance on a copy of the route fetched before it was edited', async function () {
+    const { post, put, server, selfGetJson, selfPut, sendDelta, stop } =
+      await startServer()
+    await sendDelta('navigation.position', { latitude: 59.95, longitude: 3 })
+    const route = (b: number[]) => ({
+      feature: {
+        type: 'Feature',
+        geometry: {
+          type: 'LineString',
+          coordinates: [[3, 60], b, [3, 60.2]]
+        }
+      }
+    })
+    const response = await post('/resources/routes', route([3, 60.1]))
+    const { id } = (await response.json()) as { id: string }
+    await selfPut('navigation/course/activeRoute', {
+      href: `/resources/routes/${id}`
+    }).then((response) => response.status.should.equal(200))
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const courseApi = server.app.courseApi as any
+    const getRoute = courseApi.getRoute.bind(courseApi)
+    courseApi.getRoute = async (href: string) => {
+      courseApi.getRoute = getRoute
+      const stale = await getRoute(href)
+      const revision = courseApi.routeRevision
+      await put(`/resources/routes/${id}`, route([3.05, 60.1])).then(
+        (response) => response.status.should.equal(200)
+      )
+      // Resource deltas reach the Course API at most every 500 ms.
+      const deadline = Date.now() + 2000
+      while (courseApi.routeRevision === revision && Date.now() < deadline) {
+        await new Promise((resolve) => setTimeout(resolve, 50))
+      }
+      return stale
+    }
+    await courseApi.advanceOnArrival({ latitude: 60.001, longitude: 3 })
+
+    const data = (await selfGetJson('navigation/course')) as CourseInfo
+    expect(data.activeRoute?.pointIndex).to.equal(0)
+    expect(data.nextPoint?.position).to.deep.equal({
+      latitude: 60,
+      longitude: 3
+    })
+
+    await stop()
+  })
+
+  it('advances again after a route lookup that never answered', async function () {
+    const { post, server, selfGetJson, selfPut, sendDelta, stop } =
+      await startServer()
+    await sendDelta('navigation.position', { latitude: 59.95, longitude: 3 })
+    const response = await post('/resources/routes', {
+      feature: {
+        type: 'Feature',
+        geometry: {
+          type: 'LineString',
+          coordinates: [
+            [3, 60],
+            [3, 60.1],
+            [3, 60.2]
+          ]
+        }
+      }
+    })
+    const { id } = (await response.json()) as { id: string }
+    await selfPut('navigation/course/activeRoute', {
+      href: `/resources/routes/${id}`
+    }).then((response) => response.status.should.equal(200))
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const courseApi = server.app.courseApi as any
+    const getRoute = courseApi.getRoute.bind(courseApi)
+    courseApi.getRoute = () => new Promise(() => undefined)
+    await courseApi.advanceOnArrival({ latitude: 60.001, longitude: 3 })
+    let data = (await selfGetJson('navigation/course')) as CourseInfo
+    expect(data.activeRoute?.pointIndex).to.equal(0)
+
+    courseApi.getRoute = getRoute
+    await courseApi.advanceOnArrival({ latitude: 60.001, longitude: 3 })
+    data = (await selfGetJson('navigation/course')) as CourseInfo
+    expect(data.activeRoute?.pointIndex).to.equal(1)
+
+    await stop()
+  })
+
+  it('does not advance after the server stopped during the route lookup', async function () {
+    const { post, server, selfPut, sendDelta, stop } = await startServer()
+    await sendDelta('navigation.position', { latitude: 59.95, longitude: 3 })
+    const response = await post('/resources/routes', {
+      feature: {
+        type: 'Feature',
+        geometry: {
+          type: 'LineString',
+          coordinates: [
+            [3, 60],
+            [3, 60.1],
+            [3, 60.2]
+          ]
+        }
+      }
+    })
+    const { id } = (await response.json()) as { id: string }
+    await selfPut('navigation/course/activeRoute', {
+      href: `/resources/routes/${id}`
+    }).then((response) => response.status.should.equal(200))
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const courseApi = server.app.courseApi as any
+    const route = await courseApi.getRoute(`/resources/routes/${id}`)
+    let answer: (value: unknown) => void = () => undefined
+    courseApi.getRoute = () =>
+      new Promise((resolve) => {
+        answer = resolve
+      })
+    const advance = courseApi.advanceOnArrival({
+      latitude: 60.001,
+      longitude: 3
+    })
+    await stop()
+    answer(route)
+    await advance
+
+    expect(courseApi.courseInfo.activeRoute.pointIndex).to.equal(0)
+  })
+
+  it('answers 500 when the autoAdvance setting cannot be saved', async function () {
+    const { server, selfPut, stop } = await startServer()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const courseApi = server.app.courseApi as any
+    courseApi.store.write = () => Promise.reject(new Error('disk full'))
+
+    await selfPut('navigation/course/autoAdvance', { value: 'off' }).then(
+      (response) => response.status.should.equal(500)
+    )
+    await stop()
+  })
+
+  it('restores autoAdvance when the saved waypoint is gone', async function () {
+    const { post, selfPut, sendDelta, stop } = await startServer()
+    await sendDelta('navigation.position', { latitude: 60.05, longitude: 3 })
+    const response = await post('/resources/waypoints', {
+      feature: {
+        type: 'Feature',
+        geometry: { type: 'Point', coordinates: [3, 60.1] }
+      }
+    })
+    const { id } = (await response.json()) as { id: string }
+    await selfPut('navigation/course/destination', {
+      href: `/resources/waypoints/${id}`
+    }).then((response) => response.status.should.equal(200))
+    await selfPut('navigation/course/autoAdvance', { value: 'off' }).then(
+      (response) => response.status.should.equal(200)
+    )
+    await persistedCourse((course) => course?.autoAdvance === 'off')
+    await stop()
+    await rm(
+      path.join(
+        serverTestConfigDirectory(),
+        'plugin-config-data',
+        'resources-provider',
+        'resources',
+        'waypoints'
+      ),
+      {
+        recursive: true,
+        force: true
+      }
+    )
+
+    const course = await courseAfterRestart()
+    expect(course.nextPoint).to.equal(null)
+    expect(course.autoAdvance).to.equal('off')
+  })
+
+  it('keeps autoAdvance changed while a waypoint destination is fetched', async function () {
+    const { post, server, selfGetJson, selfPut, selfDelete, sendDelta, stop } =
+      await startServer()
+    await sendDelta('navigation.position', { latitude: 60.05, longitude: 3 })
+    const response = await post('/resources/waypoints', {
+      feature: {
+        type: 'Feature',
+        geometry: { type: 'Point', coordinates: [3, 60.1] }
+      }
+    })
+    const { id } = (await response.json()) as { id: string }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const courseApi = server.app.courseApi as any
+    const resourcesApi = courseApi.resourcesApi
+    const getResource = resourcesApi.getResource.bind(resourcesApi)
+    resourcesApi.getResource = async (type: string, resourceId: string) => {
+      courseApi.courseInfo.autoAdvance = 'off'
+      return getResource(type, resourceId)
+    }
+    try {
+      await selfPut('navigation/course/destination', {
+        href: `/resources/waypoints/${id}`
+      }).then((response) => response.status.should.equal(200))
+    } finally {
+      resourcesApi.getResource = getResource
+    }
+
+    const data = (await selfGetJson('navigation/course')) as CourseInfo
+    expect(data.nextPoint?.href).to.equal(`/resources/waypoints/${id}`)
+    expect(data.autoAdvance).to.equal('off')
+    await selfDelete('navigation/course').then((response) =>
+      response.status.should.equal(200)
+    )
+    await persistedCourse((course) => course?.nextPoint === null)
+
+    await stop()
+  })
+
+  it('saves autoAdvance without an external destination', async function () {
+    const { server, selfPut, sendDelta, stop } = await startServer()
+    await sendDelta('navigation.position', { latitude: 43.02, longitude: 7.84 })
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const courseApi = server.app.courseApi as any
+    await courseApi.parseStreamValue(
+      {
+        type: 'NMEA0183',
+        $source: 'nmea.external',
+        msg: 'RMB',
+        path: 'navigation.courseRhumbline.nextPoint.position'
+      },
+      { latitude: 43.03, longitude: 7.94 }
+    )
+
+    await selfPut('navigation/course/arrivalCircle', { value: 150 }).then(
+      (response) => response.status.should.equal(200)
+    )
+    await selfPut('navigation/course/autoAdvance', { value: 'off' }).then(
+      (response) => response.status.should.equal(200)
+    )
+    let saved: CourseInfo | undefined
+    await persistedCourse((course) => {
+      saved = course
+      return course?.autoAdvance === 'off'
+    })
+    expect(saved?.nextPoint).to.equal(null)
+    expect(saved?.arrivalCircle).to.equal(150)
+    await stop()
+
+    const course = await courseAfterRestart()
+    expect(course.autoAdvance).to.equal('off')
+    expect(course.arrivalCircle).to.equal(150)
   })
 
   it('can restart the course from the vessel position', async function () {
@@ -724,7 +1376,7 @@ describe('Course Api', () => {
       (err: Error) => err.message.should.equal('No active destination!')
     )
 
-    stop()
+    await stop()
   })
 
   it('restores a destination set by position after a restart', async function () {
@@ -806,6 +1458,14 @@ const courseFile = () =>
     'settings.json'
   )
 
+async function subscribed(courseApi: { unsubscribes: unknown[] }) {
+  const deadline = Date.now() + 5000
+  while (courseApi.unsubscribes.length === 0) {
+    if (Date.now() > deadline) throw new Error('course API did not subscribe')
+    await new Promise((resolve) => setTimeout(resolve, 50))
+  }
+}
+
 // The course is written to disk after the request that changed it has been
 // answered; wait for it before stopping the server.
 async function persistedCourse(
@@ -848,3 +1508,62 @@ async function courseAfterRestart(): Promise<CourseInfo> {
     await server.stop()
   }
 }
+
+describe('Course Api arrival', () => {
+  const previousPoint = { latitude: 60, longitude: 3 }
+  const nextPoint = { latitude: 60.1, longitude: 3 }
+
+  it('arrives on entering the arrival circle', () => {
+    const inside = { latitude: 60.0995, longitude: 3 }
+    expect(hasArrived('arrivalCircle', inside, previousPoint, nextPoint, 100))
+      .to.be.true
+    expect(hasArrived('arrivalCircle', inside, previousPoint, nextPoint, 0)).to
+      .be.false
+    expect(hasArrived('perpendicular', inside, previousPoint, nextPoint, 100))
+      .to.be.false
+  })
+
+  it('arrives on passing the perpendicular, wherever the vessel is abeam', () => {
+    const beyond = { latitude: 60.101, longitude: 3.05 }
+    const before = { latitude: 60.099, longitude: 2.95 }
+    expect(hasArrived('perpendicular', beyond, previousPoint, nextPoint, 0)).to
+      .be.true
+    expect(hasArrived('either', beyond, previousPoint, nextPoint, 0)).to.be.true
+    expect(hasArrived('arrivalCircle', beyond, previousPoint, nextPoint, 0)).to
+      .be.false
+    expect(hasArrived('perpendicular', before, previousPoint, nextPoint, 0)).to
+      .be.false
+  })
+
+  it('takes the perpendicular at the point when the vessel is far abeam', () => {
+    expect(
+      hasArrived(
+        'perpendicular',
+        { latitude: 60.101, longitude: 4 },
+        previousPoint,
+        nextPoint,
+        0
+      )
+    ).to.be.true
+    expect(
+      hasArrived(
+        'perpendicular',
+        { latitude: 60.09, longitude: 4 },
+        previousPoint,
+        nextPoint,
+        0
+      )
+    ).to.be.false
+  })
+
+  it('takes the perpendicular at the point on a long leg', () => {
+    const from = { latitude: 60, longitude: 0 }
+    const to = { latitude: 60, longitude: 90 }
+    expect(
+      hasArrived('perpendicular', { latitude: 59, longitude: 90 }, from, to, 0)
+    ).to.be.true
+    expect(
+      hasArrived('perpendicular', { latitude: 61, longitude: 89 }, from, to, 0)
+    ).to.be.false
+  })
+})

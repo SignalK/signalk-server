@@ -40,6 +40,23 @@ export const ArrivalCircleSchema = Type.Number({
 })
 export type ArrivalCircleType = Static<typeof ArrivalCircleSchema>
 
+/** When the server switches an active route to its next point. */
+export const AutoAdvanceSchema = Type.Union(
+  [
+    Type.Literal('off'),
+    Type.Literal('arrivalCircle'),
+    Type.Literal('perpendicular'),
+    Type.Literal('either')
+  ],
+  {
+    $id: 'AutoAdvance',
+    description:
+      'When the server advances an active route to its next point: off (only by request), on entering the arrival circle, on passing the line through the point perpendicular to the leg, or on either.',
+    default: 'either'
+  }
+)
+export type AutoAdvanceType = Static<typeof AutoAdvanceSchema>
+
 export type PositionType = Static<typeof PositionSchema>
 
 /** Type of course point. */
@@ -126,6 +143,15 @@ export const ArrivalCircleBodySchema = Type.Object(
   { $id: 'ArrivalCircleBody' }
 )
 export type ArrivalCircleBodyType = Static<typeof ArrivalCircleBodySchema>
+
+/** PUT /course/autoAdvance request body */
+export const AutoAdvanceBodySchema = Type.Object(
+  {
+    value: AutoAdvanceSchema
+  },
+  { $id: 'AutoAdvanceBody' }
+)
+export type AutoAdvanceBodyType = Static<typeof AutoAdvanceBodySchema>
 
 /** PUT /course/targetArrivalTime request body */
 export const TargetArrivalTimeBodySchema = Type.Object(
@@ -250,6 +276,7 @@ export const CourseInfoSchema = Type.Object(
       description: 'Radius of arrival zone in meters',
       units: 'm'
     }),
+    autoAdvance: AutoAdvanceSchema,
     activeRoute: Type.Union([ActiveRouteSchema, Type.Null()], {
       description: 'The active route, or null when navigating to a point'
     }),

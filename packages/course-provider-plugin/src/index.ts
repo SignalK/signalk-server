@@ -647,6 +647,59 @@ module.exports = (server: CourseComputerApp): Plugin => {
     }
   }
 
+  // At every route point but the last, a server that advances the route
+  // itself moves on without anyone having to act, so the arrival is not
+  // worth a notification there.
+  const SERVER_ADVANCE_MODES = new Set([
+    'arrivalCircle',
+    'perpendicular',
+    'either'
+  ])
+
+  // The course is read from the server when the arrival is raised, so the
+  // route point and the advance mode belong to the same nextPoint.
+  const serverAdvancesFrom = (course: unknown) => {
+    const { autoAdvance, activeRoute } = (course ?? {}) as {
+      autoAdvance?: string
+      activeRoute?: { pointIndex?: number; pointTotal?: number } | null
+    }
+    return (
+      SERVER_ADVANCE_MODES.has(autoAdvance ?? '') &&
+      typeof activeRoute?.pointIndex === 'number' &&
+      typeof activeRoute?.pointTotal === 'number' &&
+      activeRoute.pointIndex + 1 < activeRoute.pointTotal
+    )
+  }
+
+  // An exit bumps the token, so a raise still waiting for the course cannot
+  // land after the clear and stay active.
+  const createArrivalGate = () => {
+    let token = 0
+    return {
+      exit: () => {
+        token++
+      },
+      raise: (raiseNotification: () => void) => {
+        if (activeRouteId === undefined) {
+          raiseNotification()
+          return
+        }
+        const raisedAt = ++token
+        server
+          .getCourse()
+          .then(serverAdvancesFrom)
+          .catch(() => false)
+          .then((serverAdvances) => {
+            if (!serverAdvances && raisedAt === token) {
+              raiseNotification()
+            }
+          })
+      }
+    }
+  }
+  const arrivalGate = createArrivalGate()
+  const passedGate = createArrivalGate()
+
   // ********* Arrival circle events *****************
 
   const onArrivalCircleEvent = (event: WatchEvent) => {
@@ -664,19 +717,19 @@ module.exports = (server: CourseComputerApp): Plugin => {
 
     if (event.type === 'enter') {
       if (srcPaths['navigation.position']) {
-        emitNotification(
-          new NotificationMgr(
-            'navigation.course.arrivalCircleEntered',
-            `Entered arrival zone: ${event.value.toFixed(
-              0
-            )}m < ${watchArrival.rangeMax.toFixed(0)}`,
-            ALARM_STATE.alert,
-            alarmMethod
-          )
+        const notification = new NotificationMgr(
+          'navigation.course.arrivalCircleEntered',
+          `Entered arrival zone: ${event.value.toFixed(
+            0
+          )}m < ${watchArrival.rangeMax.toFixed(0)}`,
+          ALARM_STATE.alert,
+          alarmMethod
         )
+        arrivalGate.raise(() => emitNotification(notification))
       }
     }
     if (event.type === 'exit') {
+      arrivalGate.exit()
       emitNotification(
         new NotificationMgr('navigation.course.arrivalCircleEntered', null)
       )
@@ -698,19 +751,19 @@ module.exports = (server: CourseComputerApp): Plugin => {
       : [ALARM_METHOD.visual]
     if (event.type === 'enter') {
       if (srcPaths['navigation.position']) {
-        emitNotification(
-          new NotificationMgr(
-            'navigation.course.perpendicularPassed',
-            watchPassedDest.value === 1
-              ? 'Next Point perpendicular has been passed.'
-              : '',
-            ALARM_STATE.alert,
-            alarmMethod
-          )
+        const notification = new NotificationMgr(
+          'navigation.course.perpendicularPassed',
+          watchPassedDest.value === 1
+            ? 'Next Point perpendicular has been passed.'
+            : '',
+          ALARM_STATE.alert,
+          alarmMethod
         )
+        passedGate.raise(() => emitNotification(notification))
       }
     }
     if (event.type === 'exit') {
+      passedGate.exit()
       emitNotification(
         new NotificationMgr('navigation.course.perpendicularPassed', null)
       )

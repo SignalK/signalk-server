@@ -64,6 +64,7 @@ function startPluginCapturingDelta(opts: StartOptions = {}): {
   const calcsSpy = spy<(src: SKPaths) => CourseData>(
     opts.calcsImpl ?? (() => fixed)
   )
+  restoreCourse?.()
   restoreCourse = mockModule(
     '../../packages/course-provider-plugin/src/course',
     {
@@ -537,6 +538,102 @@ describe('notification settings', () => {
 
   it('raises both notifications for a config saved without them', () => {
     expect(arrive({ calculations: { method: 'Rhumbline' } })).to.have.members([
+      ARRIVAL,
+      PERPENDICULAR
+    ])
+  })
+
+  // Arrive at route point pointIndex of pointTotal while the server reports
+  // the given autoAdvance mode.
+  const arriveOnRoute = async (
+    pointIndex: number,
+    pointTotal: number,
+    autoAdvance: string | undefined,
+    serverPointIndex = pointIndex
+  ) => {
+    const started = startPluginCapturingDelta({
+      startArgs: {},
+      calcsReturn: {
+        gc: { distance: 20 },
+        rl: {},
+        passedPerpendicular: true
+      } as CourseData
+    })
+    started.server.getCourse = spy(() =>
+      Promise.resolve({
+        autoAdvance,
+        activeRoute: {
+          href: '/resources/routes/r1',
+          pointIndex: serverPointIndex,
+          pointTotal
+        }
+      })
+    )
+    const flush = () => new Promise((resolve) => setImmediate(resolve))
+    started.deltaCallback({
+      updates: [
+        {
+          values: [
+            {
+              path: 'navigation.course.activeRoute',
+              value: { href: '/resources/routes/r1', pointIndex, pointTotal }
+            }
+          ]
+        }
+      ]
+    })
+    await flush()
+    started.deltaCallback({
+      updates: [
+        {
+          values: [
+            { path: 'navigation.course.arrivalCircle', value: 50 },
+            {
+              path: 'navigation.position',
+              value: { latitude: 10, longitude: 20 }
+            }
+          ]
+        }
+      ]
+    })
+    await flush()
+    const raised = started.server.handleMessage.calls
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .flatMap((call: any[]) => call[1]?.updates ?? [])
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .flatMap((u: any) => u.values ?? [])
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .filter((v: any) => v.path?.startsWith('notifications.') && v.value)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .map((v: any) => v.path)
+    started.stop()
+    return raised
+  }
+
+  it('stays quiet at a route point the server advances from', async () => {
+    expect(await arriveOnRoute(0, 3, 'either')).to.deep.equal([])
+  })
+
+  it('raises at a route point when the server does not advance', async () => {
+    expect(await arriveOnRoute(0, 3, 'off')).to.have.members([
+      ARRIVAL,
+      PERPENDICULAR
+    ])
+    expect(await arriveOnRoute(0, 3, undefined)).to.have.members([
+      ARRIVAL,
+      PERPENDICULAR
+    ])
+  })
+
+  it('raises at the last route point', async () => {
+    expect(await arriveOnRoute(2, 3, 'either')).to.have.members([
+      ARRIVAL,
+      PERPENDICULAR
+    ])
+  })
+
+  it('raises at the last route point before the route update has been fetched', async () => {
+    expect(await arriveOnRoute(1, 3, 'either', 2)).to.have.members([
       ARRIVAL,
       PERPENDICULAR
     ])
