@@ -154,6 +154,9 @@ export class CourseApi {
   // decided on an older copy of the route is dropped.
   private routeRevision = 0
   private stopped = false
+  // Settings set through the API while the saved course is still being
+  // restored, which must not be overwritten by the saved values.
+  private changedSettings = new Set<'arrivalCircle' | 'autoAdvance'>()
 
   constructor(
     private app: CourseApplication,
@@ -177,12 +180,16 @@ export class CourseApi {
           ...(await this.validateCourseInfo(storeData).catch(
             () => NO_COURSE_INFO
           )),
-          arrivalCircle: this.isValidArrivalCircle(storeData.arrivalCircle)
-            ? storeData.arrivalCircle
-            : NO_COURSE_INFO.arrivalCircle,
-          autoAdvance: isAutoAdvance(storeData.autoAdvance)
-            ? storeData.autoAdvance
-            : DEFAULT_AUTO_ADVANCE
+          arrivalCircle: this.changedSettings.has('arrivalCircle')
+            ? this.courseInfo.arrivalCircle
+            : this.isValidArrivalCircle(storeData.arrivalCircle)
+              ? storeData.arrivalCircle
+              : NO_COURSE_INFO.arrivalCircle,
+          autoAdvance: this.changedSettings.has('autoAdvance')
+            ? this.courseInfo.autoAdvance
+            : isAutoAdvance(storeData.autoAdvance)
+              ? storeData.autoAdvance
+              : DEFAULT_AUTO_ADVANCE
         }
         this.cmdSource = this.courseInfo.nextPoint ? API_CMD_SRC : null
       } catch (_error) {
@@ -886,6 +893,7 @@ export class CourseApi {
         }
         if (this.isValidArrivalCircle(req.body.value)) {
           this.courseInfo.arrivalCircle = req.body.value
+          this.changedSettings.add('arrivalCircle')
           this.emitCourseInfo(true, 'arrivalCircle')
           this.replySaved(res, await this.persistSettings())
         } else {
@@ -904,6 +912,7 @@ export class CourseApi {
         }
         if (isAutoAdvance(req.body.value)) {
           this.courseInfo.autoAdvance = req.body.value
+          this.changedSettings.add('autoAdvance')
           this.replySaved(res, await this.persistSettings())
         } else {
           res.status(400).json(Responses.invalid)

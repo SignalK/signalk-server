@@ -571,6 +571,40 @@ describe('Course Api', () => {
     expect(courseApi.unsubscribes).to.have.length(0)
   })
 
+  it('keeps settings set while the saved course is restored', async function () {
+    const { server, selfPut, stop } = await startServer()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const courseApi = server.app.courseApi as any
+    try {
+      await subscribed(courseApi)
+      let release: () => void = () => undefined
+      courseApi.store.read = () =>
+        new Promise((resolve) => {
+          release = () =>
+            resolve({
+              startTime: null,
+              targetArrivalTime: null,
+              activeRoute: null,
+              nextPoint: null,
+              previousPoint: null,
+              arrivalCircle: 99,
+              autoAdvance: 'perpendicular'
+            })
+        })
+      const started = courseApi.start()
+      await selfPut('navigation/course/autoAdvance', { value: 'off' }).then(
+        (response) => response.status.should.equal(200)
+      )
+      release()
+      await started
+
+      expect(courseApi.courseInfo.autoAdvance).to.equal('off')
+      expect(courseApi.courseInfo.arrivalCircle).to.equal(99)
+    } finally {
+      await stop()
+    }
+  })
+
   it('does not subscribe when the server stopped during the restore', async function () {
     const { server, stop } = await startServer()
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
