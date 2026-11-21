@@ -29,6 +29,12 @@ Enable under **Server Settings → Bluetooth** (`localBluetoothManaged: true`). 
 
 Only available on Linux (BlueZ via DBus). Not supported on macOS or Windows.
 
+While the local adapter is enabled, each adapter in use scans continuously, whether or not any plugin is listening; it pauses only while the server sets up a GATT connection through it. The server asks BlueZ to report every advertisement, not only changes, so `bluetoothd` sends a `PropertiesChanged` signal to the system D-Bus for each advertisement it receives from any device in range, with its RSSI and its manufacturer and service data. In a busy marina that can be thousands of signals a minute, and `bluetoothd` and the system `dbus-daemon` have been seen to grow to hundreds of megabytes over a few weeks.
+
+`sudo systemctl restart bluetooth` frees what `bluetoothd` holds; GATT links drop, and the server resumes scanning on its own. Restarting the system `dbus-daemon` is not supported, because services such as NetworkManager and systemd-logind do not reconnect to a new bus, so its memory comes back only with a reboot.
+
+Turn the local adapter on only when it is needed: for devices that no ESP32 gateway can hear, whether a plugin, the BLE Manager or a client of the advertisement WebSocket wants them, and for raw GATT connections (`connectGATT`) and ad-hoc GATT reads, which gateways do not support. Advertisements and GATT subscriptions (`subscribeGATT`) also work through a gateway connected over WebSocket.
+
 ### Remote BLE Gateway
 
 A built-in provider that lets devices outside the server host contribute BLE coverage. A gateway either:
