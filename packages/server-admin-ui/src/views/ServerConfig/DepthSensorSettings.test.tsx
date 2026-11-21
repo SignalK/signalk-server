@@ -1,0 +1,235 @@
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { fireEvent, render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import DepthSensorSettings from './DepthSensorSettings'
+import { useStore } from '../../store'
+
+const N2K = 'n2k.35'
+const NMEA0183 = 'nmea0183.II'
+
+const stored = () => useStore.getState().depthSensorsData.sensors
+
+describe('DepthSensorSettings', () => {
+  let fetchMock: ReturnType<typeof vi.fn>
+
+  beforeEach(() => {
+    fetchMock = vi.fn(async () => ({
+      ok: true,
+      status: 200,
+      json: async () => ({ result: 'ok' })
+    }))
+    vi.stubGlobal('fetch', fetchMock)
+    useStore.setState({
+      depthSensorsData: {
+        sensors: [],
+        saveState: { dirty: false, timeoutsOk: true }
+      },
+      depthSources: [N2K, NMEA0183],
+      loginStatus: { authenticationRequired: false }
+    })
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('lists every detected depth source as a row', () => {
+    render(<DepthSensorSettings />)
+
+    expect(screen.getByLabelText(`Sensor label for ${N2K}`)).toBeVisible()
+    expect(screen.getByLabelText(`Sensor label for ${NMEA0183}`)).toBeVisible()
+  })
+
+  it('configures a transducer by typing its position', async () => {
+    const user = userEvent.setup()
+    render(<DepthSensorSettings />)
+
+    await user.type(
+      screen.getByLabelText(`From bow in meters for ${N2K}`),
+      '6.5'
+    )
+    await user.selectOptions(
+      screen.getByLabelText(`Side of the centerline for ${N2K}`),
+      'port'
+    )
+    await user.type(
+      screen.getByLabelText(`From center in meters for ${N2K}`),
+      '0.3'
+    )
+    await user.type(
+      screen.getByLabelText(`Below waterline in meters for ${N2K}`),
+      '0.7'
+    )
+
+    expect(stored()).toEqual([
+      {
+        sensorId: 'depth1',
+        $source: N2K,
+        fromBow: 6.5,
+        fromCenter: -0.3,
+        fromWaterline: 0.7
+      }
+    ])
+  })
+
+  it('keeps a stored distance while the input holds partial text', () => {
+    useStore.setState({
+      depthSensorsData: {
+        sensors: [
+          {
+            sensorId: 'keel',
+            $source: N2K,
+            fromBow: 5.5,
+            fromCenter: null,
+            fromWaterline: 0.7
+          }
+        ],
+        saveState: { dirty: false, timeoutsOk: true }
+      }
+    })
+    render(<DepthSensorSettings />)
+    const input = screen.getByLabelText(
+      `Below waterline in meters for ${N2K}`
+    ) as HTMLInputElement
+    Object.defineProperty(input, 'validity', {
+      value: { badInput: true }
+    })
+
+    fireEvent.change(input, { target: { value: '' } })
+    fireEvent.blur(input)
+
+    expect(stored()[0].fromWaterline).toBe(0.7)
+    expect(input.value).toBe('0.7')
+  })
+
+  it('saves the transducers to the sensors API', async () => {
+    const user = userEvent.setup()
+    render(<DepthSensorSettings />)
+
+    await user.type(
+      screen.getByLabelText(`Below waterline in meters for ${NMEA0183}`),
+      '0.4'
+    )
+    await user.click(screen.getByRole('button', { name: /Save/ }))
+
+    const put = fetchMock.mock.calls.find(
+      ([, init]) => (init as RequestInit | undefined)?.method === 'PUT'
+    )
+    expect(put?.[0]).toBe('/signalk/v2/api/vessels/self/sensors/depth')
+    expect(JSON.parse((put?.[1] as RequestInit).body as string)).toEqual({
+      sensors: [
+        {
+          sensorId: 'depth1',
+          $source: NMEA0183,
+          fromBow: null,
+          fromCenter: null,
+          fromWaterline: 0.4
+        }
+      ]
+    })
+    expect(useStore.getState().depthSensorsData.saveState.dirty).toBe(false)
+  })
+
+  describe('for a read-only visitor', () => {
+    beforeEach(() => {
+      useStore.setState({
+        depthSensorsData: {
+          sensors: [
+            {
+              sensorId: 'keel',
+              $source: N2K,
+              fromBow: 5.5,
+              fromCenter: -0.4,
+              fromWaterline: 0.7
+            }
+          ],
+          saveState: { dirty: false, timeoutsOk: true }
+        },
+        loginStatus: {
+          authenticationRequired: true,
+          status: 'notLoggedIn',
+          readOnlyAccess: true
+        }
+      })
+    })
+
+    it('shows the transducer positions without offering to change them', () => {
+      render(<DepthSensorSettings />)
+
+      const fromBow = screen.getByLabelText(`From bow in meters for ${N2K}`)
+      expect((fromBow as HTMLInputElement).value).toBe('5.5')
+      expect(fromBow).toHaveProperty('disabled', true)
+      expect(
+        screen.getByLabelText(`Side of the centerline for ${N2K}`)
+      ).toHaveProperty('disabled', true)
+      expect(
+        screen.getByLabelText(`Sensor label for ${NMEA0183}`)
+      ).toHaveProperty('disabled', true)
+      expect(screen.queryByText('Save')).toBeNull()
+      expect(screen.queryByText('Reset all depth transducers')).toBeNull()
+      expect(screen.queryByText('Clear')).toBeNull()
+    })
+  })
+
+  describe('side view', () => {
+    const vesselResponse = (vessel: object) =>
+      vi.fn(async (url: string) => ({
+        ok: true,
+        status: 200,
+        json: async () => (url.endsWith('/vessel') ? vessel : { result: 'ok' })
+      }))
+
+    beforeEach(() => {
+      useStore.setState({
+        depthSensorsData: {
+          sensors: [
+            {
+              sensorId: 'keel',
+              $source: N2K,
+              fromBow: 5.5,
+              fromCenter: -0.4,
+              fromWaterline: 0.7
+            }
+          ],
+          saveState: { dirty: false, timeoutsOk: true }
+        }
+      })
+    })
+
+    it('shows each transducer at its depth below the waterline', async () => {
+      vi.stubGlobal(
+        'fetch',
+        vesselResponse({ length: 12, beam: 4, draft: 1.7 })
+      )
+      render(<DepthSensorSettings />)
+
+      expect(
+        await screen.findByRole('img', { name: /Side view of the vessel/ })
+      ).toBeVisible()
+      expect(screen.getByText('keel 0.7 m')).toBeVisible()
+      expect(screen.getByText('Draft 1.7 m')).toBeVisible()
+    })
+
+    it('shows the side view when the vessel length is unknown', async () => {
+      vi.stubGlobal('fetch', vesselResponse({ draft: 1.7 }))
+      render(<DepthSensorSettings />)
+
+      expect(
+        await screen.findByRole('img', { name: /Side view of the vessel/ })
+      ).toBeVisible()
+      expect(screen.getByText('keel 0.7 m')).toBeVisible()
+    })
+
+    it('asks for the draft when none is set', async () => {
+      vi.stubGlobal('fetch', vesselResponse({ length: 12, beam: 4 }))
+      render(<DepthSensorSettings />)
+
+      expect(
+        await screen.findByText(/to place transducers in the side view/)
+      ).toBeVisible()
+      expect(
+        screen.queryByRole('img', { name: /Side view of the vessel/ })
+      ).toBeNull()
+    })
+  })
+})
