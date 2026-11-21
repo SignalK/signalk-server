@@ -459,6 +459,143 @@ describe('Deltacache', () => {
       })
   })
 
+  it('getMultiSourcePaths excludes alerts', function () {
+    // Seeded straight into the cache: the alerts API takes alerts.* values out
+    // of the delta chain, so a delta sent to the server never reaches here
+    // under two sources, and would pass this test without the exemption.
+    const alertValue = {
+      priority: 'alarm',
+      state: 'unacknowledged',
+      message: 'Oil pressure low'
+    }
+    for (const $source of ['n2k.a', 'n2k.b']) {
+      theServer.app.deltaCache.onValue({
+        context: theServer.app.selfContext,
+        $source,
+        source: { label: $source },
+        timestamp: '2024-01-15T10:30:00.000Z',
+        path: 'alerts.propulsion.port.oilPressureLow',
+        value: alertValue
+      })
+    }
+
+    for (const $source of ['n2k.a', 'n2k.b']) {
+      theServer.app.deltaCache.onValue({
+        context: theServer.app.selfContext,
+        $source,
+        source: { label: $source },
+        timestamp: '2024-01-15T10:30:00.000Z',
+        path: 'environment.wind.speedApparent',
+        value: 4.2
+      })
+    }
+
+    const paths = theServer.app.deltaCache.getMultiSourcePaths()
+    // Control: the same seeding on a measurement path does show up, so an
+    // absent alerts path means the exemption, not a test that seeds nothing.
+    paths.should.have.property('environment.wind.speedApparent')
+    paths.should.not.have.property('alerts.propulsion.port.oilPressureLow')
+    for (const path of Object.keys(paths)) {
+      path.startsWith('alerts').should.equal(false)
+    }
+  })
+
+  it('getSelfPathPublishers excludes alerts', function () {
+    for (const $source of ['n2k.a', 'n2k.b']) {
+      theServer.app.deltaCache.onValue({
+        context: theServer.app.selfContext,
+        $source,
+        source: { label: $source },
+        timestamp: '2024-01-15T10:30:00.000Z',
+        path: 'alerts.probe.selfpath',
+        value: { priority: 'alarm', message: 'probe' }
+      })
+      theServer.app.deltaCache.onValue({
+        context: theServer.app.selfContext,
+        $source,
+        source: { label: $source },
+        timestamp: '2024-01-15T10:30:00.000Z',
+        path: 'environment.probe.selfpath',
+        value: 3.4
+      })
+    }
+
+    const publishers = theServer.app.deltaCache.getSelfPathPublishers()
+    // Control: the same seeding on a measurement path does surface, so the
+    // absent alerts path is the exemption rather than seeding that went astray.
+    publishers.should.have.property('environment.probe.selfpath')
+    publishers.should.not.have.property('alerts.probe.selfpath')
+  })
+
+  it('getReconciledGroups excludes alerts', function () {
+    const settings = theServer.app.config.settings
+    const previousGroups = settings.priorityGroups
+    try {
+      for (const $source of ['groups.a', 'groups.b']) {
+        theServer.app.deltaCache.onValue({
+          context: theServer.app.selfContext,
+          $source,
+          source: { label: $source },
+          timestamp: '2024-01-15T10:30:00.000Z',
+          path: 'alerts.probe.groups',
+          value: { priority: 'alarm', message: 'probe' }
+        })
+        theServer.app.deltaCache.onValue({
+          context: theServer.app.selfContext,
+          $source,
+          source: { label: $source },
+          timestamp: '2024-01-15T10:30:00.000Z',
+          path: 'environment.probe.groups',
+          value: 3.4
+        })
+      }
+      // Reconciled groups are built from the saved groups, so without one
+      // there is nothing to be included in and the assertion proves nothing.
+      settings.priorityGroups = [
+        { id: 'alerts.exemption.group', sources: ['groups.a', 'groups.b'] }
+      ]
+
+      const grouped = theServer.app.deltaCache
+        .getReconciledGroups()
+        .flatMap((group) => group.paths ?? [])
+      grouped.should.include('environment.probe.groups')
+      grouped.should.not.include('alerts.probe.groups')
+    } finally {
+      settings.priorityGroups = previousGroups
+    }
+  })
+
+  it('getMultiSourcePaths ignores a persisted override on an alerts path', function () {
+    for (const path of ['alerts.probe.persisted', 'environment.probe.wind']) {
+      for (const $source of ['n2k.a', 'n2k.b']) {
+        theServer.app.deltaCache.onValue({
+          context: theServer.app.selfContext,
+          $source,
+          source: { label: $source },
+          timestamp: '2024-01-15T10:30:00.000Z',
+          path,
+          value: path.startsWith('alerts') ? { priority: 'alarm' } : 4.2
+        })
+      }
+    }
+    const settings = theServer.app.config.settings
+    const previous = settings.priorityOverrides
+    settings.priorityOverrides = {
+      'alerts.probe.persisted': [
+        { sourceRef: 'n2k.a' },
+        { sourceRef: 'n2k.b' }
+      ],
+      'environment.probe.wind': [{ sourceRef: 'n2k.a' }, { sourceRef: 'n2k.b' }]
+    }
+    try {
+      const paths = theServer.app.deltaCache.getMultiSourcePaths()
+      paths.should.have.property('environment.probe.wind')
+      paths.should.not.have.property('alerts.probe.persisted')
+    } finally {
+      settings.priorityOverrides = previous
+    }
+  })
+
   it('getMultiSourcePaths surfaces fan-out paths even with one publisher', function () {
     // When the user has tagged a path as fan-out (sentinel `*` entry
     // in priorities.json) and only one source is currently emitting,
