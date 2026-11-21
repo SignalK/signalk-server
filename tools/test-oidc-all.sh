@@ -116,10 +116,10 @@ echo "--- Test 1: OIDC Configuration Status ---"
 LOGIN_STATUS=$(curl "${CURL_OPTS[@]}" "$SIGNALK_URL/skServer/loginStatus")
 log_verbose "Login status: $LOGIN_STATUS"
 
-OIDC_ENABLED=$(echo "$LOGIN_STATUS" | python3 -c "import sys,json; print(json.load(sys.stdin).get('oidcEnabled', False))" 2>/dev/null || echo "false")
-OIDC_AUTO_LOGIN=$(echo "$LOGIN_STATUS" | python3 -c "import sys,json; print(json.load(sys.stdin).get('oidcAutoLogin', False))" 2>/dev/null || echo "false")
-OIDC_LOGIN_URL=$(echo "$LOGIN_STATUS" | python3 -c "import sys,json; print(json.load(sys.stdin).get('oidcLoginUrl', ''))" 2>/dev/null || echo "")
-OIDC_PROVIDER_NAME=$(echo "$LOGIN_STATUS" | python3 -c "import sys,json; print(json.load(sys.stdin).get('oidcProviderName', ''))" 2>/dev/null || echo "")
+OIDC_ENABLED=$(echo "$LOGIN_STATUS" | python3 -c "import sys,json; print(json.dumps(any(p.get('id')=='oidc' for p in json.load(sys.stdin).get('authProviders', []))))" 2>/dev/null || echo "false")
+OIDC_AUTO_LOGIN=$(echo "$LOGIN_STATUS" | python3 -c "import sys,json; p=[p for p in json.load(sys.stdin).get('authProviders', []) if p.get('id')=='oidc']; print(json.dumps(p[0].get('autoLogin', False) if p else False))" 2>/dev/null || echo "false")
+OIDC_LOGIN_URL=$(echo "$LOGIN_STATUS" | python3 -c "import sys,json; p=[p for p in json.load(sys.stdin).get('authProviders', []) if p.get('id')=='oidc']; print(p[0]['loginUrl'] if p else '')" 2>/dev/null || echo "")
+OIDC_PROVIDER_NAME=$(echo "$LOGIN_STATUS" | python3 -c "import sys,json; p=[p for p in json.load(sys.stdin).get('authProviders', []) if p.get('id')=='oidc']; print(p[0]['name'] if p else '')" 2>/dev/null || echo "")
 
 test_result "1.1 OIDC is enabled" "$( [[ "$OIDC_ENABLED" == "True" || "$OIDC_ENABLED" == "true" ]] && echo true || echo false )"
 test_result "1.2 OIDC login URL is set" "$( [[ -n "$OIDC_LOGIN_URL" ]] && echo true || echo false )"
@@ -149,7 +149,7 @@ LOCATION=$(grep -i "^location:" headers.txt 2>/dev/null | head -1 | cut -d' ' -f
 
 test_result "2.1 OIDC login returns redirect (302)" "$( [[ "$HTTP_CODE" == "302" ]] && echo true || echo false )"
 test_result "2.2 Redirect URL is set" "$( [[ -n "$LOCATION" ]] && echo true || echo false )"
-test_result "2.3 OIDC_STATE cookie is set" "$( grep -q "OIDC_STATE" cookies.txt && echo true || echo false )"
+test_result "2.3 SK_AUTH_HANDSHAKE cookie is set" "$( grep -q "SK_AUTH_HANDSHAKE" cookies.txt && echo true || echo false )"
 
 # Auto-detect AUTH_URL if not provided
 if [[ -z "$AUTH_URL" ]] && [[ -n "$LOCATION" ]]; then
