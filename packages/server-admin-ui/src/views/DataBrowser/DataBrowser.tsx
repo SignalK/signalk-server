@@ -19,6 +19,7 @@ import Form from 'react-bootstrap/Form'
 import Row from 'react-bootstrap/Row'
 import dayjs from 'dayjs'
 import VirtualizedDataTable from './VirtualizedDataTable'
+import UnitPreferencesLoadNotice from '../../components/UnitPreferencesLoadNotice'
 import type { PathData, MetaData } from '../../store'
 import {
   buildSourceLabel,
@@ -35,7 +36,6 @@ import {
 import {
   useStore,
   useShallow,
-  useUnitPrefsLoaded,
   useConfiguredPriorityPaths,
   usePreferredSourceByPath,
   useLivePreferredSources,
@@ -156,8 +156,6 @@ const DataBrowser: React.FC = () => {
   const updateMeta = useStore((s) => s.updateMeta)
   const getPathData = useStore((s) => s.getPathData)
 
-  const unitPrefsLoaded = useUnitPrefsLoaded()
-  const fetchUnitPreferences = useStore((s) => s.fetchUnitPreferences)
   const configuredPriorityPaths = useConfiguredPriorityPaths()
   const preferredSourceByPath = usePreferredSourceByPath()
   const livePreferredSourcesRaw = useLivePreferredSources()
@@ -407,10 +405,6 @@ const DataBrowser: React.FC = () => {
       })
       .catch((err) => console.warn('Failed to load sources:', err))
 
-    if (!unitPrefsLoaded) {
-      fetchUnitPreferences()
-    }
-
     return () => {
       isMountedRef.current = false
       if (sourcesRefetchTimerRef.current) {
@@ -418,7 +412,7 @@ const DataBrowser: React.FC = () => {
         sourcesRefetchTimerRef.current = null
       }
     }
-  }, [loadSources, unitPrefsLoaded, fetchUnitPreferences])
+  }, [loadSources])
 
   // Re-fetch sourcesData whenever the N2K discovery surface changes.
   // /signalk/v1/api/sources is fetched once on mount; without this
@@ -877,6 +871,7 @@ const DataBrowser: React.FC = () => {
     <div className="animated fadeIn">
       <Card>
         <Card.Body>
+          <UnitPreferencesLoadNotice />
           <Form
             action=""
             method="post"
