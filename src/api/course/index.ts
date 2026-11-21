@@ -881,8 +881,7 @@ export class CourseApi {
         if (this.isValidArrivalCircle(req.body.value)) {
           this.courseInfo.arrivalCircle = req.body.value
           this.emitCourseInfo(true, 'arrivalCircle')
-          this.persistSettings()
-          res.status(200).json(Responses.ok)
+          this.replySaved(res, await this.persistSettings())
         } else {
           res.status(400).json(Responses.invalid)
         }
@@ -899,8 +898,7 @@ export class CourseApi {
         }
         if (isAutoAdvance(req.body.value)) {
           this.courseInfo.autoAdvance = req.body.value
-          this.persistSettings()
-          res.status(200).json(Responses.ok)
+          this.replySaved(res, await this.persistSettings())
         } else {
           res.status(400).json(Responses.invalid)
         }
@@ -1746,15 +1744,15 @@ export class CourseApi {
 
     const p = typeof noSave === 'undefined' ? this.isAPICmdSource() : !noSave
     if (p) {
-      this.persistCourseInfo()
+      void this.persistCourseInfo()
     }
   }
 
   // Only a course set through the API is saved: a saved destination is
   // restored as API-owned, which would shut out the external source.
-  private persistSettings() {
+  private persistSettings(): Promise<boolean> {
     const external = this.cmdSource !== null && !this.isAPICmdSource()
-    this.persistCourseInfo(
+    return this.persistCourseInfo(
       external
         ? {
             ...NO_COURSE_INFO,
@@ -1765,12 +1763,32 @@ export class CourseApi {
     )
   }
 
-  private persistCourseInfo(courseInfo: CourseInfo = this.courseInfo) {
+  private persistCourseInfo(
+    courseInfo: CourseInfo = this.courseInfo
+  ): Promise<boolean> {
     debug('*** persisting state **')
-    this.store.write(courseInfo).catch((error) => {
-      console.log('Course API: Unable to persist destination details!')
-      debug(error)
-    })
+    return this.store.write(courseInfo).then(
+      () => true,
+      (error) => {
+        console.log('Course API: Unable to persist destination details!')
+        debug(error)
+        return false
+      }
+    )
+  }
+
+  // The setting is in effect either way; the client learns whether it
+  // survives a restart.
+  private replySaved(res: Response, saved: boolean) {
+    if (saved) {
+      res.status(200).json(Responses.ok)
+    } else {
+      res.status(500).json({
+        state: 'FAILED',
+        statusCode: 500,
+        message: 'The setting could not be saved.'
+      })
+    }
   }
 
   private isAPICmdSource = () => this.cmdSource?.type === API_CMD_SRC.type

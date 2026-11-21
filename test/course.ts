@@ -1086,6 +1086,18 @@ describe('Course Api', () => {
     expect(courseApi.courseInfo.activeRoute.pointIndex).to.equal(0)
   })
 
+  it('answers 500 when the autoAdvance setting cannot be saved', async function () {
+    const { server, selfPut, stop } = await startServer()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const courseApi = server.app.courseApi as any
+    courseApi.store.write = () => Promise.reject(new Error('disk full'))
+
+    await selfPut('navigation/course/autoAdvance', { value: 'off' }).then(
+      (response) => response.status.should.equal(500)
+    )
+    await stop()
+  })
+
   it('keeps autoAdvance changed while a waypoint destination is fetched', async function () {
     const { post, server, selfGetJson, selfPut, selfDelete, sendDelta, stop } =
       await startServer()
