@@ -31,6 +31,7 @@ import {
   buildPgnSourceKeysFromTree
 } from '../n2k-discovery-instances'
 import { isDeviceStale, ONLINE_THRESHOLD_MS } from '../n2k-discovery-staleness'
+import { buildLabelSuggestions } from '../n2k-label-suggestions'
 
 const debug = createDebug('signalk-server:interfaces:n2k-discovery')
 
@@ -637,6 +638,9 @@ module.exports = (app: N2kDiscoveryApp) => {
     app.securityStrategy.addAdminMiddleware(
       `${SERVERROUTESPREFIX}/n2kChannelLabel`
     )
+    app.securityStrategy.addAdminMiddleware(
+      `${SERVERROUTESPREFIX}/n2kLabelSuggestions`
+    )
 
     app.post(
       `${SERVERROUTESPREFIX}/n2kDiscoverDevices`,
@@ -913,6 +917,20 @@ module.exports = (app: N2kDiscoveryApp) => {
         }
         debug('Channel label %s = %s', key, label || '(deleted)')
         res.json({ state: 'COMPLETED', statusCode: 200 })
+      }
+    )
+
+    // Names already on the bus, offered as meta.displayName for paths that
+    // have none. Read from the current tree only; nothing is sent.
+    app.get(
+      `${SERVERROUTESPREFIX}/n2kLabelSuggestions`,
+      (_req: Request, res: Response) => {
+        res.json({
+          suggestions: buildLabelSuggestions(
+            app.signalk.self,
+            app.signalk.sources
+          )
+        })
       }
     )
 

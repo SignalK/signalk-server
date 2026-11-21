@@ -39,8 +39,11 @@ import {
   useConfiguredPriorityPaths,
   usePreferredSourceByPath,
   useLivePreferredSources,
-  useDiscoveredAddresses
+  useDiscoveredAddresses,
+  useLoginStatus
 } from '../../store'
+import { canWriteDisplayName } from './displayNameUtils'
+import { useLabelSuggestions } from './labelSuggestions'
 
 const getSignalkData = () => useStore.getState().signalkData
 
@@ -162,6 +165,12 @@ const DataBrowser: React.FC = () => {
   const preferredSourceByPath = usePreferredSourceByPath()
   const livePreferredSourcesRaw = useLivePreferredSources()
   const discoveredAddresses = useDiscoveredAddresses()
+  const loginStatus = useLoginStatus()
+  // Until the login status has loaded it reads as "no security", which
+  // would ask the admin-only endpoint on behalf of every user.
+  useLabelSuggestions(
+    loginStatus.status !== undefined && canWriteDisplayName(loginStatus)
+  )
 
   // Paths the user has flagged for fan-out (sentinel '*' override).
   // Used to suppress the "Preferred" badge — a fan-out path delivers
