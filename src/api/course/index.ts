@@ -157,6 +157,9 @@ export class CourseApi {
   // Settings set through the API while the saved course is still being
   // restored, which must not be overwritten by the saved values.
   private changedSettings = new Set<'arrivalCircle' | 'autoAdvance'>()
+  // Settings are saved only once the restore is done, so a save cannot
+  // write the course before its restored destination is back.
+  private restored: Promise<void> = Promise.resolve()
 
   constructor(
     private app: CourseApplication,
@@ -168,6 +171,10 @@ export class CourseApi {
 
   async start() {
     return new Promise<void>(async (resolve) => {
+      let markRestored: () => void = () => undefined
+      this.restored = new Promise((done) => {
+        markRestored = done
+      })
       this.initCourseRoutes()
 
       let storeData
@@ -195,6 +202,7 @@ export class CourseApi {
       } catch (_error) {
         debug('No persisted course data (using default)')
       }
+      markRestored()
       if (this.stopped) {
         resolve()
         return
@@ -1765,7 +1773,8 @@ export class CourseApi {
 
   // Only a course set through the API is saved: a saved destination is
   // restored as API-owned, which would shut out the external source.
-  private persistSettings(): Promise<boolean> {
+  private async persistSettings(): Promise<boolean> {
+    await this.restored
     const external = this.cmdSource !== null && !this.isAPICmdSource()
     return this.persistCourseInfo(
       external

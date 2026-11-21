@@ -585,21 +585,36 @@ describe('Course Api', () => {
               startTime: null,
               targetArrivalTime: null,
               activeRoute: null,
-              nextPoint: null,
-              previousPoint: null,
+              nextPoint: {
+                type: 'Location',
+                position: { latitude: -35.5, longitude: 138.7 }
+              },
+              previousPoint: {
+                type: 'VesselPosition',
+                position: { latitude: -35.45, longitude: 138.0 }
+              },
               arrivalCircle: 99,
               autoAdvance: 'perpendicular'
             })
         })
       const started = courseApi.start()
-      await selfPut('navigation/course/autoAdvance', { value: 'off' }).then(
-        (response) => response.status.should.equal(200)
-      )
+      const put = selfPut('navigation/course/autoAdvance', { value: 'off' })
+      while (courseApi.courseInfo.autoAdvance !== 'off') {
+        await new Promise((resolve) => setTimeout(resolve, 10))
+      }
       release()
       await started
+      await put.then((response) => response.status.should.equal(200))
 
       expect(courseApi.courseInfo.autoAdvance).to.equal('off')
       expect(courseApi.courseInfo.arrivalCircle).to.equal(99)
+      const saved = JSON.parse(await readFile(courseFile(), 'utf8'))
+      expect(saved.autoAdvance).to.equal('off')
+      expect(saved.arrivalCircle).to.equal(99)
+      expect(saved.nextPoint?.position).to.deep.equal({
+        latitude: -35.5,
+        longitude: 138.7
+      })
     } finally {
       await stop()
     }
