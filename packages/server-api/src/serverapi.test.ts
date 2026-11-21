@@ -7,3 +7,12 @@ const _typeCheckDebug = (app: ServerAPI): boolean => {
   return app.debug.enabled
 }
 void _typeCheckDebug
+
+// Type-check test - the device API is optional, so a plugin that also runs
+// on older servers has to guard its calls.
+const _typeCheckDeviceApi = (app: ServerAPI): void => {
+  // @ts-expect-error the device API may be missing
+  app.getDevicePluginData('client')
+  app.getDevicePluginData?.('client')
+}
+void _typeCheckDeviceApi
