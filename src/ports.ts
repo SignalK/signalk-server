@@ -14,6 +14,7 @@
  * limitations under the License.
 */
 
+import { Server } from 'net'
 import { WithConfig } from './app'
 
 const SD_LISTEN_FDS_START = 3
@@ -54,4 +55,22 @@ export function getExternalPort(app: WithConfig) {
     return app.config.settings.proxy_port
   }
   return app.config.settings.ssl ? getSslPort(app) : getHttpPort(app)
+}
+
+// An MFD cannot install a local CA, so it is sent to the plain HTTP port
+// whenever one is served alongside SSL. Its port is read from the listening
+// server, because under systemd socket activation it is an inherited fd.
+export function getMfdOrigin(app: WithConfig & { plainHttpServer?: Server }): {
+  protocol: 'http' | 'https'
+  port: number
+} {
+  const plainAddress = app.plainHttpServer?.address()
+  if (plainAddress && typeof plainAddress === 'object') {
+    return { protocol: 'http', port: plainAddress.port }
+  }
+  return {
+    protocol:
+      app.config.settings.ssl || app.config.isExternalSsl() ? 'https' : 'http',
+    port: getExternalPort(app)
+  }
 }
