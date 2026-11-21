@@ -389,10 +389,7 @@ export async function reloadWasmPlugin(
   debug(`Reloading WASM plugin: ${pluginId}`)
 
   try {
-    const wasRunning = plugin.status === 'running'
-
-    // Stop the plugin
-    if (wasRunning) {
+    if (plugin.status === 'running') {
       await stopWasmPlugin(pluginId)
     }
 
@@ -411,14 +408,17 @@ export async function reloadWasmPlugin(
 
     plugin.instance = newInstance
     // The endpoints and their access levels come from the binary just loaded
-    setupPluginSpecificRoutes(app, plugin)
+    if (!setupPluginSpecificRoutes(app, plugin)) {
+      throw new Error('cannot read the HTTP endpoints it declares')
+    }
 
     // Update schema from new instance
     const schemaJson = newInstance.exports.schema()
     plugin.schema = schemaJson ? JSON.parse(schemaJson) : {}
 
-    // Restart if it was running
-    if (wasRunning) {
+    // An enabled plugin that a failed reload left in error starts again
+    // once a reload succeeds
+    if (plugin.enabled) {
       await startWasmPlugin(app, pluginId)
     }
 
