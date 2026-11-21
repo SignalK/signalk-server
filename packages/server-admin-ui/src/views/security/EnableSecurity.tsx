@@ -15,6 +15,7 @@ import Form from 'react-bootstrap/Form'
 import InputGroup from 'react-bootstrap/InputGroup'
 import Row from 'react-bootstrap/Row'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faKey } from '@fortawesome/free-solid-svg-icons/faKey'
 import { faLock } from '@fortawesome/free-solid-svg-icons/faLock'
 import { faRotateLeft } from '@fortawesome/free-solid-svg-icons/faRotateLeft'
 import { faSpinner } from '@fortawesome/free-solid-svg-icons/faSpinner'
@@ -37,6 +38,7 @@ export default function EnableSecurity() {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [allowReadonly, setAllowReadonly] = useState(false)
+  const [setupCode, setSetupCode] = useState('')
   const [hasBackup, setHasBackup] = useState(false)
   const [isRestoring, setIsRestoring] = useState(false)
   const [restoreError, setRestoreError] = useState<string | null>(null)
@@ -71,7 +73,12 @@ export default function EnableSecurity() {
     FormData
   >(
     async () => {
-      const error = await enableSecurity(username, password, allowReadonly)
+      const error = await enableSecurity(
+        username,
+        password,
+        allowReadonly,
+        loginStatus.setupCodeRequired ? setupCode : undefined
+      )
       return { error }
     },
     { error: null }
@@ -81,6 +88,7 @@ export default function EnableSecurity() {
     const { name, value } = event.target
     if (name === 'username') setUsername(value)
     else if (name === 'password') setPassword(value)
+    else if (name === 'setupCode') setSetupCode(value)
   }
 
   const handleInputKeyUp = (event: KeyboardEvent<HTMLInputElement>) => {
@@ -206,6 +214,28 @@ export default function EnableSecurity() {
                             onKeyUp={handleInputKeyUp}
                           />
                         </InputGroup>
+                        {loginStatus.setupCodeRequired && (
+                          <>
+                            <p className="text-muted mb-2">
+                              You are connecting from outside the local network.
+                              Enter the setup code the server printed in its log
+                              when it started.
+                            </p>
+                            <InputGroup className="mb-4">
+                              <InputGroup.Text>
+                                <FontAwesomeIcon icon={faKey} />
+                              </InputGroup.Text>
+                              <Form.Control
+                                type="text"
+                                name="setupCode"
+                                placeholder="Setup code"
+                                autoComplete="off"
+                                onChange={handleInputChange}
+                                onKeyUp={handleInputKeyUp}
+                              />
+                            </InputGroup>
+                          </>
+                        )}
                         <Alert variant="warning" className="mb-4">
                           <Form.Check
                             type="checkbox"

@@ -75,6 +75,7 @@ export interface LoginStatus {
   username?: string
   securityWasEnabled?: boolean
   noUsers?: boolean
+  setupCodeRequired?: boolean
   allowNewUserRegistration?: boolean
   oidcEnabled?: boolean
   oidcLoginUrl?: string
