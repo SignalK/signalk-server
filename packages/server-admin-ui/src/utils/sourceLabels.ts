@@ -206,6 +206,21 @@ export interface N2kDeviceEntry extends N2kDeviceInfo {
   srcAddr: string
 }
 
+export function lookupSourceStatus<T>(
+  sourceStatus: Record<string, T>,
+  device: Pick<N2kDeviceEntry, 'sourceRef' | 'connection' | 'srcAddr'> & {
+    src?: string
+  }
+): T | undefined {
+  return (
+    sourceStatus[device.sourceRef] ??
+    (device.src !== undefined
+      ? sourceStatus[`${device.connection}.${device.src}`]
+      : undefined) ??
+    sourceStatus[`${device.connection}.${device.srcAddr}`]
+  )
+}
+
 /**
  * Extract a flat list of N2K devices from the sources API response.
  * Sorted by manufacturer, then model, then bus address.
