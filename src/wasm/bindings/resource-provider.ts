@@ -6,6 +6,7 @@
  */
 
 import Debug from 'debug'
+import { addStopHandler } from './stop-handlers'
 import { WasmResourceProvider, WasmPluginInstance } from '../types'
 
 const debug = Debug('signalk:wasm:resource-provider')
@@ -249,6 +250,7 @@ export function createResourceProviderBinding(
         type: resourceType,
         methods: providerMethods
       })
+      addStopHandler(pluginId, () => cleanupResourceProviders(pluginId, app))
 
       debug(
         `[${pluginId}] Successfully registered as ${resourceType} resource provider`
