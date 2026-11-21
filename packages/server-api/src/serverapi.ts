@@ -24,6 +24,16 @@ import type { EnhancedDisplayUnits } from './typebox/protocol-schemas'
 
 export type { EnhancedDisplayUnits } from './typebox/protocol-schemas'
 
+/** Metadata for a standalone webapp registered by a plugin. @category Server API */
+export interface WebappRegistration {
+  /** Nonempty label displayed in the webapp list. */
+  displayName: string
+  /** Optional description; must be a string when supplied. */
+  description?: string
+  /** Relative icon path using letters, digits, _, -, . and /, without .. segments. */
+  appIcon?: string
+}
+
 /**
  * A WebSocket endpoint under the plugin's route, returned by
  * {@link ServerAPI.registerWebSocket}. A subset of
@@ -640,6 +650,59 @@ export interface ServerAPI
    * @category Server API
    */
   registerWebSocket(path: string): PluginWebSocketServer
+
+  /**
+   * Adds or updates a standalone webapp owned by this plugin. Returns its
+   * URL, `/plugins/<pluginId>/webapps/<id>/`. The plugin serves this route
+   * and any relative appIcon through registerWithRouter(). Call in start()
+   * or later while the plugin is active; registrations are removed on stop.
+   * Functions retained from an earlier start and asynchronous work originating
+   * in that start cannot register entries after stop or restart.
+   *
+   * Ids use letters, digits, underscores or hyphens, start with a letter or
+   * digit, and are at most 128 characters. Invalid metadata or registration
+   * outside the active lifecycle throws an error.
+   *
+   * @example
+   * A possible adaptation of VictoriaMetrics History Provider: its existing
+   * uiTargets map contains the exposed vmagent and VictoriaMetrics interfaces,
+   * with each target's title and admin-protected /ui/ proxy URL.
+   * Replacing its static signalk-webapp declaration with these registrations
+   * means no entry appears when uiTargets is empty. The provider can still
+   * run and supply History. These excerpts keep its existing proxy routes.
+   *
+   * ```typescript
+   * // In start(), once the exposed interfaces are ready:
+   * for (const [serviceId, target] of uiTargets) {
+   *   app.registerWebapp(serviceId, { displayName: target.title })
+   * }
+   * ```
+   *
+   * ```typescript
+   * // In registerWithRouter(router), alongside the existing /ui/ routes:
+   * router.get('/webapps/:serviceId/', (req, res) => {
+   *   const target = uiTargets.get(req.params.serviceId)
+   *   if (!target) {
+   *     res.sendStatus(404)
+   *     return
+   *   }
+   *   res.redirect(302, target.path)
+   * })
+   * ```
+   *
+   * Each exposed interface gets a separate Webapps entry. Redirecting to the
+   * existing proxy URL preserves its resource paths and administrator access;
+   * routes registered directly on the plugin router require admin access.
+   * @category Server API
+   */
+  registerWebapp(id: string, options: WebappRegistration): string
+
+  /**
+   * Removes one of this plugin's dynamic webapps. Calls from stopped or stale
+   * lifecycles have no effect, including when made by the plugin's stop handler.
+   * @category Server API
+   */
+  unregisterWebapp(id: string): void
 
   /**
    * Returns Ports object which contains information about the serial ports available on the machine.
