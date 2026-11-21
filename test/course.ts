@@ -575,9 +575,9 @@ describe('Course Api', () => {
     const { server, selfPut, stop } = await startServer()
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const courseApi = server.app.courseApi as any
+    let release: () => void = () => undefined
     try {
       await subscribed(courseApi)
-      let release: () => void = () => undefined
       courseApi.store.read = () =>
         new Promise((resolve) => {
           release = () =>
@@ -599,7 +599,9 @@ describe('Course Api', () => {
         })
       const started = courseApi.start()
       const put = selfPut('navigation/course/autoAdvance', { value: 'off' })
+      const deadline = Date.now() + 5000
       while (courseApi.courseInfo.autoAdvance !== 'off') {
+        if (Date.now() > deadline) throw new Error('autoAdvance was not set')
         await new Promise((resolve) => setTimeout(resolve, 10))
       }
       release()
@@ -616,6 +618,7 @@ describe('Course Api', () => {
         longitude: 138.7
       })
     } finally {
+      release()
       await stop()
     }
   })
