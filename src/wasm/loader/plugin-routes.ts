@@ -37,6 +37,7 @@ import {
   writePluginConfig
 } from '../wasm-storage'
 import { SERVERROUTESPREFIX } from '../../constants'
+import { openSseStream } from '../bindings/sse'
 
 const debug = Debug('signalk:wasm:loader')
 
@@ -503,6 +504,21 @@ function buildEndpointRoutes(
         }
 
         const response = JSON.parse(responseJson)
+
+        if (typeof response.sseChannel === 'string') {
+          if (timeout) clearTimeout(timeout)
+          // A stopped plugin never sends, and its streams were already closed
+          if (plugin.status !== 'running') {
+            return res.status(503).json({ error: 'Plugin is not running' })
+          }
+          openSseStream(
+            plugin.id,
+            response.sseChannel,
+            res,
+            typeof response.body === 'string' ? response.body : undefined
+          )
+          return
+        }
 
         // Set status code and headers
         res.status(response.statusCode || 200)

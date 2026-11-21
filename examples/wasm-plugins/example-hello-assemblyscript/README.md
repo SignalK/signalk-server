@@ -113,7 +113,7 @@ Example heartbeat delta:
 
 ### HTTP Endpoints
 
-The plugin exposes two REST API endpoints:
+The plugin exposes these REST API endpoints:
 
 **GET /plugins/\_signalk_example-hello-assemblyscript/api/info**
 
@@ -148,6 +148,10 @@ Returns:
   "memory": "sandboxed"
 }
 ```
+
+### Server-Sent Events
+
+`GET /api/events` keeps the connection open as a Server-Sent Events stream on the plugin's `hello` channel and greets the new client with a `welcome` event. `POST /api/broadcast` pushes a `greeting` event to every client of that channel and reports how many it reached. See [Server-Sent Events](../../../docs/develop/plugins/wasm/http_endpoints.md#server-sent-events) for how channels work.
 
 ## Configuration
 
