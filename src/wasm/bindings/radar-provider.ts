@@ -7,6 +7,7 @@
  */
 
 import Debug from 'debug'
+import { callBufferAbi, RESPONSE_BUFFER_BYTES } from '../utils/buffer-abi'
 import { WasmRadarProvider, WasmPluginInstance } from '../types'
 
 const debug = Debug('signalk:wasm:radar-provider')
@@ -107,51 +108,14 @@ export async function callWasmRadarHandler(
         return null
       }
 
-      const responseMaxLen = 65536 // 64KB response buffer
-      const responsePtr = rawExports.allocate(responseMaxLen)
-      const memory = rawExports.memory as WebAssembly.Memory
-
-      let writtenLen: number
-
-      // radar_get_radars takes only output buffer params: (output_ptr, output_len) -> written_len
-      if (handlerName === 'radar_get_radars') {
-        writtenLen = rawExports[handlerName](responsePtr, responseMaxLen)
-      } else {
-        // Other handlers take request + output: (request_ptr, request_len, response_ptr, response_max_len) -> written_len
-        const requestBytes = Buffer.from(requestJson, 'utf8')
-        const requestPtr = rawExports.allocate(requestBytes.length)
-
-        // Write request to WASM memory
-        const memView = new Uint8Array(memory.buffer)
-        memView.set(requestBytes, requestPtr)
-
-        writtenLen = rawExports[handlerName](
-          requestPtr,
-          requestBytes.length,
-          responsePtr,
-          responseMaxLen
-        )
-
-        // Deallocate request buffer
-        if (typeof rawExports.deallocate === 'function') {
-          rawExports.deallocate(requestPtr, requestBytes.length)
-        }
-      }
-
-      // Read response from WASM memory
-      const responseBytes = new Uint8Array(
-        memory.buffer,
-        responsePtr,
-        writtenLen
+      // radar_get_radars takes only the output buffer, other handlers also take a request
+      return callBufferAbi(
+        rawExports,
+        handlerName,
+        rawExports[handlerName],
+        RESPONSE_BUFFER_BYTES,
+        handlerName === 'radar_get_radars' ? undefined : requestJson
       )
-      const responseJson = new TextDecoder('utf-8').decode(responseBytes)
-
-      // Deallocate response buffer
-      if (typeof rawExports.deallocate === 'function') {
-        rawExports.deallocate(responsePtr, responseMaxLen)
-      }
-
-      return responseJson
     }
 
     debug(
