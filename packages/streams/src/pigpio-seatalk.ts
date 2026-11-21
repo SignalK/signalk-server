@@ -103,7 +103,14 @@ export default class PigpioSeatalk extends Execute {
     super({
       ...options,
       debug: createDebug('signalk:streams:pigpio-seatalk'),
-      command: `python -u -c '${pythonScript}' ${options.gpio} ${options.gpioInvert} `
+      command: 'python',
+      args: [
+        '-u',
+        '-c',
+        pythonScript,
+        String(options.gpio),
+        String(options.gpioInvert)
+      ]
     })
   }
 }
