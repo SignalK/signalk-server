@@ -2,6 +2,7 @@ import { expect } from 'chai'
 import { Type } from '@sinclair/typebox'
 import { typeboxToOpenApiSchemas } from '../src/api/openApiSchemas'
 import { notificationsApiRecord } from '../src/api/notifications/openApi'
+import { autopilotApiRecord } from '../src/api/autopilot/openApi'
 import { bleApiRecord } from '../src/api/ble/openApi'
 
 const nullOnly = { type: 'object', nullable: true, enum: [null] }
@@ -33,6 +34,55 @@ function findUnsupported(node: unknown, path: string, found: string[]) {
 }
 
 describe('typeboxToOpenApiSchemas OpenAPI 3.0 output', () => {
+  it('includes the angle units property in the Autopilot API document', () => {
+    expect(autopilotApiRecord.apiDoc)
+      .to.have.nested.property('components.schemas.AngleInput.properties.units')
+      .that.deep.equals({
+        description: 'Units for the angle value. Default is radians.',
+        default: 'rad',
+        anyOf: [
+          { type: 'string', enum: ['deg'] },
+          { type: 'string', enum: ['rad'] }
+        ]
+      })
+    expect(autopilotApiRecord.apiDoc)
+      .to.have.nested.property('components.schemas.AngleInput.required')
+      .that.deep.equals(['value'])
+  })
+
+  it('preserves property names that are also schema keywords', () => {
+    const names = [
+      'units',
+      'additionalItems',
+      'const',
+      'examples',
+      'patternProperties'
+    ]
+    const properties = Object.fromEntries(
+      names.map((name) => [name, Type.String()])
+    )
+    expect(convert(Type.Object(properties)).properties).to.deep.equal(
+      structuredClone(properties)
+    )
+  })
+
+  it('sanitizes nested property schemas without changing the input', () => {
+    const schema = Type.Object({
+      nested: Type.Object({
+        units: Type.Union([Type.Literal('deg'), Type.Literal('rad')]),
+        value: Type.Number({ units: 'rad' })
+      })
+    })
+    const original = structuredClone(schema)
+    const nested = convert(schema).properties.nested
+    expect(nested.properties.units.anyOf).to.deep.equal([
+      { type: 'string', enum: ['deg'] },
+      { type: 'string', enum: ['rad'] }
+    ])
+    expect(nested.properties.value).to.deep.equal({ type: 'number' })
+    expect(structuredClone(schema)).to.deep.equal(original)
+  })
+
   it('turns a Record into additionalProperties', () => {
     expect(
       convert(Type.Record(Type.String(), Type.Number(), { description: 'd' }))
