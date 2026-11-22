@@ -106,7 +106,8 @@ const bleApiDoc = {
         description:
           'Returns the current default provider ID. The default provider is ' +
           'preferred for GATT connections when it has available slots and can ' +
-          'see the target device.',
+          'see the target device; for a raw connection it must also be able to ' +
+          'make one, which gateways cannot.',
         responses: {
           '200': {
             description: 'Default provider',

@@ -48,6 +48,8 @@ interface BLESettings {
   localMaxGATTSlots: number
 }
 
+type GATTOperation = 'subscribe' | 'connect'
+
 /**
  * Internal extension of GATTSubscriptionHandle: providers may attach
  * `_fireDisconnect` so the server can deliver disconnect callbacks when
@@ -555,7 +557,7 @@ export class BLEApi implements IBLEApi {
     const mac = descriptor.mac.toUpperCase()
     const pending = this.reserveGATTClaim(mac, pluginId)
     try {
-      const providerId = this.selectGATTProvider(mac)
+      const providerId = this.selectGATTProvider(mac, 'subscribe')
       if (!providerId) {
         throw new Error(
           `No provider with GATT support and available slots can see ${mac}`
@@ -626,19 +628,15 @@ export class BLEApi implements IBLEApi {
     mac = mac.toUpperCase()
     const pending = this.reserveGATTClaim(mac, pluginId)
     try {
-      const providerId = this.selectGATTProvider(mac)
+      const providerId = this.selectGATTProvider(mac, 'connect')
       if (!providerId) {
-        throw new Error(`No provider with GATT support can see ${mac}`)
-      }
-
-      const provider = this.bleProviders.get(providerId)!
-      if (!provider.methods.connectGATT) {
         throw new Error(
-          `Provider ${providerId} does not support raw GATT connections`
+          `No provider with raw GATT connections and available slots can see ${mac}`
         )
       }
 
-      const conn = await provider.methods.connectGATT(mac)
+      const provider = this.bleProviders.get(providerId)!
+      const conn = await provider.methods.connectGATT!(mac)
       if (pending.released) {
         await conn.disconnect()
         throw releasedWhileConnecting(mac)
@@ -766,19 +764,26 @@ export class BLEApi implements IBLEApi {
     }
   }
 
-  private selectGATTProvider(mac: string): string | undefined {
+  private selectGATTProvider(
+    mac: string,
+    operation: GATTOperation
+  ): string | undefined {
     const device = this.deviceTable.get(mac)
     if (!device) return undefined
 
     // Sort providers by RSSI (strongest first), filter to those with
-    // GATT support and available slots
+    // GATT support and available slots. A raw connection also needs a
+    // provider that makes one: gateways only run subscription sessions, and
+    // the strongest provider is often a gateway near the device.
     const candidates = device.seenBy
       .filter((s) => {
         const provider = this.bleProviders.get(s.providerId)
         return (
           provider &&
           provider.methods.supportsGATT() &&
-          provider.methods.availableGATTSlots() > 0
+          provider.methods.availableGATTSlots() > 0 &&
+          (operation === 'subscribe' ||
+            typeof provider.methods.connectGATT === 'function')
         )
       })
       .sort((a, b) => b.rssi - a.rssi)
