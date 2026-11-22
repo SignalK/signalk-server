@@ -1,12 +1,16 @@
 /**
- * LatestValuesAccumulator - Accumulates Signal K delta values during backpressure,
- * keeping only the latest value for each unique context:path:$source combination.
+ * LatestValuesAccumulator - Accumulates Signal K deltas during backpressure,
+ * keeping only the latest value for each unique context:path:$source
+ * combination and the metadata for each context:path.
  */
 
 import {
   Context,
   Delta,
+  hasMeta,
   hasValues,
+  Meta,
+  MetaValue,
   Path,
   PathValue,
   SourceRef,
@@ -14,13 +18,24 @@ import {
   Update
 } from '@signalk/server-api'
 
-export interface AccumulatedItem {
+interface AccumulatedFields {
   context: Context
   path: Path
-  value: PathValue['value']
   $source: SourceRef | undefined
   timestamp: Timestamp | undefined
 }
+
+export interface AccumulatedValue extends AccumulatedFields {
+  kind: 'value'
+  value: PathValue['value']
+}
+
+export interface AccumulatedMeta extends AccumulatedFields {
+  kind: 'meta'
+  value: MetaValue
+}
+
+export type AccumulatedItem = AccumulatedValue | AccumulatedMeta
 
 export interface BackpressureDelta extends Delta {
   $backpressure: {
@@ -29,9 +44,17 @@ export interface BackpressureDelta extends Delta {
   }
 }
 
+interface UpdateEntries {
+  values: PathValue[]
+  meta: Meta[]
+}
+
 /**
  * Accumulate latest value per context:path:$source during backpressure.
  * Only keeps the most recent value for each unique combination, dropping intermediate updates.
+ * Metadata is kept per context:path. A metadata delta carries only the fields
+ * it changes, so later ones are merged into earlier ones rather than replacing
+ * them, and none counts as dropped.
  *
  * @param accumulator - Map to store accumulated values, keyed by context:path:$source
  * @param delta - Signal K delta to accumulate
@@ -44,6 +67,7 @@ export function accumulateLatestValue(
   let dropped = 0
   if (!delta.updates) return dropped
   for (const update of delta.updates) {
+    if (hasMeta(update)) accumulateMeta(accumulator, delta, update)
     if (!hasValues(update)) continue
     for (const pv of update.values) {
       const key = `${delta.context}:${pv.path}:${update.$source || 'unknown'}`
@@ -52,6 +76,7 @@ export function accumulateLatestValue(
       const previous = accumulator.get(key)
       if (previous && previous.timestamp !== update.timestamp) dropped++
       accumulator.set(key, {
+        kind: 'value',
         context: delta.context as Context,
         path: pv.path,
         value: pv.value,
@@ -61,6 +86,38 @@ export function accumulateLatestValue(
     }
   }
   return dropped
+}
+
+function accumulateMeta(
+  accumulator: Map<string, AccumulatedItem>,
+  delta: Delta,
+  update: Update & { meta: Meta[] }
+): void {
+  for (const meta of update.meta) {
+    const key = `meta:${delta.context}:${meta.path}`
+    const previous = accumulator.get(key)
+    accumulator.set(key, {
+      kind: 'meta',
+      context: delta.context as Context,
+      path: meta.path,
+      value:
+        previous?.kind === 'meta'
+          ? { ...previous.value, ...meta.value }
+          : meta.value,
+      $source: update.$source,
+      timestamp: update.timestamp
+    })
+  }
+}
+
+function toUpdate(
+  $source: SourceRef | undefined,
+  timestamp: Timestamp | undefined,
+  { values, meta }: UpdateEntries
+): Update {
+  if (meta.length === 0) return { $source, timestamp, values }
+  if (values.length === 0) return { $source, timestamp, meta }
+  return { $source, timestamp, values, meta }
 }
 
 /**
@@ -84,7 +141,7 @@ export function buildFlushDeltas(
 
   const byContext = new Map<
     Context,
-    Map<SourceRef | undefined, Map<Timestamp | undefined, Update>>
+    Map<SourceRef | undefined, Map<Timestamp | undefined, UpdateEntries>>
   >()
   for (const item of accumulator.values()) {
     let bySource = byContext.get(item.context)
@@ -99,27 +156,24 @@ export function buildFlushDeltas(
       byTimestamp = new Map()
       bySource.set(item.$source, byTimestamp)
     }
-    let update = byTimestamp.get(item.timestamp)
-    if (!update) {
-      update = {
-        $source: item.$source,
-        timestamp: item.timestamp,
-        values: []
-      }
-      byTimestamp.set(item.timestamp, update)
+    let entries = byTimestamp.get(item.timestamp)
+    if (!entries) {
+      entries = { values: [], meta: [] }
+      byTimestamp.set(item.timestamp, entries)
     }
-    if (hasValues(update)) {
-      update.values.push({
-        path: item.path,
-        value: item.value
-      })
+    if (item.kind === 'meta') {
+      entries.meta.push({ path: item.path, value: item.value })
+    } else {
+      entries.values.push({ path: item.path, value: item.value })
     }
   }
 
   const deltas: Array<Delta | BackpressureDelta> = []
   for (const [context, bySource] of byContext) {
-    const updates = Array.from(bySource.values()).flatMap((byTimestamp) =>
-      Array.from(byTimestamp.values())
+    const updates = Array.from(bySource).flatMap(([$source, byTimestamp]) =>
+      Array.from(byTimestamp, ([timestamp, entries]) =>
+        toUpdate($source, timestamp, entries)
+      )
     )
     deltas.push(
       dropped > 0

@@ -230,6 +230,31 @@ describe('BackpressureManager', function () {
       expect(manager.accumulatorSize).to.equal(0)
     })
 
+    it('should write metadata that arrived during backpressure', function () {
+      const transport = createMockTransport(2000)
+      const manager = new BackpressureManager(transport, defaultOptions)
+      const metaDelta = {
+        context: 'vessels.self',
+        updates: [
+          {
+            timestamp: '2024-01-15T10:30:00.000Z',
+            meta: [{ path: 'navigation.bearing', value: { units: 'rad' } }]
+          }
+        ]
+      } as Delta
+
+      manager.send(metaDelta)
+      transport._bufferLength = 0
+      manager.onDrain()
+
+      expect(transport._writes).to.deep.equal([
+        {
+          context: 'vessels.self',
+          updates: [{ $source: undefined, ...metaDelta.updates![0] }]
+        }
+      ])
+    })
+
     it('should flag the flush when an update was dropped', function () {
       const transport = createMockTransport(2000)
       const manager = new BackpressureManager(transport, defaultOptions)
