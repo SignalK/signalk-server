@@ -16,7 +16,7 @@ import {
 } from '@signalk/server-api'
 
 import { NotificationApplication } from './index'
-import { Alarm } from './alarm'
+import { Alarm, DEFAULT_ALARM_METHOD } from './alarm'
 import * as uuid from 'uuid'
 import * as _ from 'lodash'
 
@@ -183,9 +183,11 @@ export class NotificationManager {
     checkLocation(location, true)
 
     // Silence and acknowledgement answer the current state, so only a new
-    // state clears them; a message or data update leaves them standing.
+    // state clears them and restores the methods they removed; a message or
+    // data update leaves them standing.
     if (state && state !== alarm.value.state) {
       alarm.value.state = state
+      alarm.value.method = [...DEFAULT_ALARM_METHOD]
       alarm.status.canSilence = state !== ALARM_STATE.emergency
       alarm.status.silenced = false
       alarm.status.acknowledged = false

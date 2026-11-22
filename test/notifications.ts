@@ -964,6 +964,44 @@ describe('NotificationApi', () => {
       }
     })
 
+    it('REST: a new state restores the methods silence and acknowledge removed', async function () {
+      const { get, post, put, stop } = await startServer()
+      try {
+        const method = async (id: string) =>
+          (
+            (await (
+              await get(`/notifications/${id}`)
+            ).json()) as AlarmProperties
+          ).value.method
+        const raise = async (path: string) =>
+          (
+            (await (
+              await post(`/notifications`, {
+                state: 'warn',
+                message: 'Collision risk',
+                path
+              })
+            ).json()) as { id: string }
+          ).id
+
+        const silenced = await raise('navigation.collision.a')
+        await post(`/notifications/${silenced}/silence`, {})
+        expect(await method(silenced)).to.deep.equal(['visual'])
+        await put(`/notifications/${silenced}`, { message: 'Closer' })
+        expect(await method(silenced)).to.deep.equal(['visual'])
+        await put(`/notifications/${silenced}`, { state: 'alarm' })
+        expect(await method(silenced)).to.deep.equal(['visual', 'sound'])
+
+        const acknowledged = await raise('navigation.collision.b')
+        await post(`/notifications/${acknowledged}/acknowledge`, {})
+        expect(await method(acknowledged)).to.deep.equal([])
+        await put(`/notifications/${acknowledged}`, { state: 'emergency' })
+        expect(await method(acknowledged)).to.deep.equal(['visual', 'sound'])
+      } finally {
+        stop()
+      }
+    })
+
     it('REST: full lifecycle round trip works', async function () {
       const { get, post, put, host, stop } = await startServer()
       try {
