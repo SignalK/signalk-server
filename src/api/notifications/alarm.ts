@@ -15,6 +15,11 @@ import {
 } from '@signalk/server-api'
 import { buildKey } from './notificationManager'
 
+export const DEFAULT_ALARM_METHOD: readonly ALARM_METHOD[] = [
+  ALARM_METHOD.visual,
+  ALARM_METHOD.sound
+]
+
 export class Alarm {
   private external = false // true when alarm was created from delta
   status: AlarmStatus = {
@@ -34,7 +39,7 @@ export class Alarm {
   private path: Path = '' as Path
   public value: Notification = {
     state: ALARM_STATE.normal,
-    method: [ALARM_METHOD.visual, ALARM_METHOD.sound],
+    method: [...DEFAULT_ALARM_METHOD],
     message: '',
     status: this.status
   }
