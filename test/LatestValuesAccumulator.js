@@ -254,6 +254,119 @@ describe('LatestValuesAccumulator', function () {
 
       expect(accumulator.size).to.equal(0)
     })
+
+    it('should keep the metadata of an update without values', function () {
+      const accumulator = new Map()
+      const delta = {
+        context: 'vessels.self',
+        updates: [
+          {
+            $source: 'plugin',
+            timestamp: '2024-01-15T10:30:00.000Z',
+            meta: [{ path: 'navigation.bearing', value: { units: 'rad' } }]
+          }
+        ]
+      }
+
+      accumulateLatestValue(accumulator, delta)
+
+      const [flushed] = buildFlushDeltas(accumulator, FLUSH_DURATION_MS, 0)
+      expect(flushed).to.deep.equal({
+        context: 'vessels.self',
+        updates: [
+          {
+            $source: 'plugin',
+            timestamp: '2024-01-15T10:30:00.000Z',
+            meta: [{ path: 'navigation.bearing', value: { units: 'rad' } }]
+          }
+        ]
+      })
+    })
+
+    it('should keep the values and metadata of an update carrying both', function () {
+      const accumulator = new Map()
+      const update = {
+        $source: 'plugin',
+        timestamp: '2024-01-15T10:30:00.000Z',
+        values: [{ path: 'navigation.bearing', value: 1.2 }],
+        meta: [{ path: 'navigation.bearing', value: { units: 'rad' } }]
+      }
+
+      accumulateLatestValue(accumulator, {
+        context: 'vessels.self',
+        updates: [update]
+      })
+
+      const [flushed] = buildFlushDeltas(accumulator, FLUSH_DURATION_MS, 0)
+      expect(flushed.updates).to.deep.equal([update])
+    })
+
+    it('should merge later metadata for a path into earlier metadata', function () {
+      const accumulator = new Map()
+      const metaDelta = (value, timestamp) => ({
+        context: 'vessels.self',
+        updates: [{ timestamp, meta: [{ path: 'navigation.bearing', value }] }]
+      })
+
+      expect(
+        accumulateLatestValue(
+          accumulator,
+          metaDelta(
+            { units: 'rad', description: 'Bearing' },
+            '2024-01-15T10:30:00Z'
+          )
+        )
+      ).to.equal(0)
+      expect(
+        accumulateLatestValue(
+          accumulator,
+          metaDelta(
+            { description: 'Bearing to waypoint' },
+            '2024-01-15T10:30:01Z'
+          )
+        )
+      ).to.equal(0)
+
+      const [flushed] = buildFlushDeltas(accumulator, FLUSH_DURATION_MS, 0)
+      expect(flushed.updates).to.deep.equal([
+        {
+          $source: undefined,
+          timestamp: '2024-01-15T10:30:01Z',
+          meta: [
+            {
+              path: 'navigation.bearing',
+              value: { units: 'rad', description: 'Bearing to waypoint' }
+            }
+          ]
+        }
+      ])
+    })
+
+    it('should keep a value and metadata for the same path apart', function () {
+      const accumulator = new Map()
+      accumulateLatestValue(accumulator, {
+        context: 'vessels.self',
+        updates: [
+          {
+            $source: 'meta',
+            timestamp: '2024-01-15T10:30:00Z',
+            values: [{ path: 'navigation.bearing', value: 1.2 }]
+          }
+        ]
+      })
+      accumulateLatestValue(accumulator, {
+        context: 'vessels.self',
+        updates: [
+          {
+            $source: 'meta',
+            timestamp: '2024-01-15T10:30:01Z',
+            meta: [{ path: 'navigation.bearing', value: { units: 'rad' } }]
+          }
+        ]
+      })
+
+      expect(accumulator.size).to.equal(2)
+    })
   })
 
   describe('buildFlushDeltas', function () {
