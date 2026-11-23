@@ -1317,17 +1317,19 @@ export default class DeltaCache {
             const owner = pathOwner.get(p)
             // Path owned by another active group → skip.
             if (owner && owner !== sg.id && !sg.inactive) continue
-            // Require ≥2 group sources to have published this path
-            // (now or ever). Otherwise a plugin source in the group
-            // drags every unrelated path it emits into the group card.
+            // The engine (resolvePrecedences in deltaPriority.ts) claims a
+            // path for a group as soon as ONE of its sources publishes it,
+            // and routes it once two publishers have been seen on the path
+            // (routesPath). Mirror that rule here. Requiring two group
+            // members used to hide paths the engine really does rank
+            // through this group: a single group member publishing
+            // alongside an outside source left the user with a Preferred
+            // badge and no explanation on this page.
+            //
+            // The two-publisher gate is what keeps a plugin source from
+            // dragging every path it alone emits onto the group card.
             const allTime = pathPublishersAllTime[p]
-            if (!allTime) continue
-            let groupCount = 0
-            for (const ref of allTime) {
-              if (savedSet.has(ref)) groupCount++
-              if (groupCount >= 2) break
-            }
-            if (groupCount < 2) continue
+            if (!allTime || allTime.size < 2) continue
             groupPaths.add(p)
           }
         }
