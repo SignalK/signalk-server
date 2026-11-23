@@ -344,6 +344,17 @@ describe('Providers that run shell commands', () => {
     ids().should.not.include('planted')
   })
 
+  it('refuses a connection type that is not a string', async function () {
+    const res = await send('post', '', {
+      id: 'plantedArray',
+      enabled: true,
+      type: ['Execute'],
+      options: { command: 'touch /tmp/planted', dataType: 'Multiplexed' }
+    })
+    res.status.should.equal(400)
+    ids().should.not.include('plantedArray')
+  })
+
   it('refuses turning a connection into an Execute connection', async function () {
     let res = await send('post', '', {
       id: 'plain',
