@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 700" width="600" height="700">
+  <rect width="600" height="700" fill="#eef4fa"/>
+  <path d="M0 610 Q150 600 300 610 T600 610 V700 H0Z" fill="#c9dcef"/>
+  <!-- hull -->
+  <path d="M45 560 L560 560 L548 590 Q420 612 170 606 Q110 600 110 568 Z" fill="#ffffff" stroke="#24364a" stroke-width="3"/>
+  <path d="M300 606 L318 668 L372 668 L380 604" fill="#24364a"/>
+  <path d="M470 600 L480 640 L496 640 L492 598" fill="#24364a"/>
+  <!-- gennaker (not set: dashed) -->
+  <path d="M300 70 Q40 260 45 560 L110 560 L296.0,90.0 Z" fill="#fde7c4" stroke="#c97a10" stroke-width="2" stroke-dasharray="8 6"/>
+  <!-- genoa with its reef line -->
+  <polygon points="110.0,560.0 296.0,90.0 290.0,550.0" fill="#f7f9fc" stroke="#24364a" stroke-width="2.5"/>
+  <line x1="296" y1="90" x2="221.6" y2="553.8" stroke="#7a8ca0" stroke-width="1.5" stroke-dasharray="5 4"/>
+  <!-- mainsail with two reef lines -->
+  <polygon points="300,70 300,540 510,540" fill="#f7f9fc" stroke="#24364a" stroke-width="2.5"/>
+  <line x1="300" y1="470" x2="478.7" y2="470" stroke="#7a8ca0" stroke-width="1.5" stroke-dasharray="5 4"/>
+  <line x1="300" y1="405" x2="449.7" y2="405" stroke="#7a8ca0" stroke-width="1.5" stroke-dasharray="5 4"/>
+  <!-- rig -->
+  <line x1="300" y1="58" x2="300" y2="562" stroke="#24364a" stroke-width="6" stroke-linecap="round"/>
+  <line x1="300" y1="544" x2="528" y2="544" stroke="#24364a" stroke-width="6" stroke-linecap="round"/>
+  <line x1="300" y1="62" x2="110" y2="562" stroke="#24364a" stroke-width="1.5"/>
+  <line x1="300" y1="62" x2="556" y2="562" stroke="#24364a" stroke-width="1.5"/>
+</svg>

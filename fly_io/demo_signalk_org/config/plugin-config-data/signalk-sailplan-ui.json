@@ -1,0 +1,7 @@
+{
+  "enabled": true,
+  "configuration": {
+    "sailsConfigPluginId": "sailsconfiguration",
+    "pollInterval": 4
+  }
+}

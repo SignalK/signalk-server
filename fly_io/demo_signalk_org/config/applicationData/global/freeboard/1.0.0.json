@@ -119,6 +119,15 @@
         "col": 0,
         "row": 0,
         "minScreen": "tablet"
+      },
+      {
+        "instanceId": "demo-sails",
+        "extension": "signalk-sailplan-ui",
+        "widget": "sails-tile",
+        "anchor": "tr",
+        "col": 2,
+        "row": 0,
+        "minScreen": "tablet"
       }
     ],
     "state": {

@@ -1,0 +1,39 @@
+{
+  "enabled": true,
+  "configuration": {
+    "deltaInterval": 60,
+    "sails": [
+      {
+        "id": "main",
+        "name": "Mainsail",
+        "type": "mainsail",
+        "area": 30,
+        "reefs": [23, 16],
+        "active": true,
+        "reducedState": {
+          "reefs": 0,
+          "furledRatio": 0
+        }
+      },
+      {
+        "id": "genoa",
+        "name": "Genoa",
+        "type": "genoa",
+        "area": 32,
+        "reefs": [24],
+        "active": true,
+        "reducedState": {
+          "reefs": 0,
+          "furledRatio": 0
+        }
+      },
+      {
+        "id": "gennaker",
+        "name": "Gennaker",
+        "type": "gennaker",
+        "area": 75,
+        "active": false
+      }
+    ]
+  }
+}
