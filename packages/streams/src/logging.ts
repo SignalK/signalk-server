@@ -15,8 +15,12 @@
  */
 
 import FileTimestampStream from 'file-timestamp-stream'
+import { spawn } from 'child_process'
 import path from 'path'
 import fs from 'fs'
+import type { WriteStream } from 'fs'
+import { finished } from 'stream/promises'
+import { compressLogFile } from './log-compressor'
 import type { CreateDebug } from './types'
 
 export interface LoggingApp {
@@ -26,6 +30,7 @@ export interface LoggingApp {
       loggingDirectory?: string
       keepMostRecentLogsOnly?: boolean
       logCountToKeep?: number
+      compressOldLogs?: boolean
     }
   }
 }
@@ -34,14 +39,15 @@ let debug: (...args: unknown[]) => void = require('debug')(
   'signalk:streams:logging'
 )
 
-const filenamePattern = /skserver-raw_\d\d\d\d-\d\d-\d\dT\d\d\.log/
+const filenamePattern = /skserver-raw_\d\d\d\d-\d\d-\d\dT\d\d\.log(\.gz)?$/
 const loggers: Record<string, FileTimestampStream> = {}
 
-class FileTimestampStreamWithDelete extends FileTimestampStream {
+export class FileTimestampStreamWithDelete extends FileTimestampStream {
   private readonly app: LoggingApp
   private readonly filesToKeep: number | undefined
   private readonly fullLogDir: string
-  private prevFilename: string | undefined
+  private readonly compressOldLogs: boolean
+  private readonly queuedForCompression = new Set<string>()
 
   constructor(
     app: LoggingApp,
@@ -53,16 +59,52 @@ class FileTimestampStreamWithDelete extends FileTimestampStream {
     this.app = app
     this.filesToKeep = filesToKeep
     this.fullLogDir = fullLogDir
-    this.prevFilename = undefined
+    this.compressOldLogs = app.config.settings.compressOldLogs !== false
     debug = (options.createDebug ?? require('debug'))('signalk:streams:logging')
   }
 
   newFilename(): string {
-    if (this.prevFilename !== this.currentFilename) {
-      this.prevFilename = this.currentFilename
-      this.deleteOldFiles()
+    const nextFilename = super.newFilename()
+    const rotatedFilename = this.currentFilename
+    if (rotatedFilename !== undefined && rotatedFilename !== nextFilename) {
+      // this.stream is still the stream of rotatedFilename: the base class
+      // ends it right after this method returns.
+      this.onRotate(rotatedFilename, this.stream)
     }
-    return super.newFilename()
+    return nextFilename
+  }
+
+  private onRotate(filename: string, stream: WriteStream | undefined): void {
+    this.deleteOldFiles()
+    if (!this.compressOldLogs || this.queuedForCompression.has(filename)) {
+      return
+    }
+    this.queuedForCompression.add(filename)
+    const compress = () => this.compressOldFile(filename)
+    if (stream && !stream.closed && !stream.writableFinished) {
+      finished(stream).then(compress, compress)
+    } else {
+      compress()
+    }
+  }
+
+  private compressOldFile(filename: string): void {
+    const worker = path.join(__dirname, 'log-compressor.js')
+    if (fs.existsSync(worker)) {
+      try {
+        spawn(process.execPath, [worker, filename], {
+          detached: true,
+          stdio: 'ignore'
+        }).unref()
+        return
+      } catch (e) {
+        debug(`Failed to spawn the log compressor: ${(e as Error).message}`)
+      }
+    }
+    // Running from TypeScript sources, where no compiled worker exists.
+    compressLogFile(filename).catch((e: Error) => {
+      console.error(`Error compressing ${filename}: ${e.message}`)
+    })
   }
 
   private deleteOldFiles(): void {
@@ -106,20 +148,16 @@ export function getLogger(
 
     debug(`logging to ${fileName}`)
 
-    let fileTimestampStream: FileTimestampStream
-    if (
+    const keepOnlyRecent =
       app.config.settings.keepMostRecentLogsOnly === undefined ||
       app.config.settings.keepMostRecentLogsOnly
-    ) {
-      fileTimestampStream = new FileTimestampStreamWithDelete(
+    const fileTimestampStream: FileTimestampStream =
+      new FileTimestampStreamWithDelete(
         app,
         fullLogdir,
-        app.config.settings.logCountToKeep,
+        keepOnlyRecent ? app.config.settings.logCountToKeep : undefined,
         { path: fileName }
       )
-    } else {
-      fileTimestampStream = new FileTimestampStream({ path: fileName })
-    }
 
     loggers[fullLogdir] = fileTimestampStream
   }

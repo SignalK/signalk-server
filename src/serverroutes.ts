@@ -2542,6 +2542,7 @@ module.exports = function (
               (file === 'node_modules' &&
                 req.query.includePlugins === 'true')) &&
             !file.endsWith('.log') &&
+            !file.endsWith('.log.gz') &&
             file !== 'signalk-server' &&
             file !== '.npmrc'
           )
