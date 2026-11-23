@@ -514,7 +514,7 @@ export class LocalBLEProvider {
       } else {
         // Initial full read
         try {
-          const allProps = await device._propsProxy.GetAll('org.bluez.Device1')
+          const allProps = await device.helper.props()
           name = this.unwrapVariant(allProps?.Name)
           rssi = this.unwrapVariant(allProps?.RSSI) ?? -127
           if (rssi !== -127) this.lastRssi.set(mac, rssi)
