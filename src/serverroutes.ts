@@ -231,6 +231,22 @@ const sourceAliasesSchema = Type.Record(
   Type.String({ minLength: 1 })
 )
 
+const settingsBlocksSchema = Type.Object({
+  options: Type.Optional(Type.Object({})),
+  courseApi: Type.Optional(
+    Type.Object(
+      { apiOnly: Type.Optional(Type.Boolean()) },
+      { additionalProperties: false }
+    )
+  ),
+  notifications: Type.Optional(
+    Type.Object(
+      { manageNotifications: Type.Optional(Type.Boolean()) },
+      { additionalProperties: false }
+    )
+  )
+})
+
 const ignoredInstanceConflictsSchema = Type.Record(
   Type.String(),
   Type.String({ minLength: 1 })
@@ -1162,7 +1178,16 @@ module.exports = function (
   app.securityStrategy.addAdminWriteMiddleware(`${SERVERROUTESPREFIX}/settings`)
 
   app.put(`${SERVERROUTESPREFIX}/settings`, (req: Request, res: Response) => {
-    const settings = req.body
+    const validation = validateAgainst(
+      settingsBlocksSchema,
+      req.body,
+      'settings'
+    )
+    if (!validation.ok) {
+      res.status(400).type('text/plain').send(validation.error)
+      return
+    }
+    const settings = { ...req.body, options: req.body.options ?? {} }
     const updatedSettings = structuredClone(app.config.settings)
 
     forIn(settings.interfaces, (enabled, name) => {
