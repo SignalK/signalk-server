@@ -250,7 +250,6 @@ export function load(app: ConfigApp) {
 
   setConfigDirectory(app)
   app.config.baseDeltaEditor = new DeltaEditor()
-  let baseDeltasReadable = true
   if (_.isObject(app.config.settings)) {
     debug('Using settings from constructor call, not reading defaults')
     disableWriteSettings = true
@@ -266,7 +265,6 @@ export function load(app: ConfigApp) {
   } else {
     readSettingsFile(app)
     const baseDeltas = setBaseDeltas(app)
-    baseDeltasReadable = baseDeltas !== 'unreadable'
     if (baseDeltas === 'missing') {
       const defaults = getFullDefaults(app)
       if (defaults) {
@@ -283,12 +281,7 @@ export function load(app: ConfigApp) {
     }
   }
   const uuidGenerated = setSelfSettings(app)
-  if (
-    uuidGenerated &&
-    !disableWriteSettings &&
-    !app.config.hasOldDefaults &&
-    baseDeltasReadable
-  ) {
+  if (uuidGenerated && !disableWriteSettings && !app.config.hasOldDefaults) {
     try {
       writeBaseDeltasFileSync(app)
     } catch (e) {
@@ -547,20 +540,33 @@ function getFullDefaults(app: ConfigApp) {
   return undefined
 }
 
-function setBaseDeltas(app: ConfigApp): 'loaded' | 'missing' | 'unreadable' {
+function setBaseDeltas(app: ConfigApp): 'loaded' | 'missing' {
   const defaultsPath = getBaseDeltasPath(app)
   try {
     app.config.baseDeltaEditor.load(defaultsPath)
     debug(`Found default deltas at ${defaultsPath.toString()}`)
     return 'loaded'
   } catch (e) {
-    if ((e as any)?.code === 'ENOENT') {
-      debug(`No default deltas found at ${defaultsPath.toString()}`)
-      return 'missing'
-    } else {
-      console.log(e)
-      return 'unreadable'
+    if (e instanceof Error && 'code' in e) {
+      if (e.code === 'ENOENT') {
+        debug(`No default deltas found at ${defaultsPath.toString()}`)
+        return 'missing'
+      }
+      // A filesystem failure is not malformed data. In particular, do not
+      // move directories or overwrite files we could not read.
+      throw e
     }
+    const backupBase = `${defaultsPath}.corrupt-${Date.now()}`
+    let backupPath = backupBase
+    let suffix = 0
+    while (fs.existsSync(backupPath)) {
+      backupPath = `${backupBase}.${++suffix}`
+    }
+    // Preserve the original before allowing startup or runtime saves. If
+    // this fails, stop loading rather than risk losing the damaged file.
+    fs.renameSync(defaultsPath, backupPath)
+    console.error(`Invalid base deltas preserved at ${backupPath}:`, e)
+    return 'missing'
   }
 }
 
