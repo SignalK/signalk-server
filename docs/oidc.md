@@ -386,7 +386,23 @@ Initiates the OIDC login flow. Redirects to the identity provider.
 
 Query parameters:
 
-- `returnTo` (optional): URL to redirect after successful login
+- `redirect` (optional): Same-origin path to visit after successful login, for
+  example `/some/webapp`. Must start with `/`, but not `//`, and contain no
+  backslashes or control characters. Invalid or omitted values fall back to `/`.
+
+### Logout Endpoint
+
+```
+GET /signalk/v1/auth/oidc/logout
+```
+
+Clears the local session and, when supported, redirects through the identity
+provider's logout endpoint.
+
+Query parameters:
+
+- `redirect` (optional): Same-origin path to visit after logout, subject to the
+  same restrictions as the login parameter. Defaults to `/`.
 
 ### Callback Endpoint
 
