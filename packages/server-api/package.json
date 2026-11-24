@@ -25,6 +25,8 @@
     "@js-temporal/polyfill": "^0.5.1",
     "@signalk/path-metadata": "^1.2.0",
     "@sinclair/typebox": "^0.34.49",
+    "@types/express": "^4.17.25",
+    "@types/ws": "^8.18.1",
     "baconjs": "^3.0.23"
   },
   "devDependencies": {
