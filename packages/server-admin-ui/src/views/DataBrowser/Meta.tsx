@@ -77,6 +77,7 @@ interface Zone {
   upper: number
   state: string
   message: string
+  delay?: number
 }
 
 // Counter for generating unique zone IDs for stable React keys
@@ -1225,7 +1226,7 @@ const ZoneRow: React.FC<ZoneProps> = ({
   siUnit,
   unitDefinitions
 }) => {
-  const { state, lower, upper, message } = zone
+  const { state, lower, upper, message, delay } = zone
   const zoneId = `${idPrefix}-zone-${index}`
 
   const hasConversion = displayUnit && displayUnit !== siUnit
@@ -1267,7 +1268,7 @@ const ZoneRow: React.FC<ZoneProps> = ({
       }}
     >
       <Row>
-        <Col xs="2" md="2">
+        <Col xs="3" md="3">
           {showHint && (
             <Form.Text muted style={{ fontSize: '0.7rem' }}>
               Lower
@@ -1286,7 +1287,7 @@ const ZoneRow: React.FC<ZoneProps> = ({
             }
           />
         </Col>
-        <Col xs="2" md="2">
+        <Col xs="3" md="3">
           {showHint && (
             <Form.Text muted style={{ fontSize: '0.7rem' }}>
               Upper
@@ -1305,7 +1306,7 @@ const ZoneRow: React.FC<ZoneProps> = ({
             }
           />
         </Col>
-        <Col xs="2" md="2">
+        <Col xs="3" md="3">
           {showHint && (
             <Form.Text muted style={{ fontSize: '0.7rem' }}>
               State
@@ -1325,7 +1326,35 @@ const ZoneRow: React.FC<ZoneProps> = ({
             ))}
           </Form.Select>
         </Col>
-        <Col xs="4" md="4">
+        <Col xs="3" md="3">
+          {showHint && (
+            <Form.Text muted style={{ fontSize: '0.7rem' }}>
+              Delay (s)
+            </Form.Text>
+          )}
+          <Form.Control
+            id={`${zoneId}-delay`}
+            aria-label="Delay in seconds"
+            title="Seconds before a move up to this zone raises its notification"
+            disabled={!isEditing}
+            type="number"
+            min={0}
+            size="sm"
+            onChange={(e) =>
+              setZone({
+                ...zone,
+                delay:
+                  e.target.value === ''
+                    ? undefined
+                    : Math.max(0, Number(e.target.value))
+              })
+            }
+            value={delay ?? ''}
+          />
+        </Col>
+      </Row>
+      <Row className="mt-1">
+        <Col xs="10" md="10">
           {showHint && (
             <Form.Text muted style={{ fontSize: '0.7rem' }}>
               Message

@@ -222,12 +222,16 @@ describe('CategorySelect', () => {
   })
 })
 
-const renderZones = (targetUnit?: string, zones: ZoneValue[] = []) =>
+const renderZones = (
+  targetUnit?: string,
+  zones: ZoneValue[] = [],
+  setZones: (zones: ZoneValue[]) => void = () => {}
+) =>
   render(
     <Zones
       zones={zones}
       isEditing={true}
-      setZones={() => {}}
+      setZones={setZones}
       idPrefix="test"
       siUnit="m/s"
       category="speed"
@@ -262,6 +266,56 @@ describe('Zones', () => {
       { lower: 1, upper: 1, state: 'alarm', message: 'Bilge pump on' }
     ])
     expect(screen.queryByText(/This zone never matches/)).toBeNull()
+  })
+
+  it('shows the delay of a zone', () => {
+    renderZones('m/s', [
+      { lower: 0, upper: 12, state: 'warn', message: 'Low', delay: 60 }
+    ])
+    expect(screen.getByLabelText('Delay in seconds')).toHaveValue(60)
+  })
+
+  it('stores a delay entered for a zone', () => {
+    const setZones = vi.fn()
+    renderZones(
+      'm/s',
+      [{ lower: 0, upper: 12, state: 'warn', message: 'Low' }],
+      setZones
+    )
+    fireEvent.change(screen.getByLabelText('Delay in seconds'), {
+      target: { value: '90' }
+    })
+    expect(setZones).toHaveBeenCalledWith([
+      expect.objectContaining({ delay: 90 })
+    ])
+  })
+
+  it('stores no negative delay', () => {
+    const setZones = vi.fn()
+    renderZones(
+      'm/s',
+      [{ lower: 0, upper: 12, state: 'warn', message: 'Low' }],
+      setZones
+    )
+    fireEvent.change(screen.getByLabelText('Delay in seconds'), {
+      target: { value: '-5' }
+    })
+    expect(setZones).toHaveBeenCalledWith([
+      expect.objectContaining({ delay: 0 })
+    ])
+  })
+
+  it('drops the delay of a zone when the field is cleared', () => {
+    const setZones = vi.fn()
+    renderZones(
+      'm/s',
+      [{ lower: 0, upper: 12, state: 'warn', message: 'Low', delay: 60 }],
+      setZones
+    )
+    fireEvent.change(screen.getByLabelText('Delay in seconds'), {
+      target: { value: '' }
+    })
+    expect(setZones.mock.calls[0][0][0].delay).toBeUndefined()
   })
 })
 

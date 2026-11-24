@@ -96,7 +96,15 @@ export const ZoneSchema = Type.Object(
     message: Type.String({
       description: 'The message to display for the alarm.',
       default: 'Warning'
-    })
+    }),
+    delay: Type.Optional(
+      Type.Number({
+        minimum: 0,
+        description:
+          "Seconds the value must be at this zone's state or a more severe one before a move up to this zone is notified; a value that drops back sooner raises nothing. A move down is notified at once. At most about 24 days.",
+        examples: [60]
+      })
+    )
   },
   {
     $id: 'Zone',
