@@ -14,14 +14,10 @@ const SOG_PATH = 'navigation.speedOverGround'
 const HEADING_PATH = 'navigation.headingTrue'
 const SOG = 3.4
 const HEADING = 1.2
-// Long enough for the server to act on a WebSocket message before a delta
-// posted over HTTP, a separate connection, races it.
-const SETTLE_MS = 50
 const DELIVERY_TIMEOUT_MS = 2000
 const POLL_MS = 10
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
-const settle = () => sleep(SETTLE_MS)
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function deltaPaths(messages: any[]): string[] {
@@ -48,6 +44,26 @@ async function waitFor(condition: () => boolean, what: string) {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const waitForDelta = (ws: any, path: string) =>
   waitFor(() => deltaPaths(ws.parsedMessages()).includes(path), path)
+
+// A connection's messages are handled in order, and a subscribe with an empty
+// id is answered with an error at once and changes nothing. Once that answer
+// is back, the server has acted on everything sent before it, so a delta
+// posted over HTTP, a separate connection, can no longer race it.
+const EMPTY_ID_ERROR = 'subscriptionId must be a non-empty string'
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function settle(...connections: any[]) {
+  for (const ws of connections) {
+    const count = () =>
+      ws.messages.filter((m: string) => m.includes(EMPTY_ID_ERROR)).length
+    const before = count()
+    await ws.send({
+      context: 'vessels.self',
+      subscriptionId: '',
+      subscribe: [{ path: SOG_PATH }]
+    })
+    await waitFor(() => count() > before, 'the server to answer')
+  }
+}
 
 const subscribe = (subscriptionId: string, path: string) => ({
   context: 'vessels.self',
@@ -98,7 +114,7 @@ describe('Subscription ids', () => {
     await ws.send(subscribe('sog', SOG_PATH))
     await ws.send(subscribe('heading', HEADING_PATH))
     await ws.send(unsubscribe('sog'))
-    await settle()
+    await settle(ws)
 
     await server.sendDelta(SOG_PATH, SOG)
     await server.sendDelta(HEADING_PATH, HEADING)
@@ -113,7 +129,7 @@ describe('Subscription ids', () => {
     const ws = await connectNone()
     await ws.send(subscribe('nav', SOG_PATH))
     await ws.send(subscribe('nav', HEADING_PATH))
-    await settle()
+    await settle(ws)
 
     await server.sendDelta(HEADING_PATH, HEADING)
     await server.sendDelta(SOG_PATH, SOG)
@@ -130,7 +146,7 @@ describe('Subscription ids', () => {
     await ws.send(subscribe('nav', SOG_PATH))
     await ws.send(UNSUBSCRIBE_ALL)
     await ws.send(subscribe('nav', HEADING_PATH))
-    await settle()
+    await settle(ws)
 
     await server.sendDelta(SOG_PATH, SOG)
     await server.sendDelta(HEADING_PATH, HEADING)
@@ -145,7 +161,7 @@ describe('Subscription ids', () => {
     await ws.send(subscribe('nav', SOG_PATH))
     await ws.send(unsubscribe('nav'))
     await ws.send(subscribe('nav', HEADING_PATH))
-    await settle()
+    await settle(ws)
 
     await server.sendDelta(SOG_PATH, SOG)
     await server.sendDelta(HEADING_PATH, HEADING)
@@ -159,7 +175,20 @@ describe('Subscription ids', () => {
     const ws = await connectNone()
     await ws.send(subscribe('sog', SOG_PATH))
     await ws.send(unsubscribe('nothing'))
-    await settle()
+    await settle(ws)
+
+    await server.sendDelta(SOG_PATH, SOG)
+    await waitForDelta(ws, SOG_PATH)
+
+    expect(ws.ws.readyState).to.equal(WebSocket.OPEN)
+    ws.close()
+  })
+
+  it('take an empty unsubscribe list as a no-op', async () => {
+    const ws = await connectNone()
+    await ws.send(subscribe('sog', SOG_PATH))
+    await ws.send({ context: '*', unsubscribe: [] })
+    await settle(ws)
 
     await server.sendDelta(SOG_PATH, SOG)
     await waitForDelta(ws, SOG_PATH)
@@ -173,7 +202,7 @@ describe('Subscription ids', () => {
     await ws.nthMessage(1)
     await ws.send(subscribe('heading', HEADING_PATH))
     await ws.send(unsubscribe('heading'))
-    await settle()
+    await settle(ws)
 
     await server.sendDelta(SOG_PATH, SOG)
     await waitForDelta(ws, SOG_PATH)
@@ -188,11 +217,11 @@ describe('Subscription ids', () => {
     await first.send(subscribe('sog', SOG_PATH))
     await second.send(subscribe('sog', SOG_PATH))
     await first.send(unsubscribe('sog'))
-    await settle()
+    await settle(first, second)
 
     await server.sendDelta(SOG_PATH, SOG)
     await waitForDelta(second, SOG_PATH)
-    await settle()
+    await settle(first)
 
     expect(deltaPaths(first.parsedMessages())).to.deep.equal([])
     first.close()
@@ -262,5 +291,96 @@ describe('Server API subscribe', () => {
 
     expect(sog.received).to.deep.equal([])
     expect(heading.received).to.deep.equal([])
+  })
+
+  it('stops delivering once ended from its own callback during replay', async () => {
+    await server.sendDelta(SOG_PATH, SOG)
+    const unsubscribes: Unsubscribes = []
+    const received: string[] = []
+    server.server.app.subscriptionmanager.subscribe(
+      {
+        context: 'vessels.self' as Context,
+        subscribe: [{ path: '*' as Path, policy: 'instant' }]
+      },
+      unsubscribes,
+      (err: unknown) => {
+        throw err
+      },
+      (delta: Delta) => {
+        received.push(JSON.stringify(delta))
+        unsubscribes.forEach((unsubscribe) => unsubscribe())
+      }
+    )
+    const control = subscribeTo(HEADING_PATH, [])
+
+    await server.sendDelta(HEADING_PATH, HEADING)
+    await server.sendDelta(SOG_PATH, SOG)
+    await waitFor(() => control.received.length > 0, HEADING_PATH)
+
+    expect(received).to.have.length(1)
+  })
+
+  it('keeps an id taken again when the old subscription is released twice', async () => {
+    const unsubscribes: Unsubscribes = []
+    const { subscriptionmanager } = server.server.app
+    const subscribeNamed = (path: string, received: string[]) =>
+      subscriptionmanager.subscribe(
+        {
+          context: 'vessels.self' as Context,
+          subscriptionId: 'nav',
+          subscribe: [{ path: path as Path, policy: 'instant' }]
+        },
+        unsubscribes,
+        (err: unknown) => {
+          throw err
+        },
+        () => received.push(path)
+      )
+    const first: string[] = []
+    const second: string[] = []
+    const endFirst = subscribeNamed(SOG_PATH, first)
+    endFirst()
+    subscribeNamed(HEADING_PATH, second)
+    endFirst()
+    subscriptionmanager.unsubscribe(
+      { context: '*', unsubscribe: [{ subscriptionId: 'nav' }] },
+      unsubscribes
+    )
+    const control = subscribeTo(HEADING_PATH, [])
+
+    await server.sendDelta(HEADING_PATH, HEADING)
+    await waitFor(() => control.received.length > 0, HEADING_PATH)
+
+    expect(second).to.deep.equal([])
+  })
+
+  it('frees the id of a subscription that failed to attach', () => {
+    const unsubscribes: Unsubscribes = []
+    const { subscriptionmanager } = server.server.app
+    const errors: unknown[] = []
+    const attempt = (radius: number) =>
+      subscriptionmanager.subscribe(
+        {
+          context: {
+            radius,
+            position: { latitude: 60, longitude: 25 }
+          },
+          subscriptionId: 'near',
+          subscribe: [{ path: SOG_PATH as Path }]
+        } as unknown as SubscribeMessage,
+        unsubscribes,
+        (err: unknown) => {
+          errors.push(err)
+          throw new Error(String(err))
+        },
+        () => undefined
+      )
+
+    expect(() => attempt(NaN)).to.throw(/radius/)
+    expect(unsubscribes).to.have.length(0)
+    attempt(1000)
+
+    expect(errors).to.have.length(1)
+    expect(unsubscribes).to.have.length(1)
   })
 })
