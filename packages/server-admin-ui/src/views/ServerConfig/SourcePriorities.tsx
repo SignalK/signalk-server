@@ -19,6 +19,7 @@ import {
   usePriorityDefaults,
   usePriorityOverrides
 } from '../../store'
+import { savedMembership } from '../../utils/sourceGroups'
 import type { SourcesData } from '../../utils/sourceLabels'
 import type { SourcePriority } from '../../store/types'
 import PrefsEditor from './PrefsEditor'
@@ -557,19 +558,16 @@ const SourcePriorities: React.FC = () => {
     for (const g of displayed) {
       const saved =
         g.matchedSavedId !== null ? savedById.get(g.matchedSavedId) : undefined
-      // Compare only the ordering of sources that are common to both,
-      // then also flip dirty when newcomers are present so the user can
-      // click Save to accept the appended sources without having to
-      // drag anything first.
-      const liveOrder = g.sources.filter(
-        (src) => !g.newcomerSources.includes(src)
-      )
+      // Compare the saved membership with the ordering that would be saved
+      // (newcomers excluded). A newcomer on its own is not a change: it is
+      // information the user has not acted on, and adding it is what marks
+      // the group unsaved.
+      const liveOrder = savedMembership(g)
       const orderingDirty =
         !saved ||
         saved.length !== liveOrder.length ||
         saved.some((src, i) => src !== liveOrder[i])
-      const groupDirty = orderingDirty || g.newcomerSources.length > 0
-      map.set(g.id, groupDirty)
+      map.set(g.id, orderingDirty)
     }
     return map
   }, [displayed, savedGroups])
@@ -638,7 +636,11 @@ const SourcePriorities: React.FC = () => {
     return {
       groups: displayed.map((g) => ({
         id: g.id,
-        sources: g.sources,
+        // Newcomers are listed for information until the user adds them to
+        // the group, so they stay out of the saved membership: the engine
+        // ranks every other path a saved member publishes through that
+        // group, which is not a side effect of an unrelated Save.
+        sources: savedMembership(g),
         ...(g.inactive ? { inactive: true } : {})
       })),
       overrides,

@@ -1121,6 +1121,51 @@ describe('Deltacache', () => {
       })
   })
 
+  it('getReconciledGroups counts one device behind two transports as one publisher', function () {
+    // The same instrument reachable over CAN and over a remote gateway is
+    // two refs but one publisher. routesPath counts sourceRefIdentity
+    // values, so the engine leaves this path unrouted and the card must not
+    // list it.
+    const NAME = 'a1b2c3d4e5f60718'
+    const PATH_ONE_DEVICE = 'environment.salinity.oneTransportOnly'
+    const PATH_GROUPED = 'environment.turbidity.oneTransportGrouped'
+    const settings = theServer.app.config.settings
+    settings.priorityGroups = [
+      {
+        id: 'transportGroup',
+        sources: [`can1.${NAME}`, 'tankSource']
+      }
+    ]
+    const send = (source, path, value) =>
+      doSendADelta({
+        context: 'vessels.self',
+        updates: [
+          {
+            $source: source,
+            timestamp: '2024-02-04T10:00:00.000Z',
+            values: [{ path, value }]
+          }
+        ]
+      })
+
+    return send(`can1.${NAME}`, PATH_ONE_DEVICE, 3)
+      .then(() => send(`remote.${NAME}`, PATH_ONE_DEVICE, 4))
+      .then(() => send(`can1.${NAME}`, PATH_GROUPED, 0.5))
+      .then(() => send('tankSource', PATH_GROUPED, 55))
+      .then(() => {
+        const reconciled = theServer.app.deltaCache.getReconciledGroups()
+        const group = reconciled.find(
+          (g) => g.matchedSavedId === 'transportGroup'
+        )
+        group.should.not.equal(undefined)
+        group.paths.should.include(PATH_GROUPED)
+        group.paths.should.not.include(PATH_ONE_DEVICE)
+      })
+      .finally(() => {
+        delete settings.priorityGroups
+      })
+  })
+
   it('deleteContext removes the context entries from preferredSources', function () {
     // Regression test for a memory leak: preferredSources is keyed
     // `${context}\0${path}` and previously only grew, since
