@@ -121,11 +121,25 @@ class SubscriptionManager implements ISubscriptionManager {
       }
     }
 
+    let ended = false
     const own: Unsubscribes = []
+    // A callback can release the subscription during the cache replay that
+    // attach() runs, before attach() has registered every listener; one
+    // registered after that would be out of reach of every unsubscribe.
+    own.push = (...handles) => {
+      if (ended) {
+        handles.forEach((handle) => handle())
+        return own.length
+      }
+      return Array.prototype.push.apply(own, handles)
+    }
     const end = () => {
+      ended = true
       own.forEach((unsubscribe) => unsubscribe())
       own.length = 0
-      if (id !== undefined) {
+      // A second release after the id was taken again must leave the new
+      // owner's entry alone.
+      if (id !== undefined && named.get(id) === release) {
         named.delete(id)
       }
     }
@@ -144,16 +158,21 @@ class SubscriptionManager implements ISubscriptionManager {
       namedSubscriptions.set(unsubscribes, named)
     }
 
-    this.attach(
-      command,
-      own,
-      errorCallback,
-      callback,
-      user,
-      sourcePolicy,
-      excludeSources,
-      trusted
-    )
+    try {
+      this.attach(
+        command,
+        own,
+        errorCallback,
+        (delta) => (ended ? undefined : callback(delta)),
+        user,
+        sourcePolicy,
+        excludeSources,
+        trusted
+      )
+    } catch (err) {
+      release()
+      throw err
+    }
     return release
   }
 
