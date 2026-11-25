@@ -489,7 +489,7 @@ describe('logging', () => {
       }
     })
 
-    it('collects staging directories left behind by interrupted runs', async function () {
+    it('recovers a staged log left behind by an interrupted run', async function () {
       this.timeout(15000)
       const app = createLoggingApp({ configPath: tmpDir })
       const stream = new FileTimestampStreamWithDelete(app, tmpDir, undefined, {
@@ -497,25 +497,60 @@ describe('logging', () => {
       })
       const abandoned = path.join(tmpDir, '.compress-abandoned')
       fs.mkdirSync(abandoned)
+      const stagedName = 'skserver-raw_2020-01-01T00.log'
       fs.writeFileSync(
-        path.join(abandoned, 'records.log'),
-        'kept for a while\n'
+        path.join(abandoned, stagedName),
+        'records from the interrupted run\n'
       )
       const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000)
       fs.utimesSync(abandoned, twoHoursAgo, twoHoursAgo)
-      const running = path.join(tmpDir, '.compress-running')
-      fs.mkdirSync(running)
+
+      try {
+        stream.write('1700000000000;first;record\n')
+        await delay(1100)
+        stream.write('1700000001000;second;record\n')
+
+        const archive = await waitForFile(
+          tmpDir,
+          (name) => name === `${stagedName}.gz`,
+          8000
+        )
+        expect(
+          gunzipSync(fs.readFileSync(path.join(tmpDir, archive))).toString()
+        ).to.equal('records from the interrupted run\n')
+        expect(fs.existsSync(abandoned)).to.equal(false)
+      } finally {
+        stream.destroy()
+      }
+    })
+
+    it('keeps a staged copy when its hour is in use again', async function () {
+      this.timeout(15000)
+      const app = createLoggingApp({ configPath: tmpDir })
+      const stream = new FileTimestampStreamWithDelete(app, tmpDir, undefined, {
+        path: path.join(tmpDir, 'skserver-raw_%Y-%m-%dT%H.%S.log')
+      })
+      const abandoned = path.join(tmpDir, '.compress-abandoned')
+      fs.mkdirSync(abandoned)
+      const stagedName = 'skserver-raw_2020-01-01T00.log'
+      fs.writeFileSync(path.join(abandoned, stagedName), 'older records\n')
+      const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000)
+      fs.utimesSync(abandoned, twoHoursAgo, twoHoursAgo)
+      fs.writeFileSync(path.join(tmpDir, stagedName), 'records in use\n')
 
       try {
         stream.write('1700000000000;first;record\n')
         await delay(1100)
         stream.write('1700000001000;second;record\n')
         await waitForFile(tmpDir, (name) => name.endsWith('.log.gz'))
+        await delay(500)
 
-        expect(fs.existsSync(abandoned)).to.equal(false)
-        // A directory this recent may belong to a compression that is still
-        // running, so it stays.
-        expect(fs.existsSync(running)).to.equal(true)
+        expect(
+          fs.readFileSync(path.join(abandoned, stagedName), 'utf8')
+        ).to.equal('older records\n')
+        expect(fs.readFileSync(path.join(tmpDir, stagedName), 'utf8')).to.equal(
+          'records in use\n'
+        )
       } finally {
         stream.destroy()
       }

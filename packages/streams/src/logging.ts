@@ -102,7 +102,9 @@ export class FileTimestampStreamWithDelete extends FileTimestampStream {
       try {
         const child = spawn(process.execPath, [worker, filename], {
           detached: true,
-          stdio: 'ignore'
+          // stderr stays attached: when the worker has to keep a staged copy it
+          // says so there, and that message must not disappear.
+          stdio: ['ignore', 'ignore', 'inherit']
         })
         // Without a listener an emitted 'error' would become an uncaught
         // exception and take the server down.
@@ -123,7 +125,7 @@ export class FileTimestampStreamWithDelete extends FileTimestampStream {
 
   private deleteOldFiles(): void {
     debug('Checking for old log files')
-    this.deleteStaleStagingDirs()
+    this.recoverStaleStagingDirs()
     listLogFiles(this.app, (err, files) => {
       if (err) {
         console.error(err)
@@ -153,10 +155,13 @@ export class FileTimestampStreamWithDelete extends FileTimestampStream {
   /**
    * A compression run keeps its source in a directory of its own, so a run
    * that is killed leaves the records behind there instead of losing them.
-   * Those leftovers are collected once they are old enough that no run can
-   * still be using them.
+   * Once such a directory is old enough that no run can still be using it, the
+   * records are put back under their own name and compressed from there, which
+   * is the same path a live run takes. Nothing is deleted: if the hour is in
+   * use again the staged copy is kept, since it may be the only copy of those
+   * records.
    */
-  private deleteStaleStagingDirs(): void {
+  private recoverStaleStagingDirs(): void {
     const cutoff = Date.now() - 60 * 60 * 1000
     fs.readdir(this.fullLogDir, (err, names) => {
       if (err) {
@@ -172,15 +177,68 @@ export class FileTimestampStreamWithDelete extends FileTimestampStream {
           if (statErr || !stats.isDirectory() || stats.mtimeMs > cutoff) {
             return
           }
-          debug(`Deleting stale staging directory ${dir}`)
-          fs.rm(dir, { recursive: true, force: true }, (rmErr) => {
-            if (rmErr) {
-              console.error(rmErr)
-            }
-          })
+          this.recoverStagingDir(dir)
         })
       }
     })
+  }
+
+  private recoverStagingDir(dir: string): void {
+    void (async () => {
+      let names: string[]
+      try {
+        names = await fs.promises.readdir(dir)
+      } catch (e) {
+        console.error(e)
+        return
+      }
+      const staged = names.filter((name) => name.endsWith('.log'))
+      if (staged.length === 0) {
+        debug(`Deleting empty staging directory ${dir}`)
+        await fs.promises
+          .rm(dir, { recursive: true, force: true })
+          .catch((e: Error) => console.error(e))
+        return
+      }
+      for (const name of staged) {
+        const stagedPath = path.join(dir, name)
+        const logPath = path.join(this.fullLogDir, name)
+        try {
+          // Fails with EEXIST rather than replacing a log file that exists.
+          await fs.promises.link(stagedPath, logPath)
+        } catch (e) {
+          if ((e as NodeJS.ErrnoException).code === 'EEXIST') {
+            console.error(
+              `Keeping ${stagedPath}: ${logPath} is in use again, the staged copy is left in place`
+            )
+            continue
+          }
+          try {
+            // Filesystems without hard links: an exclusive copy has the same
+            // non-overwriting guarantee.
+            await fs.promises.copyFile(
+              stagedPath,
+              logPath,
+              fs.constants.COPYFILE_EXCL
+            )
+          } catch (copyErr) {
+            console.error(
+              `Keeping ${stagedPath}: could not restore ${logPath} (${(copyErr as Error).message})`
+            )
+            continue
+          }
+        }
+        debug(`Recovered ${stagedPath} as ${logPath}`)
+        await fs.promises
+          .unlink(stagedPath)
+          .catch((e: Error) => console.error(e))
+        this.compressOldFile(logPath)
+      }
+      const remaining = await fs.promises.readdir(dir).catch(() => ['?'])
+      if (remaining.length === 0) {
+        await fs.promises.rmdir(dir).catch(() => undefined)
+      }
+    })()
   }
 }
 
