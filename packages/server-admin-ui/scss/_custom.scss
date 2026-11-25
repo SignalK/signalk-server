@@ -278,7 +278,7 @@ form.rjsf {
 // Plugin config: scrollable list and connected panels on desktop
 @media (min-width: 1200px) {
   .plugin-list-container {
-    max-height: calc(100vh - 280px);
+    max-height: max(300px, calc(100vh - 280px));
     overflow-y: auto;
   }
   .plugin-config-row > :first-child .card {
