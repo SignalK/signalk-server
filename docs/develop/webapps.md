@@ -296,7 +296,7 @@ Additionally the server sets cookie `skLoginInfo` when the user logs in and remo
 
 `GET /skServer/loginStatus` tells a webapp whether security is enabled and whether the browser is logged in. It needs no authentication, so a webapp can call it on start to decide whether to show its content or a login prompt.
 
-The fields a webapp usually needs are `authenticationRequired` (security is on), `status` (`loggedIn` or `notLoggedIn`) and, when logged in, `username` and `userLevel`. When OpenID Connect is configured, the `oidc*` fields say how to send the browser to it, see [OIDC](../oidc.md). Fields that do not apply are left out, so treat a missing field as `false`.
+The fields a webapp usually needs are `authenticationRequired` (security is on), `status` (`loggedIn` or `notLoggedIn`) and, when logged in, `username` and `userLevel`. When OpenID Connect is configured, the `oidc*` fields say how to send the browser to it, see [OIDC](../oidc.md). Fields that do not apply are left out: treat a missing flag as `false`, and a missing `username` or `userLevel` as not logged in.
 
 The response is described field by field in the `LoginStatus` schema of the Security API, under _Documentation -> OpenAPI_ in the server Admin UI.
 
