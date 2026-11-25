@@ -20,35 +20,59 @@ import { createGzip } from 'zlib'
 
 /**
  * Gzips `filePath` into `<filePath>.gz` and removes the original once the
- * compressed copy is complete. A partially written archive is removed on
- * failure, and the original is only dropped when the archive holds every byte
- * the source had when the copy started. Resolves with the path of the
- * compressed file.
+ * compressed copy is complete. Resolves with the path of the compressed file.
+ *
+ * The source is renamed out of the way before it is read, so nothing can open
+ * it and append while the copy runs, and no byte written to the original name
+ * can be lost between the last read and the removal. If anything goes wrong
+ * the source is put back and the archive is dropped, so a failed compression
+ * never costs a record. An existing archive is never overwritten: an hourly
+ * name can come round again after a clock correction, and that earlier archive
+ * is the only copy of its hour.
  */
 export async function compressLogFile(filePath: string): Promise<string> {
   const compressedPath = `${filePath}.gz`
-  const before = await fsp.stat(filePath)
+  const stagingPath = `${filePath}.compressing`
+  await fsp.rename(filePath, stagingPath)
   try {
     await pipeline(
-      createReadStream(filePath),
+      createReadStream(stagingPath),
       createGzip(),
-      createWriteStream(compressedPath)
+      // wx: fail on an existing archive instead of truncating it. The stream
+      // reports the open error through the pipeline.
+      createWriteStream(compressedPath, { flags: 'wx' })
     )
   } catch (e) {
-    await fsp.unlink(compressedPath).catch(() => undefined)
+    if ((e as NodeJS.ErrnoException).code !== 'EEXIST') {
+      // The archive, if there is one, was written by this call.
+      await fsp.unlink(compressedPath).catch(() => undefined)
+    }
+    await restoreSource(stagingPath, filePath)
     throw e
   }
-  const after = await fsp.stat(filePath).catch(() => undefined)
-  if (!after || after.size !== before.size) {
-    // Records reached the file after the copy read it to the end, so the
-    // archive is incomplete: keep the original and drop the archive.
-    await fsp.unlink(compressedPath).catch(() => undefined)
-    throw new Error(
-      `${filePath} changed while it was being compressed, keeping the original`
-    )
-  }
-  await fsp.unlink(filePath)
+  await fsp.unlink(stagingPath)
   return compressedPath
+}
+
+async function restoreSource(
+  stagingPath: string,
+  filePath: string
+): Promise<void> {
+  const inUseAgain = await fsp.access(filePath).then(
+    () => true,
+    () => false
+  )
+  if (inUseAgain) {
+    // The name is being written again; overwriting it with the staged copy
+    // would drop the new records, so the staged file stays where it is.
+    console.error(`Kept ${stagingPath}: ${filePath} is in use again`)
+    return
+  }
+  await fsp
+    .rename(stagingPath, filePath)
+    .catch((e: Error) =>
+      console.error(`Could not restore ${filePath}: ${e.message}`)
+    )
 }
 
 if (require.main === module) {

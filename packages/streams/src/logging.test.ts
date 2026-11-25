@@ -298,32 +298,29 @@ describe('logging', () => {
       expect(fs.readdirSync(tmpDir)).to.have.length(0)
     })
 
-    it('keeps the original when records arrive while the copy runs', async () => {
+    it('keeps both files when an archive already exists', async () => {
       const file = path.join(tmpDir, 'skserver-raw_2024-01-15T12.log')
+      const archive = `${file}.gz`
       const content = '1700000000000;N;$GPGLL,4916.45,N\n'
       fs.writeFileSync(file, content)
+      fs.writeFileSync(archive, 'earlier hour')
 
-      // Reporting a smaller size on the first stat stands in for records that
-      // reached the file after the copy had read it to the end.
-      const realStat = fs.promises.stat
-      let calls = 0
-      fs.promises.stat = ((p: fs.PathLike) =>
-        realStat(p).then((stats) =>
-          calls++ === 0 ? { size: stats.size - 1 } : stats
-        )) as typeof fs.promises.stat
+      let error: Error | undefined
       try {
-        let error: Error | undefined
-        try {
-          await compressLogFile(file)
-        } catch (e) {
-          error = e as Error
-        }
-        expect(error?.message).to.match(/changed while it was being compressed/)
-        expect(fs.readFileSync(file, 'utf8')).to.equal(content)
-        expect(fs.existsSync(`${file}.gz`)).to.equal(false)
-      } finally {
-        fs.promises.stat = realStat
+        await compressLogFile(file)
+      } catch (e) {
+        error = e as Error
       }
+
+      expect((error as NodeJS.ErrnoException)?.code).to.equal('EEXIST')
+      // The source is back under its own name and the earlier archive is
+      // untouched, so neither hour lost records.
+      expect(fs.readFileSync(file, 'utf8')).to.equal(content)
+      expect(fs.readFileSync(archive, 'utf8')).to.equal('earlier hour')
+      expect(fs.readdirSync(tmpDir).sort()).to.deep.equal([
+        'skserver-raw_2024-01-15T12.log',
+        'skserver-raw_2024-01-15T12.log.gz'
+      ])
     })
 
     it('lists compressed log files alongside uncompressed ones', (done) => {
