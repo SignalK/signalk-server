@@ -292,6 +292,32 @@ As the cookie is set to be [`HttpOnly`](https://developer.mozilla.org/en-US/docs
 
 Additionally the server sets cookie `skLoginInfo` when the user logs in and removes it when the user logs out. A webapp can poll for changes of this cookie to be notified of the browser's cookie based login status.
 
+### Checking the login status
+
+`GET /skServer/loginStatus` tells a webapp whether security is enabled and whether the browser is logged in. It needs no authentication, so a webapp can call it on start to decide whether to show its content or a login prompt.
+
+```json
+{
+  "status": "loggedIn",
+  "authenticationRequired": true,
+  "readOnlyAccess": false,
+  "allowNewUserRegistration": false,
+  "allowDeviceAccessRequests": true,
+  "username": "skipper",
+  "userLevel": "admin",
+  "securityWasEnabled": false
+}
+```
+
+- `authenticationRequired` is `false` when security is off: every client then has full access, and the fields about users and login methods are absent.
+- `securityWasEnabled` is `true` when security was enabled while the server was running; it takes effect after a restart.
+- `status` is `loggedIn` or `notLoggedIn`; `username` and `userLevel` (`readonly`, `readwrite` or `admin`) are present only when logged in.
+- `readOnlyAccess` means clients that are not logged in can still read data.
+- `noUsers` is `true` while security is enabled but no user exists yet.
+- `oidcEnabled`, `oidcAutoLogin`, `oidcLoginUrl` and `oidcProviderName` describe the OpenID Connect login when one is configured, see [OIDC](../oidc.md).
+
+Fields that do not apply are left out, so treat a missing field as `false`. The full schema is in the Security API's OpenAPI document.
+
 ### Redirecting unauthenticated users to login
 
 A webapp that requires an authenticated user can hand off sign-in to the server. Send the browser to the admin UI's login page with a `redirect` query parameter pointing back at the webapp:

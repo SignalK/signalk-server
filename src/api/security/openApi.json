@@ -33,6 +33,67 @@
   ],
   "components": {
     "schemas": {
+      "LoginStatus": {
+        "type": "object",
+        "required": ["status"],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": ["loggedIn", "notLoggedIn"],
+            "description": "Whether the request carries a valid session cookie or token."
+          },
+          "authenticationRequired": {
+            "type": "boolean",
+            "description": "`true` when security is enabled. Without security every client has full access and the remaining security fields are absent."
+          },
+          "readOnlyAccess": {
+            "type": "boolean",
+            "description": "Clients that are not logged in get read-only access."
+          },
+          "allowNewUserRegistration": {
+            "type": "boolean",
+            "description": "Visitors may request a user account."
+          },
+          "allowDeviceAccessRequests": {
+            "type": "boolean",
+            "description": "Devices may request access tokens through `/signalk/v1/access/requests`."
+          },
+          "username": {
+            "type": "string",
+            "description": "The logged in user. Present only when logged in."
+          },
+          "userLevel": {
+            "type": "string",
+            "enum": ["readonly", "readwrite", "admin"],
+            "description": "The logged in user's permission. Present only when logged in."
+          },
+          "securityWasEnabled": {
+            "type": "boolean",
+            "description": "Security was enabled while the server was running and takes effect after a restart."
+          },
+          "noUsers": {
+            "type": "boolean",
+            "description": "Security is enabled but no user exists yet, so the first admin can still be created."
+          },
+          "oidcEnabled": {
+            "type": "boolean",
+            "description": "OpenID Connect login is configured."
+          },
+          "oidcAutoLogin": {
+            "type": "boolean",
+            "description": "Clients should send users to the OIDC login without showing the login form. Present only when `oidcEnabled`."
+          },
+          "oidcLoginUrl": {
+            "type": "string",
+            "example": "/signalk/v1/auth/oidc/login",
+            "description": "Where to send the browser for OIDC login. Present only when `oidcEnabled`."
+          },
+          "oidcProviderName": {
+            "type": "string",
+            "description": "Name of the identity provider for the login button. Present only when `oidcEnabled` and configured."
+          }
+        }
+      },
       "IsoTime": {
         "type": "string",
         "pattern": "^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2}):(\\d{2}):(\\d{2}(?:\\.\\d*)?)((-(\\d{2}):(\\d{2})|Z)?)$",
@@ -482,6 +543,25 @@
           "default": {
             "$ref": "#/components/responses/ErrorResponse"
           }
+        }
+      }
+    },
+    "/loginStatus": {
+      "servers": [{ "url": "/skServer" }],
+      "get": {
+        "tags": ["authentication"],
+        "summary": "Get the login status of the client.",
+        "description": "Tells a client whether security is enabled, whether the request is logged in and as whom, and which ways to log in or request access the server offers. Webapps use it to decide whether to show a login prompt. Needs no authentication. Fields that do not apply are left out.",
+        "responses": {
+          "200": {
+            "description": "Login status",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/LoginStatus" }
+              }
+            }
+          },
+          "429": { "description": "Too many requests from this address." }
         }
       }
     },
