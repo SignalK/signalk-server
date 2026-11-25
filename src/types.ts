@@ -42,4 +42,7 @@ export interface MdnsAdvertisement {
   port: number
 }
 
-export type ContextMatcher = (_: WithContext) => boolean
+export interface ContextMatcher {
+  (_: WithContext): boolean
+  literalContext?: string
+}
