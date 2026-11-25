@@ -366,9 +366,6 @@ export const createAppSlice: StateCreator<AppSlice, [], [], AppSlice> = (
   },
 
   setVesselInfo: (vesselInfo) => {
-    if (vesselInfo.name && typeof document !== 'undefined') {
-      document.title = vesselInfo.name
-    }
     set({ vesselInfo })
   },
 

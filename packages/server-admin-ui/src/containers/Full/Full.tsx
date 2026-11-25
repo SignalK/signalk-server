@@ -15,6 +15,7 @@ import {
 import Container from 'react-bootstrap/Container'
 import { useLoginStatus, type LoginStatus } from '../../store'
 
+import PageTitle from './PageTitle'
 import Header from '../../components/Header/Header'
 import Sidebar from '../../components/Sidebar/Sidebar'
 import Aside from '../../components/Aside/Aside'
@@ -279,6 +280,7 @@ export default function Full() {
 
   return (
     <div className="app">
+      <PageTitle />
       <Header />
       <div className="app-body">
         <Sidebar location={location} />
