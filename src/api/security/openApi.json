@@ -44,7 +44,7 @@
           },
           "authenticationRequired": {
             "type": "boolean",
-            "description": "`true` when security is enabled. Without security every client has full access and the remaining security fields are absent."
+            "description": "`true` when security is enabled. Without security every client has full access, and the fields about users, registration, device access and OIDC are absent."
           },
           "readOnlyAccess": {
             "type": "boolean",
