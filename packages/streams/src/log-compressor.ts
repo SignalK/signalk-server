@@ -15,6 +15,7 @@
  */
 
 import { createReadStream, createWriteStream, promises as fsp } from 'fs'
+import type { FileHandle } from 'fs/promises'
 import { pipeline } from 'stream/promises'
 import { createGzip } from 'zlib'
 
@@ -34,21 +35,31 @@ export async function compressLogFile(filePath: string): Promise<string> {
   const compressedPath = `${filePath}.gz`
   const stagingPath = `${filePath}.compressing`
   await fsp.rename(filePath, stagingPath)
+  let claim: FileHandle
+  try {
+    // Claim the archive name exclusively before reading anything: if the open
+    // fails, no byte has been read and the existing archive is untouched.
+    claim = await fsp.open(compressedPath, 'wx')
+  } catch (e) {
+    await restoreSource(stagingPath, filePath)
+    throw e
+  }
   try {
     await pipeline(
       createReadStream(stagingPath),
       createGzip(),
-      // wx: fail on an existing archive instead of truncating it. The stream
-      // reports the open error through the pipeline.
-      createWriteStream(compressedPath, { flags: 'wx' })
+      // autoClose: false, the handle below closes the descriptor. Letting the
+      // stream close it leaves the FileHandle to close it again at GC time.
+      createWriteStream(compressedPath, { fd: claim.fd, autoClose: false })
     )
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code !== 'EEXIST') {
-      // The archive, if there is one, was written by this call.
-      await fsp.unlink(compressedPath).catch(() => undefined)
-    }
+    // The archive was created by this call, so removing the partial copy
+    // cannot touch an earlier one.
+    await fsp.unlink(compressedPath).catch(() => undefined)
     await restoreSource(stagingPath, filePath)
     throw e
+  } finally {
+    await claim.close().catch(() => undefined)
   }
   await fsp.unlink(stagingPath)
   return compressedPath

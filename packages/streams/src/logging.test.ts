@@ -298,6 +298,55 @@ describe('logging', () => {
       expect(fs.readdirSync(tmpDir)).to.have.length(0)
     })
 
+    it('keeps an existing archive when the source cannot be read', async function () {
+      if (process.getuid?.() === 0) {
+        this.skip()
+      }
+      const file = path.join(tmpDir, 'skserver-raw_2024-01-15T12.log')
+      const archive = `${file}.gz`
+      fs.writeFileSync(file, 'unreadable hour\n')
+      fs.writeFileSync(archive, 'earlier hour')
+      fs.chmodSync(file, 0o000)
+
+      try {
+        let error: Error | undefined
+        try {
+          await compressLogFile(file)
+        } catch (e) {
+          error = e as Error
+        }
+        expect(error).to.not.equal(undefined)
+        expect(fs.readFileSync(archive, 'utf8')).to.equal('earlier hour')
+        expect(fs.existsSync(file)).to.equal(true)
+      } finally {
+        fs.chmodSync(file, 0o644)
+      }
+    })
+
+    it('leaves no archive behind when the source cannot be read and none existed', async function () {
+      if (process.getuid?.() === 0) {
+        this.skip()
+      }
+      const file = path.join(tmpDir, 'skserver-raw_2024-01-15T12.log')
+      fs.writeFileSync(file, 'unreadable hour\n')
+      fs.chmodSync(file, 0o000)
+
+      try {
+        let error: Error | undefined
+        try {
+          await compressLogFile(file)
+        } catch (e) {
+          error = e as Error
+        }
+        expect((error as NodeJS.ErrnoException)?.code).to.equal('EACCES')
+        expect(fs.readdirSync(tmpDir)).to.deep.equal([
+          'skserver-raw_2024-01-15T12.log'
+        ])
+      } finally {
+        fs.chmodSync(file, 0o644)
+      }
+    })
+
     it('keeps both files when an archive already exists', async () => {
       const file = path.join(tmpDir, 'skserver-raw_2024-01-15T12.log')
       const archive = `${file}.gz`
