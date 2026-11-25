@@ -74,6 +74,11 @@
       "targetUnit": "percent",
       "displayFormat": "0"
     },
+    "salinity": {
+      "baseUnit": "ratio",
+      "targetUnit": "ppm",
+      "displayFormat": "0"
+    },
     "frequency": {
       "baseUnit": "Hz",
       "targetUnit": "Hz",

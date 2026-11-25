@@ -14,6 +14,7 @@
     "current": "A",
     "power": "W",
     "percentage": "ratio",
+    "salinity": "ratio",
     "frequency": "Hz",
     "rotationalSpeed": "Hz",
     "time": "s",
@@ -44,6 +45,7 @@
     "current",
     "power",
     "percentage",
+    "salinity",
     "frequency",
     "rotationalSpeed",
     "time",
@@ -61,6 +63,7 @@
   ],
   "parentCategories": {
     "fluidPressure": "pressure",
-    "rotationalSpeed": "frequency"
+    "rotationalSpeed": "frequency",
+    "salinity": "percentage"
   }
 }

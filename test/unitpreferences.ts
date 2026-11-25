@@ -223,6 +223,16 @@ describe('Unit Preferences', function () {
       ).to.include({ category: 'pressure', targetUnit: 'mbar' })
     })
 
+    it('shows salinity in ppm', async function () {
+      expect(
+        await displayUnitsOf('environment.water.salinity', 0.035)
+      ).to.include({
+        category: 'salinity',
+        targetUnit: 'ppm',
+        formula: 'value * 1000000'
+      })
+    })
+
     it('resolves a path stored with the broader category in the narrower one it is listed under', function () {
       expect(
         resolvePathDisplayUnits('propulsion.port.revolutions', {
@@ -277,6 +287,7 @@ describe('Unit Preferences', function () {
                 targetUnit: 'psi',
                 displayFormat: '0'
               },
+              percentage: { baseUnit: 'ratio', targetUnit: 'percent' },
               frequency: {
                 baseUnit: 'Hz',
                 targetUnit: 'rpm',
@@ -310,6 +321,7 @@ describe('Unit Preferences', function () {
         const { categories } = await res.json()
         expect(categories.rotationalSpeed).to.deep.equal(categories.frequency)
         expect(categories.fluidPressure).to.deep.equal(categories.pressure)
+        expect(categories.salinity).to.deep.equal(categories.percentage)
       })
 
       it('shows them in the unit of the broader category', function () {

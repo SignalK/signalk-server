@@ -1,5 +1,6 @@
 {
   "m": "distance",
   "Pa": "pressure",
-  "Hz": "frequency"
+  "Hz": "frequency",
+  "ratio": "percentage"
 }

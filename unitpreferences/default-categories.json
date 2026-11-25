@@ -270,6 +270,10 @@
         "electrical.displays.*.*.brightness"
       ]
     },
+    "salinity": {
+      "siUnit": "ratio",
+      "paths": ["environment.water.salinity", "watermaker.*.salinity"]
+    },
     "charge": {
       "siUnit": "C",
       "paths": [
