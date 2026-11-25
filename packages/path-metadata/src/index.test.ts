@@ -86,6 +86,56 @@ describe('getMetadata', () => {
     })
   })
 
+  describe('watermaker entries', () => {
+    it('give the SI units of the values a watermaker reports', () => {
+      for (const [path, units] of [
+        ['watermaker.0.salinity', 'ratio'],
+        ['watermaker.0.productWaterTemperature', 'K'],
+        ['watermaker.0.preFilterPressure', 'Pa'],
+        ['watermaker.0.postFilterPressure', 'Pa'],
+        ['watermaker.0.feedPressure', 'Pa'],
+        ['watermaker.0.systemHighPressure', 'Pa'],
+        ['watermaker.0.productWaterFlow', 'm3/s'],
+        ['watermaker.0.brineWaterFlow', 'm3/s'],
+        ['watermaker.0.runTime', 's']
+      ] as const) {
+        expect(getMetadata(self(path))?.units, path).to.equal(units)
+      }
+    })
+
+    it('describe the switches and pumps, which have no unit', () => {
+      for (const name of [
+        'production',
+        'rinsing',
+        'flushMode',
+        'lowPressurePump',
+        'highPressurePump',
+        'emergencyStop'
+      ]) {
+        const meta = getMetadata(self(`watermaker.0.${name}`))
+        expect(meta?.description, name).to.be.a('string').and.not.empty
+        expect(meta?.units, name).to.equal(undefined)
+      }
+    })
+
+    it('list the operating states', () => {
+      expect(getMetadata(self('watermaker.0.state'))?.enum).to.deep.equal([
+        'Stopped',
+        'Starting',
+        'Running',
+        'Stopping',
+        'Flushing',
+        'Rinsing',
+        'Initiating',
+        'Manual'
+      ])
+    })
+
+    it('do not describe a value a watermaker does not report', () => {
+      expect(getMetadata(self('watermaker.0.madeUp'))).to.equal(undefined)
+    })
+  })
+
   describe('runtime-added plugin meta survives later lookups', () => {
     // Plugins publish their own metadata via `update.meta`. FullSignalK.addMeta
     // forwards that into metadataRegistry.addMetaData(context, path, value),
