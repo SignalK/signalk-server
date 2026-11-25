@@ -223,6 +223,7 @@ export interface Plugin {
 }
 
 export interface Webapp {
+  signalk?: { displayName?: string; [key: string]: unknown }
   name: string
   description?: string
   [key: string]: unknown
