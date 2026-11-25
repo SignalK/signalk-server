@@ -803,7 +803,9 @@ class Server {
         debug(`primary port:${primaryPort}`)
         server.listen(primaryPort, () => {
           console.log(
-            'signalk-server running at 0.0.0.0:' + primaryPort.toString() + '\n'
+            typeof primaryPort === 'number'
+              ? `signalk-server running at 0.0.0.0:${primaryPort}\n`
+              : `signalk-server running on systemd socket fd ${primaryPort.fd}\n`
           )
           app.started = true
           app.stalenessEnforcer?.start()
@@ -1116,7 +1118,7 @@ function createServer(app: any, cb: (err: any, server?: any) => void) {
 }
 
 function startRedirectToSsl(
-  port: number,
+  port: number | { fd: number },
   redirectPort: number,
   cb: (e: unknown, server: any, connections: ConnectionTracker) => void
 ) {
@@ -1128,7 +1130,11 @@ function startRedirectToSsl(
   const server = http.createServer(redirectApp)
   const connections = new ConnectionTracker(server)
   server.listen(port, () => {
-    console.log(`Redirect server running on port ${port.toString()}`)
+    console.log(
+      typeof port === 'number'
+        ? `Redirect server running on port ${port}`
+        : `Redirect server running on systemd socket fd ${port.fd}`
+    )
     cb(null, server, connections)
   })
 }
