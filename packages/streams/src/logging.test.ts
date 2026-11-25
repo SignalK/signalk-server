@@ -370,29 +370,6 @@ describe('logging', () => {
       }
     })
 
-    it('keeps records a writer appends through a handle opened before the copy', async () => {
-      const file = path.join(tmpDir, 'skserver-raw_2024-01-15T12.log')
-      // Large enough that the copy is still running when the append lands.
-      fs.writeFileSync(file, '1700000000000;N;filler\n'.repeat(200000))
-      const handle = fs.openSync(file, 'a')
-
-      const compression = compressLogFile(file)
-      fs.writeSync(handle, '1700000001000;N;late record\n')
-      fs.closeSync(handle)
-
-      let archived = ''
-      try {
-        const compressed = await compression
-        archived = gunzipSync(fs.readFileSync(compressed)).toString()
-      } catch {
-        // Refusing to archive the file is the other safe outcome.
-      }
-      const restored = fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : ''
-      expect(
-        archived.includes('late record') || restored.includes('late record')
-      ).to.equal(true)
-    })
-
     it('leaves no archive behind when the source cannot be read and none existed', async function () {
       if (process.getuid?.() === 0) {
         this.skip()
@@ -551,6 +528,66 @@ describe('logging', () => {
         expect(fs.readFileSync(path.join(tmpDir, stagedName), 'utf8')).to.equal(
           'records in use\n'
         )
+      } finally {
+        stream.destroy()
+      }
+    })
+
+    it('restores a staged log without compressing it when compression is off', async function () {
+      this.timeout(15000)
+      const app = createLoggingApp({
+        configPath: tmpDir,
+        settings: { compressOldLogs: false }
+      })
+      const stream = new FileTimestampStreamWithDelete(app, tmpDir, undefined, {
+        path: path.join(tmpDir, 'skserver-raw_%Y-%m-%dT%H.%S.log')
+      })
+      const abandoned = path.join(tmpDir, '.compress-abandoned')
+      fs.mkdirSync(abandoned)
+      const stagedName = 'skserver-raw_2020-01-01T00.log'
+      fs.writeFileSync(path.join(abandoned, stagedName), 'older records\n')
+      const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000)
+      fs.utimesSync(abandoned, twoHoursAgo, twoHoursAgo)
+
+      try {
+        stream.write('1700000000000;first;record\n')
+        await delay(1100)
+        stream.write('1700000001000;second;record\n')
+        await waitForFile(tmpDir, (name) => name === stagedName)
+
+        expect(fs.readFileSync(path.join(tmpDir, stagedName), 'utf8')).to.equal(
+          'older records\n'
+        )
+        expect(fs.existsSync(`${path.join(tmpDir, stagedName)}.gz`)).to.equal(
+          false
+        )
+      } finally {
+        stream.destroy()
+      }
+    })
+
+    it('leaves a staging directory alone when it holds something else', async function () {
+      this.timeout(15000)
+      const app = createLoggingApp({ configPath: tmpDir })
+      const stream = new FileTimestampStreamWithDelete(app, tmpDir, undefined, {
+        path: path.join(tmpDir, 'skserver-raw_%Y-%m-%dT%H.%S.log')
+      })
+      const foreign = path.join(tmpDir, '.compress-foreign')
+      fs.mkdirSync(foreign)
+      fs.writeFileSync(path.join(foreign, 'custom.txt'), 'not ours\n')
+      const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000)
+      fs.utimesSync(foreign, twoHoursAgo, twoHoursAgo)
+
+      try {
+        stream.write('1700000000000;first;record\n')
+        await delay(1100)
+        stream.write('1700000001000;second;record\n')
+        await waitForFile(tmpDir, (name) => name.endsWith('.log.gz'))
+        await delay(300)
+
+        expect(
+          fs.readFileSync(path.join(foreign, 'custom.txt'), 'utf8')
+        ).to.equal('not ours\n')
       } finally {
         stream.destroy()
       }

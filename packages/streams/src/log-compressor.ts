@@ -14,12 +14,7 @@
  * limitations under the License.
  */
 
-import {
-  constants as fsConstants,
-  createReadStream,
-  createWriteStream,
-  promises as fsp
-} from 'fs'
+import { constants as fsConstants, createReadStream, promises as fsp } from 'fs'
 import type { FileHandle } from 'fs/promises'
 import path from 'path'
 import { Transform } from 'stream'
@@ -78,13 +73,13 @@ export async function compressLogFile(filePath: string): Promise<string> {
   })
   let failure: unknown
   try {
+    // The handle owns the descriptor: the stream closes it when it finishes or
+    // is destroyed, and the handle records that, so nothing closes it twice.
     await pipeline(
       createReadStream(stagingPath),
       countBytes,
       createGzip(),
-      // autoClose: false, the handle below closes the descriptor. Letting the
-      // stream close it leaves the FileHandle to close it again at GC time.
-      createWriteStream(compressedPath, { fd: claim.fd, autoClose: false })
+      claim.createWriteStream()
     )
     const source = await fsp.stat(stagingPath)
     if (source.size !== sourceBytes) {
@@ -94,8 +89,6 @@ export async function compressLogFile(filePath: string): Promise<string> {
     }
   } catch (e) {
     failure = e
-  } finally {
-    await claim.close().catch(() => undefined)
   }
   if (failure !== undefined) {
     // The archive was created by this call, so removing the partial copy

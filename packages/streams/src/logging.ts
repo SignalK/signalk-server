@@ -194,10 +194,16 @@ export class FileTimestampStreamWithDelete extends FileTimestampStream {
       }
       const staged = names.filter((name) => name.endsWith('.log'))
       if (staged.length === 0) {
-        debug(`Deleting empty staging directory ${dir}`)
-        await fs.promises
-          .rm(dir, { recursive: true, force: true })
-          .catch((e: Error) => console.error(e))
+        if (names.length > 0) {
+          // Anything else in there was not put there by a run of ours, so it
+          // is left alone and reported instead of being swept away.
+          console.error(
+            `Keeping ${dir}: it holds ${names.join(', ')}, which is not a log file`
+          )
+          return
+        }
+        debug(`Removing empty staging directory ${dir}`)
+        await fs.promises.rmdir(dir).catch((e: Error) => console.error(e))
         return
       }
       for (const name of staged) {
@@ -232,7 +238,9 @@ export class FileTimestampStreamWithDelete extends FileTimestampStream {
         await fs.promises
           .unlink(stagedPath)
           .catch((e: Error) => console.error(e))
-        this.compressOldFile(logPath)
+        if (this.compressOldLogs) {
+          this.compressOldFile(logPath)
+        }
       }
       const remaining = await fs.promises.readdir(dir).catch(() => ['?'])
       if (remaining.length === 0) {
