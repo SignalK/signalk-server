@@ -323,6 +323,24 @@ describe('logging', () => {
       }
     })
 
+    it('never replaces a staging copy left behind by an interrupted run', async () => {
+      const file = path.join(tmpDir, 'skserver-raw_2024-01-15T12.log')
+      const leftoverDir = path.join(tmpDir, '.compress-abandoned')
+      fs.mkdirSync(leftoverDir)
+      const leftover = path.join(leftoverDir, 'skserver-raw_2024-01-15T12.log')
+      fs.writeFileSync(leftover, 'records from the interrupted run\n')
+      fs.writeFileSync(file, 'records from this run\n')
+
+      const compressed = await compressLogFile(file)
+
+      expect(fs.readFileSync(leftover, 'utf8')).to.equal(
+        'records from the interrupted run\n'
+      )
+      expect(gunzipSync(fs.readFileSync(compressed)).toString()).to.equal(
+        'records from this run\n'
+      )
+    })
+
     it('keeps the source when it grew after the copy read it', async () => {
       const file = path.join(tmpDir, 'skserver-raw_2024-01-15T12.log')
       const content = '1700000000000;N;$GPGLL,4916.45,N\n'
@@ -333,7 +351,7 @@ describe('logging', () => {
       const realStat = fs.promises.stat
       fs.promises.stat = ((p: fs.PathLike) =>
         realStat(p).then((stats) =>
-          String(p).endsWith('.compressing')
+          String(p).includes(`${path.sep}.compress-`)
             ? Object.assign(stats, { size: Number(stats.size) + 1 })
             : stats
         )) as typeof fs.promises.stat
@@ -466,6 +484,38 @@ describe('logging', () => {
           fs.readFileSync(path.join(tmpDir, compressed))
         ).toString()
         expect(content).to.equal('1700000000000;first;record\n')
+      } finally {
+        stream.destroy()
+      }
+    })
+
+    it('collects staging directories left behind by interrupted runs', async function () {
+      this.timeout(15000)
+      const app = createLoggingApp({ configPath: tmpDir })
+      const stream = new FileTimestampStreamWithDelete(app, tmpDir, undefined, {
+        path: path.join(tmpDir, 'skserver-raw_%Y-%m-%dT%H.%S.log')
+      })
+      const abandoned = path.join(tmpDir, '.compress-abandoned')
+      fs.mkdirSync(abandoned)
+      fs.writeFileSync(
+        path.join(abandoned, 'records.log'),
+        'kept for a while\n'
+      )
+      const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000)
+      fs.utimesSync(abandoned, twoHoursAgo, twoHoursAgo)
+      const running = path.join(tmpDir, '.compress-running')
+      fs.mkdirSync(running)
+
+      try {
+        stream.write('1700000000000;first;record\n')
+        await delay(1100)
+        stream.write('1700000001000;second;record\n')
+        await waitForFile(tmpDir, (name) => name.endsWith('.log.gz'))
+
+        expect(fs.existsSync(abandoned)).to.equal(false)
+        // A directory this recent may belong to a compression that is still
+        // running, so it stays.
+        expect(fs.existsSync(running)).to.equal(true)
       } finally {
         stream.destroy()
       }

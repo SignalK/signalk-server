@@ -20,7 +20,7 @@ import path from 'path'
 import fs from 'fs'
 import type { WriteStream } from 'fs'
 import { finished } from 'stream/promises'
-import { compressLogFile } from './log-compressor'
+import { compressLogFile, STAGING_DIR_PREFIX } from './log-compressor'
 import type { CreateDebug } from './types'
 
 export interface LoggingApp {
@@ -123,6 +123,7 @@ export class FileTimestampStreamWithDelete extends FileTimestampStream {
 
   private deleteOldFiles(): void {
     debug('Checking for old log files')
+    this.deleteStaleStagingDirs()
     listLogFiles(this.app, (err, files) => {
       if (err) {
         console.error(err)
@@ -145,6 +146,39 @@ export class FileTimestampStreamWithDelete extends FileTimestampStream {
             }
           })
         }
+      }
+    })
+  }
+
+  /**
+   * A compression run keeps its source in a directory of its own, so a run
+   * that is killed leaves the records behind there instead of losing them.
+   * Those leftovers are collected once they are old enough that no run can
+   * still be using them.
+   */
+  private deleteStaleStagingDirs(): void {
+    const cutoff = Date.now() - 60 * 60 * 1000
+    fs.readdir(this.fullLogDir, (err, names) => {
+      if (err) {
+        console.error(err)
+        return
+      }
+      for (const name of names) {
+        if (!name.startsWith(STAGING_DIR_PREFIX)) {
+          continue
+        }
+        const dir = path.join(this.fullLogDir, name)
+        fs.stat(dir, (statErr, stats) => {
+          if (statErr || !stats.isDirectory() || stats.mtimeMs > cutoff) {
+            return
+          }
+          debug(`Deleting stale staging directory ${dir}`)
+          fs.rm(dir, { recursive: true, force: true }, (rmErr) => {
+            if (rmErr) {
+              console.error(rmErr)
+            }
+          })
+        })
       }
     })
   }

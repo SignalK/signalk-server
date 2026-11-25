@@ -21,35 +21,52 @@ import {
   promises as fsp
 } from 'fs'
 import type { FileHandle } from 'fs/promises'
+import path from 'path'
 import { Transform } from 'stream'
 import { pipeline } from 'stream/promises'
 import { createGzip } from 'zlib'
 
 /**
+ * Prefix of the per-run directories that hold a source while it is compressed.
+ * A directory that survives a crash is cleaned up by the logger once it is old.
+ */
+export const STAGING_DIR_PREFIX = '.compress-'
+
+/**
  * Gzips `filePath` into `<filePath>.gz` and removes the original once the
  * compressed copy is complete. Resolves with the path of the compressed file.
  *
- * The source is renamed out of the way before it is read, so nothing can reach
- * it by name while the copy runs, and the number of bytes that went into the
- * archive is checked against the source size afterwards: a writer that opened
- * the file before the rename cannot have its records silently left out of the
- * archive. If anything goes wrong the source is put back without ever
- * overwriting a file that appeared in the meantime, and the archive is
- * dropped, so a failed compression never costs a record. An existing archive
- * is never overwritten either: an hourly name can come round again after a
- * clock correction, and that earlier archive is the only copy of its hour.
+ * The source is renamed out of the way before it is read, into a directory
+ * created for this run alone: nothing can reach it by name while the copy runs,
+ * and a staging copy left behind by an interrupted run is never replaced. The
+ * number of bytes that went into the archive is checked against the source size
+ * afterwards, so a writer that opened the file before the rename cannot have
+ * its records silently left out of the archive. If anything goes wrong the
+ * source is put back without ever overwriting a file that appeared in the
+ * meantime, and the archive is dropped, so a failed compression never costs a
+ * record. An existing archive is never overwritten either: an hourly name can
+ * come round again after a clock correction, and that earlier archive is the
+ * only copy of its hour.
  */
 export async function compressLogFile(filePath: string): Promise<string> {
   const compressedPath = `${filePath}.gz`
-  const stagingPath = `${filePath}.compressing`
-  await fsp.rename(filePath, stagingPath)
+  const stagingDir = await fsp.mkdtemp(
+    path.join(path.dirname(filePath), STAGING_DIR_PREFIX)
+  )
+  const stagingPath = path.join(stagingDir, path.basename(filePath))
+  try {
+    await fsp.rename(filePath, stagingPath)
+  } catch (e) {
+    await fsp.rmdir(stagingDir).catch(() => undefined)
+    throw e
+  }
   let claim: FileHandle
   try {
     // Claim the archive name exclusively before reading anything: if the open
     // fails, no byte has been read and the existing archive is untouched.
     claim = await fsp.open(compressedPath, 'wx')
   } catch (e) {
-    await restoreSource(stagingPath, filePath)
+    await restoreSource(stagingPath, filePath, stagingDir)
     throw e
   }
   let compressedBytes = 0
@@ -84,10 +101,11 @@ export async function compressLogFile(filePath: string): Promise<string> {
     // The archive was created by this call, so removing the partial copy
     // cannot touch an earlier one.
     await fsp.unlink(compressedPath).catch(() => undefined)
-    await restoreSource(stagingPath, filePath)
+    await restoreSource(stagingPath, filePath, stagingDir)
     throw failure
   }
   await fsp.unlink(stagingPath)
+  await fsp.rmdir(stagingDir).catch(() => undefined)
   return compressedPath
 }
 
@@ -99,7 +117,8 @@ export async function compressLogFile(filePath: string): Promise<string> {
  */
 async function restoreSource(
   stagingPath: string,
-  filePath: string
+  filePath: string,
+  stagingDir: string
 ): Promise<void> {
   try {
     try {
@@ -116,6 +135,7 @@ async function restoreSource(
       await fsp.copyFile(stagingPath, filePath, fsConstants.COPYFILE_EXCL)
     }
     await fsp.unlink(stagingPath).catch(() => undefined)
+    await fsp.rmdir(stagingDir).catch(() => undefined)
   } catch (e) {
     // The name is being written again; overwriting it would drop the new
     // records, so the staged copy stays where it is.
