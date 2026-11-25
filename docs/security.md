@@ -16,6 +16,8 @@ The available security options relate to:
 - **communications**: Network traffic is encrypted and the identity of the server verified to protect against eavesdropping.
 - **network services**: Control which of the server's services/interfaces are configured and active _(e.g. does it allow unsecured read/write over the network)_.
 
+A server without security gives everyone who can reach it full admin rights, including installing plugins, which run code on the server. Never make an unsecured server reachable from the internet. When it gets a request from an internet address, the server warns about it in its log and on the Dashboard. To reach the boat from ashore, use a VPN such as WireGuard or Tailscale rather than opening a port.
+
 ## Enabling Security
 
 When Signal K Server does not have security enabled, the `Login` option at the top right corner of the Admin UI will not be available.
