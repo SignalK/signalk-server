@@ -601,7 +601,7 @@ module.exports = (theApp: any) => {
   }
 
   function getSelfPath(aPath: string) {
-    return _.get(theApp.signalk.self, aPath)
+    return getPathValue(theApp.signalk.self, aPath)
   }
 
   function getPath(aPath: string) {
@@ -611,7 +611,7 @@ module.exports = (theApp: any) => {
         ...theApp.deltaCache.getSources()
       }
     } else {
-      return _.get(theApp.signalk.retrieve(), aPath)
+      return getPathValue(theApp.signalk.retrieve(), aPath)
     }
   }
 
@@ -1458,3 +1458,27 @@ const isEnabledByPackageEnableDefault = (
 ) =>
   _.isUndefined(options.enabled) &&
   (metadata as any)['signalk-plugin-enabled-by-default']
+
+const MAX_PLUGIN_PATHS = 1024
+const pluginPathParts = new Map<string, string[]>()
+
+function getPathValue(root: unknown, aPath: string): unknown {
+  // Preserve lodash's literal-key precedence and bracket notation for plugins.
+  if (aPath in Object(root) || aPath.includes('[') || aPath.includes(']')) {
+    return _.get(root, aPath)
+  }
+  let parts = pluginPathParts.get(aPath)
+  if (parts === undefined) {
+    parts = aPath.split('.')
+    if (pluginPathParts.size >= MAX_PLUGIN_PATHS) {
+      pluginPathParts.delete(pluginPathParts.keys().next().value!)
+    }
+    pluginPathParts.set(aPath, parts)
+  }
+  let node = root
+  for (const part of parts) {
+    if (node === null || node === undefined) return undefined
+    node = (node as Record<string, unknown>)[part]
+  }
+  return node
+}

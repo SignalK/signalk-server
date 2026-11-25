@@ -648,8 +648,14 @@ function checkPosition(
   origin: RelativePositionOrigin,
   normalizedDelta: WithContext
 ): boolean {
-  const vessel = get(app.signalk.root, normalizedDelta.context)
-  const position = get(vessel, 'navigation.position')
+  const dot = normalizedDelta.context.indexOf('.')
+  const vessel =
+    dot === -1 || normalizedDelta.context.indexOf('.', dot + 1) !== -1
+      ? get(app.signalk.root, normalizedDelta.context)
+      : app.signalk.root?.[normalizedDelta.context.slice(0, dot)]?.[
+          normalizedDelta.context.slice(dot + 1)
+        ]
+  const position = vessel?.navigation?.position
 
   return (
     position &&
