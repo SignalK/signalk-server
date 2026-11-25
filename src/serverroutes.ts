@@ -580,7 +580,7 @@ module.exports = function (
       delete result.noUsers
     }
     if (needsSetupCode(req)) {
-      result.setupCodeRequired = true
+      result.securitySetupCodeRequired = true
     }
 
     setNoCache(res)

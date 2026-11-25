@@ -86,18 +86,18 @@ describe('Setup code for the first admin account', function () {
   })
 
   it('asks only internet visitors for the setup code', async () => {
-    expect((await loginStatusFrom(LAN_ADDRESS)).setupCodeRequired).to.equal(
-      undefined
-    )
     expect(
-      (await loginStatusFrom(INTERNET_ADDRESS)).setupCodeRequired
+      (await loginStatusFrom(LAN_ADDRESS)).securitySetupCodeRequired
+    ).to.equal(undefined)
+    expect(
+      (await loginStatusFrom(INTERNET_ADDRESS)).securitySetupCodeRequired
     ).to.equal(true)
   })
 
   it('is not fooled by a local address added in front of the real one', async () => {
     expect(
       (await loginStatusFrom(`${LAN_ADDRESS}, ${INTERNET_ADDRESS}`))
-        .setupCodeRequired
+        .securitySetupCodeRequired
     ).to.equal(true)
   })
 
@@ -107,16 +107,16 @@ describe('Setup code for the first admin account', function () {
     'unknown'
   ]) {
     it(`asks for the setup code behind a proxy that forwards ${forwarded}`, async () => {
-      expect((await loginStatusFrom(forwarded)).setupCodeRequired).to.equal(
-        true
-      )
+      expect(
+        (await loginStatusFrom(forwarded)).securitySetupCodeRequired
+      ).to.equal(true)
       expect((await enableSecurityFrom(forwarded, {})).status).to.equal(403)
     })
   }
 
   it('does not ask a LAN visitor behind a proxy that adds the port', async () => {
     expect(
-      (await loginStatusFrom('192.168.1.20:54321')).setupCodeRequired
+      (await loginStatusFrom('192.168.1.20:54321')).securitySetupCodeRequired
     ).to.equal(undefined)
   })
 

@@ -77,7 +77,7 @@ export default function EnableSecurity() {
         username,
         password,
         allowReadonly,
-        loginStatus.setupCodeRequired ? setupCode : undefined
+        loginStatus.securitySetupCodeRequired ? setupCode : undefined
       )
       return { error }
     },
@@ -214,7 +214,7 @@ export default function EnableSecurity() {
                             onKeyUp={handleInputKeyUp}
                           />
                         </InputGroup>
-                        {loginStatus.setupCodeRequired && (
+                        {loginStatus.securitySetupCodeRequired && (
                           <>
                             <p className="text-muted mb-2">
                               You are connecting from outside the local network.
