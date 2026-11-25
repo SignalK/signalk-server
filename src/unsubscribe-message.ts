@@ -18,7 +18,6 @@ export function isUnsubscribeById(
 ): msg is { unsubscribe: { subscriptionId: string }[] } {
   return (
     Array.isArray(msg.unsubscribe) &&
-    msg.unsubscribe.length > 0 &&
     msg.unsubscribe.every((row) => typeof row?.subscriptionId === 'string')
   )
 }
