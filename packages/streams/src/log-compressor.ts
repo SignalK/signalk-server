@@ -14,8 +14,14 @@
  * limitations under the License.
  */
 
-import { createReadStream, createWriteStream, promises as fsp } from 'fs'
+import {
+  constants as fsConstants,
+  createReadStream,
+  createWriteStream,
+  promises as fsp
+} from 'fs'
 import type { FileHandle } from 'fs/promises'
+import { Transform } from 'stream'
 import { pipeline } from 'stream/promises'
 import { createGzip } from 'zlib'
 
@@ -23,13 +29,15 @@ import { createGzip } from 'zlib'
  * Gzips `filePath` into `<filePath>.gz` and removes the original once the
  * compressed copy is complete. Resolves with the path of the compressed file.
  *
- * The source is renamed out of the way before it is read, so nothing can open
- * it and append while the copy runs, and no byte written to the original name
- * can be lost between the last read and the removal. If anything goes wrong
- * the source is put back and the archive is dropped, so a failed compression
- * never costs a record. An existing archive is never overwritten: an hourly
- * name can come round again after a clock correction, and that earlier archive
- * is the only copy of its hour.
+ * The source is renamed out of the way before it is read, so nothing can reach
+ * it by name while the copy runs, and the number of bytes that went into the
+ * archive is checked against the source size afterwards: a writer that opened
+ * the file before the rename cannot have its records silently left out of the
+ * archive. If anything goes wrong the source is put back without ever
+ * overwriting a file that appeared in the meantime, and the archive is
+ * dropped, so a failed compression never costs a record. An existing archive
+ * is never overwritten either: an hourly name can come round again after a
+ * clock correction, and that earlier archive is the only copy of its hour.
  */
 export async function compressLogFile(filePath: string): Promise<string> {
   const compressedPath = `${filePath}.gz`
@@ -44,46 +52,77 @@ export async function compressLogFile(filePath: string): Promise<string> {
     await restoreSource(stagingPath, filePath)
     throw e
   }
+  let compressedBytes = 0
+  const countBytes = new Transform({
+    transform(chunk: Buffer, _encoding, callback) {
+      compressedBytes += chunk.length
+      callback(null, chunk)
+    }
+  })
+  let failure: unknown
   try {
     await pipeline(
       createReadStream(stagingPath),
+      countBytes,
       createGzip(),
       // autoClose: false, the handle below closes the descriptor. Letting the
       // stream close it leaves the FileHandle to close it again at GC time.
       createWriteStream(compressedPath, { fd: claim.fd, autoClose: false })
     )
+    const source = await fsp.stat(stagingPath)
+    if (source.size !== compressedBytes) {
+      failure = new Error(
+        `${stagingPath} grew while it was being compressed, keeping the source`
+      )
+    }
   } catch (e) {
+    failure = e
+  } finally {
+    await claim.close().catch(() => undefined)
+  }
+  if (failure !== undefined) {
     // The archive was created by this call, so removing the partial copy
     // cannot touch an earlier one.
     await fsp.unlink(compressedPath).catch(() => undefined)
     await restoreSource(stagingPath, filePath)
-    throw e
-  } finally {
-    await claim.close().catch(() => undefined)
+    throw failure
   }
   await fsp.unlink(stagingPath)
   return compressedPath
 }
 
+/**
+ * Puts the staged source back under its own name, or leaves it staged if a
+ * file has appeared there in the meantime. The placement is a single
+ * non-overwriting operation, so a file created between a check and a rename
+ * cannot be clobbered.
+ */
 async function restoreSource(
   stagingPath: string,
   filePath: string
 ): Promise<void> {
-  const inUseAgain = await fsp.access(filePath).then(
-    () => true,
-    () => false
-  )
-  if (inUseAgain) {
-    // The name is being written again; overwriting it with the staged copy
-    // would drop the new records, so the staged file stays where it is.
-    console.error(`Kept ${stagingPath}: ${filePath} is in use again`)
-    return
-  }
-  await fsp
-    .rename(stagingPath, filePath)
-    .catch((e: Error) =>
-      console.error(`Could not restore ${filePath}: ${e.message}`)
+  try {
+    try {
+      // Fails with EEXIST rather than replacing an existing file.
+      await fsp.link(stagingPath, filePath)
+    } catch (e) {
+      const code = (e as NodeJS.ErrnoException).code
+      if (code === 'EEXIST') {
+        throw e
+      }
+      // Filesystems without hard links (exFAT user data partitions, some
+      // network shares): exclusive copy has the same non-overwriting
+      // guarantee.
+      await fsp.copyFile(stagingPath, filePath, fsConstants.COPYFILE_EXCL)
+    }
+    await fsp.unlink(stagingPath).catch(() => undefined)
+  } catch (e) {
+    // The name is being written again; overwriting it would drop the new
+    // records, so the staged copy stays where it is.
+    console.error(
+      `Kept ${stagingPath}: ${filePath} is in use again (${(e as Error).message})`
     )
+  }
 }
 
 if (require.main === module) {

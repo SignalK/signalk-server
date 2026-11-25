@@ -323,6 +323,58 @@ describe('logging', () => {
       }
     })
 
+    it('keeps the source when it grew after the copy read it', async () => {
+      const file = path.join(tmpDir, 'skserver-raw_2024-01-15T12.log')
+      const content = '1700000000000;N;$GPGLL,4916.45,N\n'
+      fs.writeFileSync(file, content)
+
+      // A larger source size after the copy stands in for records that landed
+      // after the read reached the end of the file.
+      const realStat = fs.promises.stat
+      fs.promises.stat = ((p: fs.PathLike) =>
+        realStat(p).then((stats) =>
+          String(p).endsWith('.compressing')
+            ? Object.assign(stats, { size: Number(stats.size) + 1 })
+            : stats
+        )) as typeof fs.promises.stat
+      try {
+        let error: Error | undefined
+        try {
+          await compressLogFile(file)
+        } catch (e) {
+          error = e as Error
+        }
+        expect(error?.message).to.match(/grew while it was being compressed/)
+        expect(fs.readFileSync(file, 'utf8')).to.equal(content)
+        expect(fs.existsSync(`${file}.gz`)).to.equal(false)
+      } finally {
+        fs.promises.stat = realStat
+      }
+    })
+
+    it('keeps records a writer appends through a handle opened before the copy', async () => {
+      const file = path.join(tmpDir, 'skserver-raw_2024-01-15T12.log')
+      // Large enough that the copy is still running when the append lands.
+      fs.writeFileSync(file, '1700000000000;N;filler\n'.repeat(200000))
+      const handle = fs.openSync(file, 'a')
+
+      const compression = compressLogFile(file)
+      fs.writeSync(handle, '1700000001000;N;late record\n')
+      fs.closeSync(handle)
+
+      let archived = ''
+      try {
+        const compressed = await compression
+        archived = gunzipSync(fs.readFileSync(compressed)).toString()
+      } catch {
+        // Refusing to archive the file is the other safe outcome.
+      }
+      const restored = fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : ''
+      expect(
+        archived.includes('late record') || restored.includes('late record')
+      ).to.equal(true)
+    })
+
     it('leaves no archive behind when the source cannot be read and none existed', async function () {
       if (process.getuid?.() === 0) {
         this.skip()
