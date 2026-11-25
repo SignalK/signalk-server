@@ -298,6 +298,34 @@ describe('logging', () => {
       expect(fs.readdirSync(tmpDir)).to.have.length(0)
     })
 
+    it('keeps the original when records arrive while the copy runs', async () => {
+      const file = path.join(tmpDir, 'skserver-raw_2024-01-15T12.log')
+      const content = '1700000000000;N;$GPGLL,4916.45,N\n'
+      fs.writeFileSync(file, content)
+
+      // Reporting a smaller size on the first stat stands in for records that
+      // reached the file after the copy had read it to the end.
+      const realStat = fs.promises.stat
+      let calls = 0
+      fs.promises.stat = ((p: fs.PathLike) =>
+        realStat(p).then((stats) =>
+          calls++ === 0 ? { size: stats.size - 1 } : stats
+        )) as typeof fs.promises.stat
+      try {
+        let error: Error | undefined
+        try {
+          await compressLogFile(file)
+        } catch (e) {
+          error = e as Error
+        }
+        expect(error?.message).to.match(/changed while it was being compressed/)
+        expect(fs.readFileSync(file, 'utf8')).to.equal(content)
+        expect(fs.existsSync(`${file}.gz`)).to.equal(false)
+      } finally {
+        fs.promises.stat = realStat
+      }
+    })
+
     it('lists compressed log files alongside uncompressed ones', (done) => {
       fs.writeFileSync(path.join(tmpDir, 'skserver-raw_2024-01-15T12.log'), '')
       fs.writeFileSync(
@@ -320,18 +348,29 @@ describe('logging', () => {
         path: path.join(tmpDir, 'skserver-raw_%Y-%m-%dT%H.%S.log')
       })
 
-      stream.write('1700000000000;first;record\n')
-      await delay(1100)
-      stream.write('1700000001000;second;record\n')
+      try {
+        stream.write('1700000000000;first;record\n')
+        await delay(1100)
+        stream.write('1700000001000;second;record\n')
 
-      const compressed = await waitForFile(tmpDir, (name) =>
-        name.endsWith('.log.gz')
-      )
-      const content = gunzipSync(
-        fs.readFileSync(path.join(tmpDir, compressed))
-      ).toString()
-      expect(content).to.equal('1700000000000;first;record\n')
-      stream.destroy()
+        // The pipeline is done when the archive exists and its source is
+        // gone; gunzipping an archive that is still being written fails.
+        await waitForFile(
+          tmpDir,
+          (name) =>
+            name.endsWith('.log.gz') &&
+            !fs.existsSync(path.join(tmpDir, name.replace(/\.gz$/, '')))
+        )
+        const compressed = fs
+          .readdirSync(tmpDir)
+          .find((name) => name.endsWith('.log.gz'))!
+        const content = gunzipSync(
+          fs.readFileSync(path.join(tmpDir, compressed))
+        ).toString()
+        expect(content).to.equal('1700000000000;first;record\n')
+      } finally {
+        stream.destroy()
+      }
     })
 
     it('leaves rotated files uncompressed when compression is disabled', async function () {
@@ -344,15 +383,20 @@ describe('logging', () => {
         path: path.join(tmpDir, 'skserver-raw_%Y-%m-%dT%H.%S.log')
       })
 
-      stream.write('1700000000000;first;record\n')
-      await delay(1100)
-      stream.write('1700000001000;second;record\n')
-      await delay(500)
+      try {
+        stream.write('1700000000000;first;record\n')
+        await delay(1100)
+        stream.write('1700000001000;second;record\n')
+        await delay(500)
 
-      const files = fs.readdirSync(tmpDir)
-      expect(files.filter((name) => name.endsWith('.log.gz'))).to.have.length(0)
-      expect(files.filter((name) => name.endsWith('.log'))).to.have.length(2)
-      stream.destroy()
+        const files = fs.readdirSync(tmpDir)
+        expect(files.filter((name) => name.endsWith('.log.gz'))).to.have.length(
+          0
+        )
+        expect(files.filter((name) => name.endsWith('.log'))).to.have.length(2)
+      } finally {
+        stream.destroy()
+      }
     })
   })
 })

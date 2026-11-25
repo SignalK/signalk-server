@@ -21,12 +21,13 @@ import { createGzip } from 'zlib'
 /**
  * Gzips `filePath` into `<filePath>.gz` and removes the original once the
  * compressed copy is complete. A partially written archive is removed on
- * failure, so the original is only dropped when a full copy exists.
- *
- * Resolves with the path of the compressed file.
+ * failure, and the original is only dropped when the archive holds every byte
+ * the source had when the copy started. Resolves with the path of the
+ * compressed file.
  */
 export async function compressLogFile(filePath: string): Promise<string> {
   const compressedPath = `${filePath}.gz`
+  const before = await fsp.stat(filePath)
   try {
     await pipeline(
       createReadStream(filePath),
@@ -36,6 +37,15 @@ export async function compressLogFile(filePath: string): Promise<string> {
   } catch (e) {
     await fsp.unlink(compressedPath).catch(() => undefined)
     throw e
+  }
+  const after = await fsp.stat(filePath).catch(() => undefined)
+  if (!after || after.size !== before.size) {
+    // Records reached the file after the copy read it to the end, so the
+    // archive is incomplete: keep the original and drop the archive.
+    await fsp.unlink(compressedPath).catch(() => undefined)
+    throw new Error(
+      `${filePath} changed while it was being compressed, keeping the original`
+    )
   }
   await fsp.unlink(filePath)
   return compressedPath

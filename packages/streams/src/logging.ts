@@ -48,6 +48,7 @@ export class FileTimestampStreamWithDelete extends FileTimestampStream {
   private readonly fullLogDir: string
   private readonly compressOldLogs: boolean
   private readonly queuedForCompression = new Set<string>()
+  private notifiedRotationOf: string | undefined
 
   constructor(
     app: LoggingApp,
@@ -66,9 +67,16 @@ export class FileTimestampStreamWithDelete extends FileTimestampStream {
   newFilename(): string {
     const nextFilename = super.newFilename()
     const rotatedFilename = this.currentFilename
-    if (rotatedFilename !== undefined && rotatedFilename !== nextFilename) {
-      // this.stream is still the stream of rotatedFilename: the base class
-      // ends it right after this method returns.
+    if (
+      rotatedFilename !== undefined &&
+      rotatedFilename !== nextFilename &&
+      rotatedFilename !== this.notifiedRotationOf
+    ) {
+      // The base class polls newFilename() every second, so only the first
+      // call after the filename changes belongs to this rotation. this.stream
+      // is still the stream of rotatedFilename: the base class ends it right
+      // after this method returns.
+      this.notifiedRotationOf = rotatedFilename
       this.onRotate(rotatedFilename, this.stream)
     }
     return nextFilename
@@ -92,10 +100,16 @@ export class FileTimestampStreamWithDelete extends FileTimestampStream {
     const worker = path.join(__dirname, 'log-compressor.js')
     if (fs.existsSync(worker)) {
       try {
-        spawn(process.execPath, [worker, filename], {
+        const child = spawn(process.execPath, [worker, filename], {
           detached: true,
           stdio: 'ignore'
-        }).unref()
+        })
+        // Without a listener an emitted 'error' would become an uncaught
+        // exception and take the server down.
+        child.on('error', (e: Error) => {
+          debug(`Log compressor failed to start: ${e.message}`)
+        })
+        child.unref()
         return
       } catch (e) {
         debug(`Failed to spawn the log compressor: ${(e as Error).message}`)

@@ -889,6 +889,7 @@ module.exports = function (
         isUndefined(app.config.settings.keepMostRecentLogsOnly) ||
         app.config.settings.keepMostRecentLogsOnly,
       logCountToKeep: app.config.settings.logCountToKeep || 24,
+      compressOldLogs: app.config.settings.compressOldLogs !== false,
       runFromSystemd: process.env.RUN_FROM_SYSTEMD === 'true',
       courseApi: {
         apiOnly: app.config.settings.courseApi?.apiOnly || false
@@ -1230,6 +1231,10 @@ module.exports = function (
 
     if (!isUndefined(settings.logCountToKeep)) {
       updatedSettings.logCountToKeep = Number(settings.logCountToKeep)
+    }
+
+    if (!isUndefined(settings.compressOldLogs)) {
+      updatedSettings.compressOldLogs = Boolean(settings.compressOldLogs)
     }
 
     if (settings.staleness !== undefined) {
