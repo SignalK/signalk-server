@@ -135,6 +135,7 @@ const {
   reloadCustomDefinitions,
   reloadCustomCategories,
   invalidatePresetCache,
+  readPresetFromDisk,
   getDefaultCategory,
   getBaseUnitToCategories,
   getCategoryForBaseUnit,
@@ -340,26 +341,8 @@ module.exports = function (app) {
         return
       }
 
-      // Check custom presets in config dir first
-      const customPath = path.join(
-        configUnitprefsDir,
-        'presets/custom',
-        `${presetName}.json`
-      )
-      if (fs.existsSync(customPath)) {
-        const preset = JSON.parse(fs.readFileSync(customPath, 'utf-8'))
-        res.json(preset)
-        return
-      }
-
-      // Fall back to built-in in package dir
-      const builtInPath = path.join(
-        PACKAGE_UNITPREFS_DIR,
-        'presets',
-        `${presetName}.json`
-      )
-      if (fs.existsSync(builtInPath)) {
-        const preset = JSON.parse(fs.readFileSync(builtInPath, 'utf-8'))
+      const preset = readPresetFromDisk(presetName)
+      if (preset) {
         res.json(preset)
         return
       }

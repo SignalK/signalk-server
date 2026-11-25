@@ -1,3 +1,5 @@
 {
-  "m": "distance"
+  "m": "distance",
+  "Pa": "pressure",
+  "Hz": "frequency"
 }

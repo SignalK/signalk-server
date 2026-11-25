@@ -10,6 +10,7 @@ export {
   getCustomCategories,
   getActivePreset,
   getActivePresetForUser,
+  readPresetFromDisk,
   getDefaultCategory,
   getConfigUnitprefsDir,
   setApplicationDataPath,
@@ -20,6 +21,7 @@ export {
   DEFAULT_PRESET
 } from './loader'
 export {
+  narrowToListedCategory,
   resolveDisplayUnits,
   resolvePathDisplayUnits,
   stripResolvedDisplayUnits,

@@ -35,6 +35,7 @@ let applicationDataPath: string = ''
 let configUnitprefsDir: string = ''
 
 let defaultPrimaryCategories: PrimaryCategoryMap = {}
+let broaderCategories = new Set<string>()
 
 function validateUsername(username: string): void {
   if (!VALID_USERNAME.test(username) || username === '.' || username === '..') {
@@ -116,6 +117,7 @@ export function loadAll(): void {
       'utf-8'
     )
   )
+  broaderCategories = new Set(Object.values(categories.parentCategories ?? {}))
 
   // Load standard definitions (read-only, from package)
   standardDefinitions = JSON.parse(
@@ -228,7 +230,7 @@ function loadActivePreset(): void {
       `${presetName}.json`
     )
     if (fs.existsSync(customPresetPath)) {
-      activePreset = JSON.parse(fs.readFileSync(customPresetPath, 'utf-8'))
+      activePreset = readPreset(customPresetPath)
       return
     }
   }
@@ -240,17 +242,35 @@ function loadActivePreset(): void {
     `${presetName}.json`
   )
   if (fs.existsSync(builtInPath)) {
-    activePreset = JSON.parse(fs.readFileSync(builtInPath, 'utf-8'))
+    activePreset = readPreset(builtInPath)
     return
   }
 
   // Default to nautical-metric
-  activePreset = JSON.parse(
-    fs.readFileSync(
-      path.join(PACKAGE_UNITPREFS_DIR, `presets/${DEFAULT_PRESET}.json`),
-      'utf-8'
-    )
+  activePreset = readPreset(
+    path.join(PACKAGE_UNITPREFS_DIR, `presets/${DEFAULT_PRESET}.json`)
   )
+}
+
+/**
+ * Read a preset, giving it the settings of a broader category for each
+ * narrower one it has none for, so that a preset that does not tell them
+ * apart shows both in one unit.
+ */
+function readPreset(presetPath: string): Preset {
+  const preset: Preset = JSON.parse(fs.readFileSync(presetPath, 'utf-8'))
+  const presetCategories = preset.categories
+  if (!presetCategories) {
+    return preset
+  }
+  for (const [category, parent] of Object.entries(
+    categories.parentCategories ?? {}
+  )) {
+    if (!presetCategories[category] && presetCategories[parent]) {
+      presetCategories[category] = presetCategories[parent]
+    }
+  }
+  return preset
 }
 
 // The returned object is shared and must be treated as read-only by callers.
@@ -353,11 +373,11 @@ export function getMergedDefinitions(): UnitDefinitions {
   return mergedDefinitionsCache
 }
 
-export function getDefaultCategory(
-  signalkPath: string,
-  pathSiUnit?: string,
-  username?: string
-): string | null {
+/**
+ * The category default-categories.json lists the path under, by its name or
+ * a wildcard pattern.
+ */
+export function getListedCategory(signalkPath: string): string | null {
   if (defaultCategories[signalkPath]) {
     return defaultCategories[signalkPath]
   }
@@ -366,6 +386,37 @@ export function getDefaultCategory(
     if (regex.test(signalkPath)) {
       return category
     }
+  }
+
+  return null
+}
+
+/**
+ * Whether a narrower category is a kind of this one.
+ */
+export function hasNarrowerCategory(category: string): boolean {
+  return broaderCategories.has(category)
+}
+
+/**
+ * The broader category a category is a kind of, such as `pressure` for
+ * `fluidPressure`.
+ */
+export function getParentCategory(category: string): string | undefined {
+  const parents = categories.parentCategories
+  return parents && Object.hasOwn(parents, category)
+    ? parents[category]
+    : undefined
+}
+
+export function getDefaultCategory(
+  signalkPath: string,
+  pathSiUnit?: string,
+  username?: string
+): string | null {
+  const listed = getListedCategory(signalkPath)
+  if (listed) {
+    return listed
   }
 
   if (pathSiUnit) {
@@ -480,7 +531,7 @@ function loadPresetByName(presetName: string): Preset | null {
   return preset
 }
 
-function readPresetFromDisk(presetName: string): Preset | null {
+export function readPresetFromDisk(presetName: string): Preset | null {
   // Check custom presets in config dir first
   if (configUnitprefsDir) {
     const customPresetPath = path.join(
@@ -489,7 +540,7 @@ function readPresetFromDisk(presetName: string): Preset | null {
       `${presetName}.json`
     )
     if (fs.existsSync(customPresetPath)) {
-      return JSON.parse(fs.readFileSync(customPresetPath, 'utf-8'))
+      return readPreset(customPresetPath)
     }
   }
 
@@ -500,7 +551,7 @@ function readPresetFromDisk(presetName: string): Preset | null {
     `${presetName}.json`
   )
   if (fs.existsSync(builtInPath)) {
-    return JSON.parse(fs.readFileSync(builtInPath, 'utf-8'))
+    return readPreset(builtInPath)
   }
 
   return null

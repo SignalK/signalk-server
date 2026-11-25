@@ -3,6 +3,7 @@
     "speed": "m/s",
     "temperature": "K",
     "pressure": "Pa",
+    "fluidPressure": "Pa",
     "distance": "m",
     "depth": "m",
     "angle": "rad",
@@ -14,6 +15,7 @@
     "power": "W",
     "percentage": "ratio",
     "frequency": "Hz",
+    "rotationalSpeed": "Hz",
     "time": "s",
     "charge": "C",
     "volumeRate": "m3/s",
@@ -31,6 +33,7 @@
     "speed",
     "temperature",
     "pressure",
+    "fluidPressure",
     "distance",
     "depth",
     "angle",
@@ -42,6 +45,7 @@
     "power",
     "percentage",
     "frequency",
+    "rotationalSpeed",
     "time",
     "charge",
     "volumeRate",
@@ -54,5 +58,9 @@
     "unitless",
     "boolean",
     "dataSize"
-  ]
+  ],
+  "parentCategories": {
+    "fluidPressure": "pressure",
+    "rotationalSpeed": "frequency"
+  }
 }

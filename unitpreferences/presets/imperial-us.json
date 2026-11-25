@@ -21,8 +21,13 @@
     },
     "pressure": {
       "baseUnit": "Pa",
+      "targetUnit": "inHg",
+      "displayFormat": "0.00"
+    },
+    "fluidPressure": {
+      "baseUnit": "Pa",
       "targetUnit": "psi",
-      "displayFormat": "0.0"
+      "displayFormat": "0"
     },
     "depth": {
       "baseUnit": "m",
@@ -71,8 +76,13 @@
     },
     "frequency": {
       "baseUnit": "Hz",
-      "targetUnit": "rpm",
+      "targetUnit": "Hz",
       "displayFormat": "0.0"
+    },
+    "rotationalSpeed": {
+      "baseUnit": "Hz",
+      "targetUnit": "rpm",
+      "displayFormat": "0"
     },
     "time": {
       "baseUnit": "s",

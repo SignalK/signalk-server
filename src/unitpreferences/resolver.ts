@@ -3,7 +3,10 @@ import {
   getMergedDefinitions,
   getActivePreset,
   getActivePresetForUser,
-  getDefaultCategory
+  getDefaultCategory,
+  getListedCategory,
+  getParentCategory,
+  hasNarrowerCategory
 } from './loader'
 import {
   EnhancedDisplayUnits,
@@ -11,6 +14,29 @@ import {
   DisplayUnitsOverride,
   PathUnitsMetadata
 } from './types'
+
+/**
+ * Display units naming a broader category than the one the path is listed
+ * under, such as an engine's revolutions as a frequency, in the listed
+ * category: both name the same kind of quantity, the listed one more closely.
+ * A target unit or format given with them still applies.
+ *
+ * @param signalkPath - Path relative to its context
+ * @param displayUnits - The path's display units
+ * @returns The display units in the listed category
+ */
+export function narrowToListedCategory(
+  signalkPath: string,
+  displayUnits: DisplayUnitsMetadata
+): DisplayUnitsMetadata {
+  if (!hasNarrowerCategory(displayUnits.category)) {
+    return displayUnits
+  }
+  const listed = getListedCategory(signalkPath)
+  return listed && getParentCategory(listed) === displayUnits.category
+    ? { ...displayUnits, category: listed }
+    : displayUnits
+}
 
 /**
  * The path-specific unit override, as opposed to what the preset supplied.
@@ -210,7 +236,9 @@ export function resolvePathDisplayUnits(
   includeOverride = false
 ): EnhancedDisplayUnits | null {
   let storedDisplayUnits = metadata.displayUnits
-  if (!storedDisplayUnits?.category && signalkPath) {
+  if (storedDisplayUnits?.category && signalkPath) {
+    storedDisplayUnits = narrowToListedCategory(signalkPath, storedDisplayUnits)
+  } else if (signalkPath) {
     const defaultCategory = getDefaultCategory(
       signalkPath,
       metadata.units,

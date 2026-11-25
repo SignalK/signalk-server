@@ -15,6 +15,11 @@ export interface CategoryMap {
     [categoryName: string]: string // category → SI unit (e.g., "speed" → "m/s")
   }
   coreCategories: string[]
+  // narrower category → the broader one it is a kind of, with the same SI
+  // unit (e.g., "fluidPressure" → "pressure")
+  parentCategories?: {
+    [categoryName: string]: string
+  }
 }
 
 // Conversion formula

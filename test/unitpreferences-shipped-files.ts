@@ -77,6 +77,45 @@ describe('Shipped unit preference files', function () {
     }
   })
 
+  describe('categories.json', function () {
+    const { categoryToBaseUnit, parentCategories = {} } = readShipped(
+      'categories.json'
+    ) as {
+      categoryToBaseUnit: Record<string, string>
+      parentCategories?: Record<string, string>
+    }
+
+    it('makes each narrower category a kind of one with its base unit', function () {
+      const mismatched = Object.entries(parentCategories).flatMap(
+        ([category, parent]) =>
+          categoryToBaseUnit[category] !== undefined &&
+          categoryToBaseUnit[category] === categoryToBaseUnit[parent]
+            ? []
+            : [
+                `${category} (${categoryToBaseUnit[category]}): ${parent} (${categoryToBaseUnit[parent]})`
+              ]
+      )
+      expect(mismatched).to.deep.equal([])
+    })
+
+    it('names the primary category of each base unit categories share', function () {
+      const primaries = readShipped('primary-categories.json') as Record<
+        string,
+        string
+      >
+      const byUnit = new Map<string, string[]>()
+      for (const [category, unit] of Object.entries(categoryToBaseUnit)) {
+        byUnit.set(unit, [...(byUnit.get(unit) ?? []), category])
+      }
+      const unresolved = [...byUnit].flatMap(([unit, shared]) =>
+        shared.length < 2 || shared.includes(primaries[unit])
+          ? []
+          : [`${unit}: ${shared.join(', ')}`]
+      )
+      expect(unresolved).to.deep.equal([])
+    })
+  })
+
   describe('default-categories.json', function () {
     const { categories } = readShipped(
       'default-categories.json'
@@ -114,6 +153,22 @@ describe('Shipped unit preference files', function () {
           : [`${p}: ${category} (${siUnit}), specified in ${units}`]
       })
       expect(misfiled).to.deep.equal([])
+    })
+
+    it('has a unit for each category in every built-in preset', function () {
+      const presetsDir = path.join(UNITPREFS_DIR, 'presets')
+      const missing = fs
+        .readdirSync(presetsDir)
+        .filter((file) => file.endsWith('.json'))
+        .flatMap((file) => {
+          const preset = readShipped(path.join('presets', file)) as {
+            categories: Record<string, unknown>
+          }
+          return Object.keys(categories)
+            .filter((category) => !(category in preset.categories))
+            .map((category) => `${file}: ${category}`)
+        })
+      expect(missing).to.deep.equal([])
     })
 
     it('lists each path once', function () {

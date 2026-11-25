@@ -45,7 +45,7 @@ Advanced users can upload **Custom Presets** to define specific combinations of 
 
 In addition to category-wide settings (e.g., "All speeds in Knots"), you can override units for specific data paths. For example, you might want _Boat Speed_ in Knots but _Wind Speed_ in Meters/Second.
 
-An override is specific to a single path and is set under **Data → Metadata**. The override can specify either just the category for the path or directly the target unit. An override that names no target unit of its own follows the active preset's target unit choice for its category. An override that specifies the target unit takes precedence over the preset's setting for the category.
+An override is specific to a single path and is set under **Data → Metadata**. The override can specify either just the category for the path or directly the target unit. An override that names no target unit of its own follows the active preset's target unit choice for its category. An override that specifies the target unit takes precedence over the preset's setting for the category. For a path listed under a narrower category (see [Unit Categories](#unit-categories)), an override that names the broader category keeps the narrower one.
 
 ---
 
@@ -71,7 +71,8 @@ The following categories are available by default:
 - **depth**: Vertical distances/depths (Base: m). Examples: `environment.depth.belowTransducer`, `environment.depth.belowKeel`.
 - **length**: Dimensions of the vessel or objects (Base: m). Examples: `design.length.overall`, `design.airHeight`.
 - **temperature**: Temperature readings (Base: K). Examples: `environment.outside.temperature`, `propulsion.*.temperature`.
-- **pressure**: Pressure readings (Base: Pa). Examples: `environment.outside.pressure`, `propulsion.*.oilPressure`.
+- **pressure**: Atmospheric pressure (Base: Pa). Examples: `environment.outside.pressure`.
+- **fluidPressure**: Pressure in engines, tanks and watermakers (Base: Pa). Examples: `propulsion.*.oilPressure`, `propulsion.*.boostPressure`.
 - **angle**: Angles (Base: rad). Examples: `environment.wind.angleApparent`, `navigation.headingMagnetic`.
 - **angularVelocity**: Rate of turn (Base: rad/s). Examples: `navigation.rateOfTurn`.
 - **volume**: Liquid volumes (Base: m³). Examples: `tanks.*.currentLevel`.
@@ -83,11 +84,14 @@ The following categories are available by default:
   - **charge** (Base: C). Examples: `electrical.batteries.*.capacity.stateOfCharge`.
   - **power** (Base: W).
   - **energy** (Base: J).
-- **frequency**: (Base: Hz). Examples: `propulsion.*.revolutions`.
+- **frequency**: (Base: Hz). Examples: `electrical.inverters.*.ac.frequency`.
+- **rotationalSpeed**: Engine and alternator speed (Base: Hz). Examples: `propulsion.*.revolutions`.
 - **time**: Durations (Base: s).
 - **percentage**: Ratios and levels (Base: ratio 0-1). Examples: `tanks.*.currentLevel`, `electrical.batteries.*.capacity.stateOfCharge`.
 
 Additional categories include `dateTime`, `epoch` for time representations, and `unitless`/`boolean` for data that doesn't require conversion.
+
+`fluidPressure` is a kind of `pressure`, and `rotationalSpeed` a kind of `frequency`. A preset without an entry for the narrower category uses the one for the broader category. A path listed under the narrower category stays in it when its metadata names the broader one; to show it in another unit, give it a target unit.
 
 ## For Client Application Developers
 
