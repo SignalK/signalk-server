@@ -69,10 +69,10 @@ export async function compressLogFile(filePath: string): Promise<string> {
     await restoreSource(stagingPath, filePath, stagingDir)
     throw e
   }
-  let compressedBytes = 0
+  let sourceBytes = 0
   const countBytes = new Transform({
     transform(chunk: Buffer, _encoding, callback) {
-      compressedBytes += chunk.length
+      sourceBytes += chunk.length
       callback(null, chunk)
     }
   })
@@ -87,7 +87,7 @@ export async function compressLogFile(filePath: string): Promise<string> {
       createWriteStream(compressedPath, { fd: claim.fd, autoClose: false })
     )
     const source = await fsp.stat(stagingPath)
-    if (source.size !== compressedBytes) {
+    if (source.size !== sourceBytes) {
       failure = new Error(
         `${stagingPath} grew while it was being compressed, keeping the source`
       )
