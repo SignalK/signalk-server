@@ -185,6 +185,9 @@ export class ResourcesApi {
     if (!provider) {
       return Promise.reject(new Error(`No provider for ${resType}`))
     }
+    if (providerId) {
+      return this.resProvider[resType].get(provider)!.getResource(resId)
+    }
     return this.getFromAll(resType, resId)
   }
 
@@ -200,6 +203,9 @@ export class ResourcesApi {
     debug(`** provider = ${provider}`)
     if (!provider) {
       return Promise.reject(new Error(`No provider for ${resType}`))
+    }
+    if (providerId) {
+      return this.resProvider[resType].get(provider)!.listResources(params)
     }
     return this.listFromAll(resType, params)
   }
