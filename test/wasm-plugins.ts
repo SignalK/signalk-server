@@ -15,6 +15,7 @@ import { expect } from 'chai'
 import fs from 'fs'
 import path from 'path'
 import { execSync } from 'child_process'
+import type { EventEmitter } from 'events'
 import { freeport } from './ts-servertestutilities'
 import {
   startServerP,
@@ -46,6 +47,7 @@ interface ServerInstance {
         port: number
       }
     }
+    signalk: EventEmitter
   }
 }
 
@@ -310,6 +312,8 @@ export function plugin_start(configPtr: usize, configLen: usize): i32 {
   return 0
 }
 
+export function delta_handler(delta: string): void {}
+
 export function plugin_stop(): i32 {
   return 0
 }
@@ -480,6 +484,8 @@ export function http_endpoints(): string {
 export function handle_${build}(requestPtr: usize, requestLen: usize): string {
   return '{"statusCode":200,"body":"${build}"}'
 }
+
+export function delta_handler(delta: string): void {}
 
 export function plugin_stop(): i32 {
   return 0
@@ -673,6 +679,18 @@ export function plugin_stop(): i32 {
       await reloadWasmPlugin(server!.app, packageName)
       expect(getWasmPlugin(packageName)?.status).to.equal('running')
       expect((await getBuildEndpoint('seven')).status).to.equal(200)
+    })
+
+    it('keeps one delta listener when a crashed plugin is restarted', async function () {
+      expect(await reload('two')).to.equal(200)
+      expect(await waitForStatus('build two')).to.equal('build two')
+      const listeners = server!.app.signalk.listenerCount('delta')
+
+      getWasmPlugin(packageName)!.status = 'crashed'
+      await reloadWasmPlugin(server!.app, packageName)
+
+      expect(getWasmPlugin(packageName)?.status).to.equal('running')
+      expect(server!.app.signalk.listenerCount('delta')).to.equal(listeners)
     })
   })
 
