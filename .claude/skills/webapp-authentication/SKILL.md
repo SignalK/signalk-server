@@ -21,7 +21,7 @@ Fields that do not apply are left out: a missing flag means `false`, a missing `
 
 Use the server's session cookie. A webapp served by the server is on the server's origin, so `fetch` sends the HttpOnly cookie by default, and opening a WebSocket sends it too; neither needs a token. Every webapp on the server shares this session, including the Admin UI.
 
-During development, let the dev server proxy `/signalk`, `/skServer`, `/admin` and `/plugins` to the Signal K server, WebSockets included, so the webapp stays on one origin and the cookie, `loginStatus` and the login redirect below behave as in production. Calling the server from another origin instead needs `credentials: 'include'` and that origin in the server's `allowedCorsOrigins`, and the login redirect cannot return to it.
+During development, let the dev server proxy `/signalk`, `/skServer`, `/admin` and `/plugins` to the Signal K server, WebSockets included, so the webapp stays on one origin and the cookie, `loginStatus` and the login redirect below behave as in production. Calling the server from another origin instead needs `credentials: 'include'` and that origin in the server's `allowedCorsOrigins`, and the login redirect cannot return to it. That works only from the same site (the same host on another port): the session cookie is `SameSite=Strict`, so a webapp on another host or scheme never gets it and every request arrives logged out.
 
 Do not keep a token in the webapp (localStorage, an `Authorization` header, a `?token=` query) unless it has no browser session to share, such as a native client. A webapp that logs in with its own token also sets the shared cookie, which confuses the sessions of the other webapps.
 
@@ -31,7 +31,7 @@ The session cookie is HttpOnly, so JavaScript cannot read it. To notice a login 
 
 Do not build a login form. Send the browser to the Admin UI's login page, `/admin/#/login`, with a `redirect` back to the webapp's current path; the example is under "Redirecting unauthenticated users to login" in `docs/develop/webapps.md`. This covers form login and OIDC; when only OIDC is used, `/signalk/v1/auth/oidc/login?redirect=…` skips the Admin UI. The `redirect` must be a same-origin path starting with a single `/`; anything else is ignored.
 
-When a request returns 401 during use, call `loginStatus` again. `notLoggedIn` means the session expired or was revoked: send the user to log in. `loggedIn` means the user lacks the permission, for example a `readonly` user trying to write: show that instead of sending them to a login that changes nothing.
+When a request returns 401 during use, call `loginStatus` again. Without security (`authenticationRequired` missing or `false`) there is no login to offer: show the error. With security on, `notLoggedIn` means the session expired or was revoked: send the user to log in. `loggedIn` means the user lacks the permission, for example a `readonly` user trying to write: show that instead of sending them to a login that changes nothing.
 
 ## Reviewing a webapp
 
