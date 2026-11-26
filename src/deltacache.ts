@@ -1530,6 +1530,19 @@ export default class DeltaCache {
   // getCachedDeltasForContexts within the same synchronous task, before
   // ingestion can add or expire contexts.
   getMatchingContexts(contextFilter: ContextMatcher): CachedContexts {
+    if (contextFilter.literalContext !== undefined) {
+      const context = contextFilter.literalContext
+      const dot = context.indexOf('.')
+      if (dot === -1) return []
+      const type = context.slice(0, dot)
+      const id = context.slice(dot + 1)
+      if (
+        !Object.hasOwn(this.cache, type) ||
+        !Object.hasOwn(this.cache[type], id)
+      )
+        return []
+      return [this.cache[type][id]]
+    }
     const contextNodes: StringKeyed[] = []
     for (const type in this.cache) {
       const contextsOfType: StringKeyed = this.cache[type]

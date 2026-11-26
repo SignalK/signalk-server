@@ -615,6 +615,17 @@ function contextMatcher(
   debug.enabled && debug('subscribeCommand:' + JSON.stringify(subscribeCommand))
   if (subscribeCommand.context) {
     if (isString(subscribeCommand.context)) {
+      const context = subscribeCommand.context
+      if (
+        !context.includes('*') &&
+        context !== 'self' &&
+        context !== 'vessels.self'
+      ) {
+        return Object.assign(
+          (delta: WithContext) => delta.context === context,
+          { literalContext: context }
+        )
+      }
       const matches = wildcardMatcher(subscribeCommand.context)
       return (normalizedDeltaData: WithContext) =>
         matches(normalizedDeltaData.context) ||
