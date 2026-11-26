@@ -131,6 +131,9 @@ async function promptForVesselName(configDirectory, updateExisting) {
   let settings = {
     interfaces: {},
     ssl: false,
+    // Seeded as the server seeds a missing settings file: a fresh
+    // installation enforces staleness from the start.
+    enforceDataTimeouts: true,
     pipedProviders: [],
     security: {
       strategy: './tokensecurity'
