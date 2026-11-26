@@ -45,6 +45,8 @@ When security is enabled, the next time you access the Admin UI it will prompt y
 
 Until that account exists, whoever reaches the Admin UI first can create it. If you create it from an internet address rather than from the local network or a VPN, the Admin UI also asks for the setup code that the server prints in its log when it starts, so that a stranger who finds the server cannot claim it.
 
+Behind a reverse proxy the server sees the proxy's address, so it can tell an internet visitor only from the `X-Forwarded-For` header. Make sure the proxy sends it (in nginx, `proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;`); a proxy on the same machine that leaves it out makes every visitor look local, and the setup code is not asked for.
+
 ## Security Settings
 
 After enabling security, the following settings are available in **Security > Settings**. They are stored in the `security.json` file in the server configuration directory, and can also be overridden with environment variables.
