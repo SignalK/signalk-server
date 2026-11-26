@@ -9,6 +9,7 @@ on:
     branches:
       - master
       - 'build-docker'
+      - 'feat/canboat-9'
     tags:
       - '*'
       - '!v*'
