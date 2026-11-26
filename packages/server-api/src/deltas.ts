@@ -15,6 +15,94 @@ export const FORBIDDEN_PATH_KEYS = new Set([
   'prototype'
 ])
 
+const FORBIDDEN_SUBSTRING = /__proto__|constructor|prototype/
+
+/**
+ * Whether a dotted context or path has a FORBIDDEN_PATH_KEYS segment.
+ * @hidden
+ */
+export function hasForbiddenPathSegment(dotted: string): boolean {
+  // Substring pre-check keeps the common case free of the split allocation.
+  if (!FORBIDDEN_SUBSTRING.test(dotted)) {
+    return false
+  }
+  for (const part of dotted.split('.')) {
+    if (FORBIDDEN_PATH_KEYS.has(part)) {
+      return true
+    }
+  }
+  return false
+}
+
+// Sources key several lookup tables, so a source named after any inherited
+// member (toString, valueOf, ...) would resolve to a builtin, not just
+// the three keys that reach a prototype.
+const INHERITED_KEYS = new Set([
+  ...Object.getOwnPropertyNames(Object.prototype),
+  ...FORBIDDEN_PATH_KEYS
+])
+
+// The source fields FullSignalK and the delta cache use as object keys.
+const SOURCE_KEY_FIELDS = [
+  'label',
+  'src',
+  'canName',
+  'talker',
+  'instance',
+  'pgn',
+  'sentence'
+] as const
+
+// Source strings repeat on every delta from a device, so those already found
+// safe skip the split. Bounded so unique sources cannot grow it without limit.
+const MAX_SAFE_SOURCE_KEYS = 10000
+const safeSourceKeys = new Set<string>()
+
+function isUnsafeSourceKey(value: unknown): boolean {
+  if (value === undefined || value === null || typeof value === 'number') {
+    return false
+  }
+  if (typeof value === 'string' && safeSourceKeys.has(value)) {
+    return false
+  }
+  for (const part of String(value).split('.')) {
+    if (INHERITED_KEYS.has(part)) {
+      return true
+    }
+  }
+  if (typeof value === 'string') {
+    if (safeSourceKeys.size >= MAX_SAFE_SOURCE_KEYS) {
+      safeSourceKeys.clear()
+    }
+    safeSourceKeys.add(value)
+  }
+  return false
+}
+
+/**
+ * Whether an update's `$source` or `source` would resolve to an inherited
+ * member when used as an object key.
+ * @hidden
+ */
+export function hasUnsafeSourceKey(update: {
+  $source?: unknown
+  source?: unknown
+}): boolean {
+  if (isUnsafeSourceKey(update.$source)) {
+    return true
+  }
+  const source = update.source
+  if (source === null || typeof source !== 'object') {
+    return isUnsafeSourceKey(source)
+  }
+  for (const field of SOURCE_KEY_FIELDS) {
+    if (isUnsafeSourceKey((source as Record<string, unknown>)[field])) {
+      return true
+    }
+  }
+  return false
+}
+
 /** @hidden */
 export interface WithContext {
   context: Context

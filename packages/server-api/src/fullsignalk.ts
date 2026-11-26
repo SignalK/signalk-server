@@ -16,7 +16,11 @@
 
 import { EventEmitter } from 'events'
 import { getSourceId, fillIdentity, fillIdentityField } from './sourceutil'
-import { FORBIDDEN_PATH_KEYS, PathValueState } from './deltas'
+import {
+  FORBIDDEN_PATH_KEYS,
+  hasUnsafeSourceKey,
+  PathValueState
+} from './deltas'
 import { metadataRegistry } from '@signalk/path-metadata'
 
 /** @hidden */
@@ -148,11 +152,17 @@ function applyStateToLeaf(
   }
 }
 
+// Own properties only: an inherited key such as `__proto__` or `toString`
+// would hand back a shared builtin that the delta then writes onto.
 function getNestedValue(obj: AnyObject, dotPath: string): unknown {
   const parts = dotPath.split('.')
   let cursor: unknown = obj
   for (const part of parts) {
-    if (cursor === null || cursor === undefined || typeof cursor !== 'object')
+    if (
+      cursor === null ||
+      typeof cursor !== 'object' ||
+      !Object.hasOwn(cursor, part)
+    )
       return undefined
     cursor = (cursor as AnyObject)[part]
   }
@@ -165,8 +175,8 @@ function setNestedValue(obj: AnyObject, dotPath: string, value: unknown): void {
   for (let i = 0; i < parts.length - 1; i++) {
     const part = parts[i]!
     if (
+      !Object.hasOwn(cursor, part) ||
       cursor[part] === null ||
-      cursor[part] === undefined ||
       typeof cursor[part] !== 'object'
     ) {
       cursor[part] = {}
@@ -184,8 +194,9 @@ function findContext(
   // the setNestedValue below would seed an empty entry like
   // root.vessels = {} that no caller can ever reach via a normal
   // identity-prefixed lookup, leaving an orphan key in the tree.
-  const identity = contextPath.split('.')[1]
-  if (!identity) {
+  const contextParts = contextPath.split('.')
+  const identity = contextParts[1]
+  if (!identity || contextParts.some((part) => FORBIDDEN_PATH_KEYS.has(part))) {
     return undefined
   }
   let context = getNestedValue(root, contextPath) as AnyObject | undefined
@@ -225,7 +236,12 @@ function addValue(
 
   let valueLeaf: AnyObject
   if (pathValue.path.length === 0) {
-    Object.assign(context, pathValue.value)
+    const value = Object(pathValue.value)
+    for (const key of Object.keys(value)) {
+      if (!FORBIDDEN_PATH_KEYS.has(key)) {
+        context[key] = value[key]
+      }
+    }
     return
   } else {
     const splitPath: string[] = pathValue.path.split('.')
@@ -242,7 +258,7 @@ function addValue(
     }
     valueLeaf = splitPath.reduce(
       (previous: AnyObject, pathPart: string, i: number) => {
-        if (!previous[pathPart]) {
+        if (!Object.hasOwn(previous, pathPart) || !previous[pathPart]) {
           previous[pathPart] = {}
         }
         if (
@@ -497,6 +513,13 @@ export class FullSignalK extends EventEmitter {
     contextPath: string,
     update: AnyObject
   ): void {
+    if (hasUnsafeSourceKey(update)) {
+      console.error(
+        'Ignoring update with a prototype key in its source: ' +
+          JSON.stringify({ $source: update.$source, source: update.source })
+      )
+      return
+    }
     if (update.source !== undefined) {
       this.updateSource(update.source, update.timestamp)
     }

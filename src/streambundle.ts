@@ -43,17 +43,19 @@ export class StreamBundle implements IStreamBundle {
 
   constructor(selfId: string) {
     this.selfContext = 'vessels.' + selfId
-    this.buses = {}
+    // Keyed by delta paths, so a path such as `toString` must not find an
+    // inherited member.
+    this.buses = Object.create(null)
     this.allPathsBus = new Bacon.Bus()
-    this.selfBuses = {}
+    this.selfBuses = Object.create(null)
     this.selfAllPathsBus = new Bacon.Bus()
-    this.selfStreams = {}
+    this.selfStreams = Object.create(null)
     this.selfAllPathsStream = new Bacon.Bus()
     this.keys = new Bacon.Bus()
-    this.availableSelfPaths = {}
+    this.availableSelfPaths = Object.create(null)
     this.metaBus = new Bacon.Bus()
     this.selfMetaBus = new Bacon.Bus()
-    this.unfilteredBuses = {}
+    this.unfilteredBuses = Object.create(null)
     this.unfilteredAllPathsBus = new Bacon.Bus()
   }
 

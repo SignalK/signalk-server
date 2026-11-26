@@ -152,7 +152,7 @@ export default class DeltaCache {
     [context: string]: {
       [path: string]: string[]
     }
-  } = {}
+  } = Object.create(null)
   private sourcesCachePath: string | null = null
   private saveTimer: ReturnType<typeof setTimeout> | null = null
   private preferredSources: Map<string, SourceRef> = new Map()
@@ -206,7 +206,7 @@ export default class DeltaCache {
     // No fancy pruning, just clear & let it recreate.
     setInterval(
       () => {
-        this.cachedContextPaths = {}
+        this.cachedContextPaths = Object.create(null)
       },
       5 * 60 * 1000
     )
@@ -232,16 +232,13 @@ export default class DeltaCache {
     if (msg.path.length !== 0) {
       contextAndPathParts = contextAndPathParts.concat(msg.path.split('.'))
     }
-    // A prototype key anywhere in context or path must never be cached:
-    // this.cachedContextPaths['__proto__'] is Object.prototype, so the
-    // "create if missing" guard below would never fire and the write
-    // would land straight on the shared prototype. Return the parts
-    // uncached; getLeafObject rejects them too.
+    // A prototype key anywhere in context or path is never cached;
+    // getLeafObject rejects the parts too.
     if (contextAndPathParts.some((p) => FORBIDDEN_PATH_KEYS.has(p))) {
       return contextAndPathParts
     }
     if (!this.cachedContextPaths[msg.context]) {
-      this.cachedContextPaths[msg.context] = {}
+      this.cachedContextPaths[msg.context] = Object.create(null)
     }
     this.cachedContextPaths[msg.context][msg.path] = contextAndPathParts
     return contextAndPathParts
@@ -265,6 +262,9 @@ export default class DeltaCache {
     }
 
     const sourceRef = ensureHasDollarSource(msg)
+    if (FORBIDDEN_PATH_KEYS.has(sourceRef)) {
+      return
+    }
     const leaf = getLeafObject(
       this.cache,
       this.getContextAndPathParts(msg),
@@ -315,7 +315,10 @@ export default class DeltaCache {
       }
     } else if (msg.value) {
       _.keys(msg.value).forEach((key) => {
-        if (!leaf[key]) {
+        if (FORBIDDEN_PATH_KEYS.has(key)) {
+          return
+        }
+        if (!Object.hasOwn(leaf, key) || !leaf[key]) {
           leaf[key] = {}
         }
         leaf[key][sourceRef] = msg
@@ -611,8 +614,11 @@ export default class DeltaCache {
     for (const update of delta.updates) {
       if (!('values' in update) || !update.values) continue
       const sourceRef: SourceRef = update.$source
+      if (FORBIDDEN_PATH_KEYS.has(sourceRef)) continue
       if (sourceMeta && typeof sourceRef === 'string' && sourceRef.length > 0) {
-        let meta = sourceMeta[sourceRef]
+        let meta = Object.hasOwn(sourceMeta, sourceRef)
+          ? sourceMeta[sourceRef]
+          : undefined
         if (!meta) {
           meta = sourceMeta[sourceRef] = { lastSeen: 0 }
         }
@@ -1010,8 +1016,9 @@ export default class DeltaCache {
     // ≥2-source filter below; fan-out paths reuse this map when only
     // one source is currently emitting so the path keeps its group
     // affiliation in the priorities view.
-    const cachePublishers: Record<string, Set<string>> = {}
-    const result: Record<string, Set<string>> = {}
+    // Null-prototype: keyed by delta paths, which may name an inherited member.
+    const cachePublishers: Record<string, Set<string>> = Object.create(null)
+    const result: Record<string, Set<string>> = Object.create(null)
     if (selfBranch) {
       const walk = (node: any, pathParts: string[]) => {
         for (const key of Object.keys(node)) {
@@ -1193,8 +1200,9 @@ export default class DeltaCache {
     // Walk once to populate two views: per-source path history, and
     // per-path live publisher set. The latter is the same set of edges
     // computeGroups would build from multiSourcePaths.
-    const bySource: Record<string, Set<string>> = {}
-    const livePublishers: Record<string, Set<string>> = {}
+    // Null-prototype: keyed by delta paths, which may name an inherited member.
+    const bySource: Record<string, Set<string>> = Object.create(null)
+    const livePublishers: Record<string, Set<string>> = Object.create(null)
     const walk = (node: any, pathParts: string[]) => {
       for (const key of Object.keys(node)) {
         if (key === 'meta') continue
@@ -1229,7 +1237,9 @@ export default class DeltaCache {
 
     // pathsBySource history: every path each source has cached.
     // Inverted so per-path "all-time publishers" is O(1).
-    const pathPublishersAllTime: Record<string, Set<string>> = {}
+    const pathPublishersAllTime: Record<string, Set<string>> = Object.create(
+      null
+    )
     for (const [src, paths] of Object.entries(bySource)) {
       for (const p of paths) {
         const set =
@@ -1698,11 +1708,13 @@ function getLeafObject(
     // A __proto__ / constructor / prototype segment resolves to a live
     // prototype object that already exists, so the walk would step onto
     // Object.prototype and the next segment would be written there. Reject
-    // rather than pollute the shared prototype.
+    // rather than pollute the shared prototype. Any other inherited key
+    // (toString, hasOwnProperty) is walked as an own key that is not there
+    // yet, never into the builtin it would inherit.
     if (FORBIDDEN_PATH_KEYS.has(p)) {
       return null
     }
-    if (isUndefined(current[p])) {
+    if (!Object.hasOwn(current, p) || isUndefined(current[p])) {
       if (createIfMissing) {
         current[p] = {}
       } else {

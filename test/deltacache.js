@@ -336,6 +336,59 @@ describe('Deltacache', () => {
     ;({}).should.not.have.property('pocPollutedFlag2')
   })
 
+  it('onValue drops a delta whose $source is a prototype key', function () {
+    const deltaCache = theServer.app.deltaCache
+    deltaCache.onValue({
+      context: 'vessels.self',
+      path: 'pocSourceProto',
+      value: { polluted: 1 },
+      $source: '__proto__',
+      timestamp: '2024-01-15T10:30:05.000Z',
+      isMeta: false
+    })
+    chai
+      .expect(_.has(deltaCache.cache, ['vessels', 'self', 'pocSourceProto']))
+      .to.equal(false)
+  })
+
+  it('ingestDelta drops a delta whose $source is a prototype key', function () {
+    const deltaCache = theServer.app.deltaCache
+    deltaCache.ingestDelta({
+      context: 'vessels.self',
+      updates: [
+        {
+          $source: '__proto__',
+          timestamp: '2024-01-15T10:30:06.000Z',
+          values: [{ path: 'pocSourceProto2', value: 1 }]
+        }
+      ]
+    })
+    ;({}).should.not.have.property('lastSeen')
+    chai
+      .expect(_.has(deltaCache.cache, ['vessels', 'self', 'pocSourceProto2']))
+      .to.equal(false)
+  })
+
+  it('ingestDelta stamps a toString $source as an own sourceMeta entry', function () {
+    const toString = Object.prototype.toString
+    const deltaCache = theServer.app.deltaCache
+    deltaCache.ingestDelta({
+      context: 'vessels.pocToString',
+      updates: [
+        {
+          $source: 'toString',
+          timestamp: '2024-01-15T10:30:07.000Z',
+          values: [{ path: 'pocSourceToString', value: 1 }]
+        }
+      ]
+    })
+    const sourceMeta = theServer.app.signalk.sourceMeta
+    chai.expect(Object.hasOwn(sourceMeta, 'toString')).to.equal(true)
+    chai.expect(Object.hasOwn(toString, 'lastSeen')).to.equal(false)
+    delete sourceMeta.toString
+    deltaCache.deleteContext('vessels.pocToString')
+  })
+
   it('getCachedDeltas fans out unrouted multi-source paths', function () {
     // With no priority configuration, every cached source is delivered
     // — preferredSources stays empty for unrouted paths so the
@@ -1061,14 +1114,14 @@ describe('Deltacache', () => {
       ]
     })
       .then(() => {
-        deltaCache.cachedContextPaths.should.have.property(context)
+        chai.expect(deltaCache.cachedContextPaths).to.have.property(context)
         deltaCache
           .getLivePreferredSources()
           .should.have.property(prefKey, 'pruneLeakSource')
 
         deltaCache.deleteContext(context)
 
-        deltaCache.cachedContextPaths.should.not.have.property(context)
+        chai.expect(deltaCache.cachedContextPaths).to.not.have.property(context)
         deltaCache.getLivePreferredSources().should.not.have.property(prefKey)
       })
       .finally(() => deltaCache.setRoutesPathPredicate(null))

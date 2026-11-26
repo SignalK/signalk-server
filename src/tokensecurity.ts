@@ -620,10 +620,14 @@ function tokenSecurityFactory(
     }
   }
 
+  // Own properties only: a connection admitted without a token has neither,
+  // and must not pick them up from a polluted prototype.
   function hasAdminAccess(req: Request | SecurityWSConnection): boolean {
     const skReq = req as AuthenticatedRequest
     return (
+      Object.hasOwn(skReq, 'skIsAuthenticated') &&
       skReq.skIsAuthenticated === true &&
+      Object.hasOwn(skReq, 'skPrincipal') &&
       skReq.skPrincipal !== undefined &&
       skReq.skPrincipal.permissions === 'admin'
     )
@@ -1368,6 +1372,7 @@ function tokenSecurityFactory(
   ): boolean {
     const skReq = req as AuthenticatedRequest
     if (
+      Object.hasOwn(skReq, 'skPrincipal') &&
       skReq.skPrincipal &&
       (skReq.skPrincipal.permissions === 'admin' ||
         skReq.skPrincipal.permissions === 'readwrite')

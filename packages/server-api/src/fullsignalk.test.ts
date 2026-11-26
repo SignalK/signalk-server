@@ -2,6 +2,46 @@ import { expect } from 'chai'
 import { metadataRegistry } from '@signalk/path-metadata'
 import { FullSignalK } from './fullsignalk'
 
+const BUILTINS: Array<[string, object]> = [
+  ['Object.prototype', Object.prototype],
+  ['Object', Object],
+  ['Object.prototype.toString', Object.prototype.toString]
+]
+
+function snapshotBuiltins(): Map<PropertyKey, PropertyDescriptor>[] {
+  return BUILTINS.map(
+    ([, target]) =>
+      new Map(
+        Reflect.ownKeys(target).map((key) => [
+          key,
+          Object.getOwnPropertyDescriptor(target, key)!
+        ])
+      )
+  )
+}
+
+// Returns what changed since the snapshot and puts the builtins back.
+function restoreBuiltins(
+  before: Map<PropertyKey, PropertyDescriptor>[]
+): string[] {
+  const changes: string[] = []
+  BUILTINS.forEach(([name, target], i) => {
+    const original = before[i]!
+    for (const key of Reflect.ownKeys(target)) {
+      const desc = Object.getOwnPropertyDescriptor(target, key)!
+      const orig = original.get(key)
+      if (!orig) {
+        changes.push(`${name}.${String(key)} added`)
+        Reflect.deleteProperty(target, key)
+      } else if (orig.value !== desc.value || orig.get !== desc.get) {
+        changes.push(`${name}.${String(key)} replaced`)
+        Object.defineProperty(target, key, orig)
+      }
+    }
+  })
+  return changes
+}
+
 describe('FullSignalK', function () {
   afterEach(function () {
     // Guard against a regression leaking prototype pollution into sibling tests.
@@ -43,6 +83,131 @@ describe('FullSignalK', function () {
     const fullSignalK = new FullSignalK()
     fullSignalK.addDelta(delta)
     expect(({} as Record<string, unknown>).polluted).to.equal(undefined)
+  })
+
+  for (const [context, path] of [
+    ['vessels.__proto__', ''],
+    ['vessels.constructor', ''],
+    ['vessels.toString', ''],
+    ['__proto__.polluted', ''],
+    ['__proto__.polluted', 'navigation']
+  ] as const) {
+    it(`does not pollute builtins via context ${context} with path "${path}"`, function () {
+      const builtins = [Object.prototype, Object, Object.prototype.toString]
+      const fullSignalK = new FullSignalK()
+      fullSignalK.addDelta({
+        context,
+        updates: [
+          {
+            $source: 'evil',
+            values: [{ path, value: { polluted: 'pwned' } }]
+          }
+        ]
+      })
+      for (const builtin of builtins) {
+        const keys = Object.keys(builtin)
+        for (const key of keys) {
+          delete (builtin as Record<string, unknown>)[key]
+        }
+        expect(keys).to.deep.equal([])
+      }
+    })
+  }
+
+  it('does not replace the prototype of a context via an empty path', function () {
+    const fullSignalK = new FullSignalK()
+    fullSignalK.addDelta({
+      context: 'vessels.foo',
+      updates: [
+        {
+          $source: 'evil',
+          values: [
+            { path: '', value: JSON.parse('{"__proto__": {"polluted": 1}}') }
+          ]
+        }
+      ]
+    })
+    const vessel = fullSignalK.retrieve().vessels.foo
+    expect(Object.getPrototypeOf(vessel)).to.equal(Object.prototype)
+    expect(vessel.polluted).to.equal(undefined)
+  })
+
+  const unsafeSources: Array<[string, Record<string, unknown>]> = [
+    ['$source __proto__', { $source: '__proto__' }],
+    ['$source __proto__.polluted', { $source: '__proto__.polluted' }],
+    ['$source constructor.prototype.x', { $source: 'constructor.prototype.x' }],
+    ['$source toString', { $source: 'toString' }],
+    ['$source toString.x', { $source: 'toString.x' }],
+    ['$source as an array', { $source: ['__proto__'] }],
+    [
+      'N2K source label __proto__',
+      {
+        source: {
+          label: '__proto__',
+          type: 'NMEA2000',
+          src: 'polluted',
+          pgn: 1
+        }
+      }
+    ],
+    [
+      'N2K source src __proto__',
+      { source: { label: 'n2k', type: 'NMEA2000', src: '__proto__', pgn: 1 } }
+    ],
+    [
+      'NMEA0183 source talker toString',
+      {
+        source: {
+          label: 'nmea',
+          type: 'NMEA0183',
+          talker: 'toString',
+          sentence: 'RMC'
+        }
+      }
+    ]
+  ]
+
+  for (const [name, source] of unsafeSources) {
+    it(`ignores an update with ${name}`, function () {
+      const fullSignalK = new FullSignalK('self')
+      const before = snapshotBuiltins()
+      // A path with two sources already takes the values[sourceId] branch.
+      for (const update of [{ $source: 'a' }, { $source: 'b' }, source]) {
+        fullSignalK.addDelta({
+          context: 'vessels.self',
+          updates: [
+            {
+              ...update,
+              timestamp: '2014-08-15T19:03:21.532Z',
+              values: [{ path: 'navigation.log', value: 1 }]
+            }
+          ]
+        })
+      }
+      expect(restoreBuiltins(before)).to.deep.equal([])
+      expect(
+        Object.keys(fullSignalK.retrieve().vessels.self.navigation.log.values)
+      ).to.deep.equal(['a', 'b'])
+    })
+  }
+
+  it('stores a toString path as an own leaf', function () {
+    const fullSignalK = new FullSignalK('self')
+    const before = snapshotBuiltins()
+    fullSignalK.addDelta({
+      context: 'vessels.self',
+      updates: [
+        {
+          $source: 'a',
+          timestamp: '2014-08-15T19:03:21.532Z',
+          values: [{ path: 'toString', value: 1 }]
+        }
+      ]
+    })
+    expect(restoreBuiltins(before)).to.deep.equal([])
+    const vessel = fullSignalK.retrieve().vessels.self
+    expect(Object.hasOwn(vessel, 'toString')).to.equal(true)
+    expect(vessel.toString.value).to.equal(1)
   })
 
   it('Delta with object value should produce full tree leaf without the .value', function () {

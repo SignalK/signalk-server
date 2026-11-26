@@ -25,6 +25,8 @@ import {
   DeltaInputHandler,
   FullSignalK,
   getSourceId,
+  hasForbiddenPathSegment,
+  hasUnsafeSourceKey,
   Path,
   PropertyValues,
   SKVersion,
@@ -527,12 +529,29 @@ class Server {
           data.context = ('vessels.' + app.selfId) as Context
         }
 
+        if (
+          typeof data.context === 'string' &&
+          hasForbiddenPathSegment(data.context)
+        ) {
+          console.warn(
+            `Discarding delta from ${providerId}: prototype key in context`
+          )
+          return
+        }
+
         const now = new Date()
         data.updates = data.updates
           .map((update: Partial<Update>) => {
             if (!isValidUpdate(update)) {
               console.warn(
                 `Discarding update from ${providerId}: invalid values entry (null or missing path)`
+              )
+              return undefined
+            }
+
+            if (hasPrototypeKey(update)) {
+              console.warn(
+                `Discarding update from ${providerId}: prototype key in source or path`
               )
               return undefined
             }
@@ -1240,4 +1259,31 @@ function isValidUpdate(update: unknown): update is Partial<Update> {
     return false
   }
   return true
+}
+
+// Sources and paths become object keys throughout the server, so one that
+// names a prototype member must not get past the boundary.
+function hasPrototypeKey(update: Partial<Update>): boolean {
+  if (hasUnsafeSourceKey(update)) {
+    return true
+  }
+  const { values, meta } = update as {
+    values?: Array<{ path: string }>
+    meta?: unknown
+  }
+  if (values) {
+    for (const v of values) {
+      if (hasForbiddenPathSegment(v.path)) {
+        return true
+      }
+    }
+  }
+  if (Array.isArray(meta)) {
+    for (const m of meta) {
+      if (typeof m?.path === 'string' && hasForbiddenPathSegment(m.path)) {
+        return true
+      }
+    }
+  }
+  return false
 }

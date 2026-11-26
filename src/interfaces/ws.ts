@@ -176,11 +176,7 @@ function normalizePercentComplete(percentComplete: unknown): number | null {
     : null
 }
 
-interface PathSources {
-  [path: string]: {
-    [source: string]: Spark
-  }
-}
+type PathSources = Map<string, Map<string, Spark>>
 
 interface SubscriptionManager {
   subscribe: (
@@ -349,7 +345,7 @@ function wsInterface(app: WsApp): WsApi {
 
   let primuses: Primus[] = []
   let stopping = false
-  const pathSources: PathSources = {}
+  const pathSources: PathSources = new Map()
   const ipConnectionCounts = new Map<string, number>()
 
   const api: WsApi = {
@@ -376,8 +372,8 @@ function wsInterface(app: WsApp): WsApi {
     },
 
     canHandlePut: function (path: string, source: string | undefined) {
-      const sources = pathSources[path]
-      return sources !== undefined && (!source || sources[source] !== undefined)
+      const sources = pathSources.get(path)
+      return sources !== undefined && (!source || sources.has(source))
     },
 
     handlePut: function (
@@ -388,13 +384,13 @@ function wsInterface(app: WsApp): WsApi {
       value: unknown
     ): Promise<Reply> {
       return new Promise((resolve, reject) => {
-        const sources = pathSources[path]
+        const sources = pathSources.get(path)
         if (sources) {
           let spark: Spark | undefined
           if (source) {
-            spark = sources[source]
-          } else if (Object.keys(sources).length === 1) {
-            spark = Object.values(sources)[0]
+            spark = sources.get(source)
+          } else if (sources.size === 1) {
+            spark = sources.values().next().value
           } else {
             updateRequest(requestId, 'COMPLETED', {
               statusCode: 400,
@@ -700,14 +696,14 @@ function wsInterface(app: WsApp): WsApi {
 
             unsubscribes.forEach((unsubscribe) => unsubscribe())
 
-            Object.keys(pathSources).forEach((path) => {
-              Object.keys(pathSources[path]).forEach((source) => {
-                if (pathSources[path][source] === spark) {
+            for (const [path, sources] of pathSources) {
+              for (const [source, sourceSpark] of sources) {
+                if (sourceSpark === spark) {
                   debug('removing source for %s', path)
-                  delete pathSources[path][source]
+                  sources.delete(source)
                 }
-              })
-            })
+              }
+            }
           })
 
           spark.onDisconnects = [
@@ -1062,14 +1058,14 @@ function processUpdates(
 
       if (source) {
         update.values.forEach((valuePath) => {
-          if (!pathSources[valuePath.path]) {
-            pathSources[valuePath.path] = {}
+          let sources = pathSources.get(valuePath.path)
+          if (!sources) {
+            sources = new Map()
+            pathSources.set(valuePath.path, sources)
           }
-          if (
-            !pathSources[valuePath.path][source!] ||
-            pathSources[valuePath.path][source!] !== spark
-          ) {
-            if (pathSources[valuePath.path][source!]) {
+          const existing = sources.get(source!)
+          if (existing !== spark) {
+            if (existing) {
               console.log(
                 `WARNING: got a new ws client for path ${valuePath.path} source ${source}`
               )
@@ -1081,7 +1077,7 @@ function processUpdates(
               spark.id
             )
 
-            pathSources[valuePath.path][source!] = spark
+            sources.set(source!, spark)
           }
         })
       }

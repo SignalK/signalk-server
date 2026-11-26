@@ -121,4 +121,18 @@ describe('StreamBundle path announcements', () => {
     expect(filtered).to.deep.equal([SOG_FIRST, SOG_SECOND])
     expect(unfiltered).to.deep.equal([SOG_FIRST, SOG_SECOND])
   })
+
+  it('delivers a path named after an Object.prototype member', () => {
+    const path = 'toString' as Path
+    const received: unknown[] = []
+    bundle.keys.onValue((announcedPath) => {
+      bundle.getBus(announcedPath).onValue((d) => received.push(d.value))
+    })
+
+    dispatch(bundle, valueDelta(path, SOG_FIRST))
+
+    expect(announced).to.deep.equal([path])
+    expect(received).to.deep.equal([SOG_FIRST])
+    expect(bundle.getAvailablePaths()).to.deep.equal([path])
+  })
 })
