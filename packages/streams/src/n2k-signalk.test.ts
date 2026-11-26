@@ -365,6 +365,6 @@ describe('N2kToSignalK canName warmup', () => {
     }>
     expect(results).to.have.length(1)
     const paths = results[0]!.updates[0]!.values.map((v) => v.path)
-    expect(paths).to.include('notifications.propulsion.starboard.checkEngine')
+    expect(paths).to.include('notifications.propulsion.port.checkEngine')
   })
 })
