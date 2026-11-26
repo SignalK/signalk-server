@@ -607,6 +607,7 @@ function setSelfSettings(app: ConfigApp): boolean {
   }
 
   app.config.vesselName = name
+  app.config.vesselUUID = uuid
   if (mmsi) {
     app.selfType = 'mmsi'
     app.selfId = 'urn:mrn:imo:mmsi:' + mmsi
@@ -614,7 +615,6 @@ function setSelfSettings(app: ConfigApp): boolean {
   } else if (uuid) {
     app.selfType = 'uuid'
     app.selfId = uuid
-    app.config.vesselUUID = uuid
   }
   if (app.selfType) {
     debug(app.selfType.toUpperCase() + ': ' + app.selfId)

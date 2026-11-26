@@ -1372,7 +1372,7 @@ module.exports = function (
     setString('name', newVessel.name)
     setString('mmsi', newVessel.mmsi)
 
-    if (newVessel.uuid && !self.mmsi) {
+    if (newVessel.uuid) {
       setString('uuid', newVessel.uuid)
     } else {
       delete self.uuid
@@ -1454,7 +1454,7 @@ module.exports = function (
     app.config.vesselName = vessel.name
     de.setSelfValue('mmsi', vessel.mmsi)
     app.config.vesselMMSI = vessel.mmsi
-    if (vessel.uuid && !vessel.mmsi) {
+    if (vessel.uuid) {
       de.setSelfValue('uuid', vessel.uuid)
       app.config.vesselUUID = vessel.uuid
     } else {
