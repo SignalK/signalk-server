@@ -240,4 +240,6 @@ export interface Zone {
   upper: number | undefined
   state: ALARM_STATE
   message: string
+  /** Seconds the value must be at the zone's state or a more severe one before a move up to it is notified */
+  delay?: number
 }

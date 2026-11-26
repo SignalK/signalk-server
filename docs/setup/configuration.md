@@ -109,7 +109,7 @@ The _Data_ menu provides tools for viewing, inspecting, and managing your Signal
 
 - **Data Browser** — Browse all Signal K data paths in real time with values, sources, and timestamps. When a path has a `displayName` set in its metadata, it is shown below the path — handy for telling instanced paths like `tanks.freshWater.2` or `electrical.switches.bank.10.1` apart. Notification rows show the name of the data path they relate to. Administrators can set or edit the name in place via the pencil next to it; it is stored as regular metadata, the same as editing it on the _Meta Data_ page.
 
-- **Meta Data** — View and edit Signal K metadata (units, descriptions, display names, zones) for any path.
+- **Meta Data** — View and edit Signal K metadata (units, descriptions, display names, zones) for any path. A zone can give a delay in seconds: the server then raises the zone's notification only once the value has been at that zone's state or a more severe one for that long, so a battery's voltage dipping while an engine cranks raises no low-voltage alarm. The delay is a server feature that is not part of the Signal K specification, so clients that evaluate zones themselves ignore it.
 
 - **Source Discovery** — View all data sources connected to the server. For NMEA 2000, this shows a detailed table of every device on the bus with manufacturer, model, and instance information. Includes instance conflict detection. See [NMEA 2000 Device Management](./n2k-device-management.md) for details.
 

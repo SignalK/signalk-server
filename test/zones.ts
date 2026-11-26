@@ -9,6 +9,7 @@ import {
   Zones
 } from '../dist/zones.js'
 import * as Bacon from 'baconjs'
+import { mock } from 'node:test'
 
 interface MockStreambundle {
   getSelfMetaBus: () => Bacon.Bus<unknown>
@@ -301,6 +302,670 @@ describe('Zones', () => {
     })
   })
 
+  describe('zone delay', () => {
+    beforeEach(() => {
+      mock.timers.enable({ apis: ['setTimeout', 'Date'] })
+      mock.method(performance, 'now', () => Date.now())
+    })
+    afterEach(() => {
+      mock.timers.reset()
+      mock.restoreAll()
+    })
+
+    const PATH = 'electrical.batteries.1.voltage'
+    const LOW: Zone = {
+      lower: 0,
+      upper: 12,
+      state: ALARM_STATE.warn,
+      message: 'Battery low',
+      delay: 60
+    }
+    const VERY_LOW: Zone = {
+      lower: 0,
+      upper: 11.5,
+      state: ALARM_STATE.alarm,
+      message: 'Battery very low',
+      delay: 60
+    }
+    const LOW_ABOVE_VERY_LOW: Zone = { ...LOW, lower: 11.5 }
+
+    function watch(zones: Zone[]) {
+      const metaBus = new Bacon.Bus()
+      const valueStream = new Bacon.Bus()
+      const deltas: Delta[] = []
+      new Zones(
+        {
+          getSelfMetaBus: () => metaBus,
+          getSelfStream: (_path: Path) => valueStream
+        } as never,
+        (delta: Delta) => deltas.push(delta)
+      )
+      metaBus.push({ path: PATH, value: { zones } })
+      const notifications = () =>
+        deltas.map((delta) => {
+          const update = delta.updates[0]
+          return hasValues(update)
+            ? asNotification(update.values[0].value)
+            : undefined
+        })
+      const states = () => notifications().map((n) => n?.state)
+      return { metaBus, valueStream, states, notifications }
+    }
+
+    it('notifies once the value has stayed in the zone for its delay', () => {
+      const { valueStream, states } = watch([LOW])
+      valueStream.push(12.6)
+      valueStream.push(11.8)
+      mock.timers.tick(59_999)
+      expect(states()).to.deep.equal([ALARM_STATE.normal])
+
+      mock.timers.tick(1)
+      expect(states()).to.deep.equal([ALARM_STATE.normal, ALARM_STATE.warn])
+    })
+
+    it('raises nothing when the value leaves the zone before its delay', () => {
+      const { valueStream, states } = watch([LOW])
+      valueStream.push(12.6)
+      valueStream.push(10.5)
+      mock.timers.tick(5_000)
+      valueStream.push(12.4)
+      mock.timers.tick(120_000)
+
+      expect(states()).to.deep.equal([ALARM_STATE.normal])
+    })
+
+    it('counts afresh after the value returned to the zone notified last', () => {
+      const { valueStream, states } = watch([LOW])
+      valueStream.push(12.6)
+      valueStream.push(11.8)
+      mock.timers.tick(5_000)
+      valueStream.push(12.6)
+      mock.timers.tick(600_000)
+      valueStream.push(11.8)
+      mock.timers.tick(59_999)
+      expect(states()).to.deep.equal([ALARM_STATE.normal])
+
+      mock.timers.tick(1)
+      expect(states()).to.deep.equal([ALARM_STATE.normal, ALARM_STATE.warn])
+    })
+
+    it('keeps counting while the value moves within the zone', () => {
+      const { valueStream, states } = watch([LOW])
+      valueStream.push(12.6)
+      valueStream.push(11.8)
+      mock.timers.tick(30_000)
+      valueStream.push(11.2)
+      mock.timers.tick(30_000)
+
+      expect(states()).to.deep.equal([ALARM_STATE.normal, ALARM_STATE.warn])
+    })
+
+    it('keeps the notification of the zone before until the delay ends', () => {
+      const { valueStream, states } = watch([
+        { ...LOW_ABOVE_VERY_LOW, delay: undefined },
+        { ...VERY_LOW, delay: 120 }
+      ])
+      valueStream.push(11.8)
+      valueStream.push(11)
+      mock.timers.tick(60_000)
+      expect(states()).to.deep.equal([ALARM_STATE.warn])
+
+      mock.timers.tick(60_000)
+      expect(states()).to.deep.equal([ALARM_STATE.warn, ALARM_STATE.alarm])
+    })
+
+    it('raises the less severe zone when the value keeps crossing between two', () => {
+      const { valueStream, states } = watch([LOW_ABOVE_VERY_LOW, VERY_LOW])
+      valueStream.push(12.6)
+      for (let i = 0; i < 6; i++) {
+        valueStream.push(i % 2 ? 11.55 : 11.45)
+        mock.timers.tick(20_000)
+      }
+
+      expect(states()).to.deep.equal([ALARM_STATE.normal, ALARM_STATE.warn])
+    })
+
+    it('counts the delay of a more severe zone from reaching its severity', () => {
+      const { valueStream, states } = watch([LOW_ABOVE_VERY_LOW, VERY_LOW])
+      valueStream.push(12.6)
+      valueStream.push(11.8)
+      mock.timers.tick(50_000)
+      valueStream.push(11)
+      mock.timers.tick(10_000)
+      expect(states()).to.deep.equal([ALARM_STATE.normal, ALARM_STATE.warn])
+
+      mock.timers.tick(49_999)
+      expect(states()).to.deep.equal([ALARM_STATE.normal, ALARM_STATE.warn])
+
+      mock.timers.tick(1)
+      expect(states()).to.deep.equal([
+        ALARM_STATE.normal,
+        ALARM_STATE.warn,
+        ALARM_STATE.alarm
+      ])
+    })
+
+    it('raises a less severe zone the value went through at its own delay', () => {
+      const { valueStream, states } = watch([
+        LOW_ABOVE_VERY_LOW,
+        { ...VERY_LOW, delay: 120 }
+      ])
+      valueStream.push(12.6)
+      valueStream.push(11.8)
+      mock.timers.tick(5_000)
+      valueStream.push(11)
+      mock.timers.tick(54_999)
+      expect(states()).to.deep.equal([ALARM_STATE.normal])
+
+      mock.timers.tick(1)
+      expect(states()).to.deep.equal([ALARM_STATE.normal, ALARM_STATE.warn])
+
+      mock.timers.tick(64_999)
+      expect(states()).to.deep.equal([ALARM_STATE.normal, ALARM_STATE.warn])
+
+      mock.timers.tick(1)
+      expect(states()).to.deep.equal([
+        ALARM_STATE.normal,
+        ALARM_STATE.warn,
+        ALARM_STATE.alarm
+      ])
+    })
+
+    it('raises a less severe zone that was due when the value went higher', () => {
+      const { valueStream, states } = watch([
+        LOW_ABOVE_VERY_LOW,
+        { ...VERY_LOW, delay: 5 }
+      ])
+      valueStream.push(12.6)
+      valueStream.push(11.8)
+      mock.timers.tick(58_000)
+      valueStream.push(11)
+      mock.timers.tick(3_000)
+      valueStream.push(12.6)
+
+      expect(states()).to.deep.equal([
+        ALARM_STATE.normal,
+        ALARM_STATE.warn,
+        ALARM_STATE.normal
+      ])
+    })
+
+    it('waits the full delay again after the value came back to the zone notified', () => {
+      const { valueStream, states } = watch([
+        { ...LOW_ABOVE_VERY_LOW, delay: undefined },
+        VERY_LOW
+      ])
+      valueStream.push(11.8)
+      valueStream.push(11)
+      mock.timers.tick(30_000)
+      valueStream.push(11.8)
+      mock.timers.tick(5_000)
+      valueStream.push(11)
+      mock.timers.tick(59_999)
+      expect(states()).to.deep.equal([ALARM_STATE.warn])
+
+      mock.timers.tick(1)
+      expect(states()).to.deep.equal([ALARM_STATE.warn, ALARM_STATE.alarm])
+    })
+
+    it('counts the time at a severity for every zone of it', () => {
+      const { valueStream, notifications } = watch([
+        { ...VERY_LOW, delay: 30 },
+        {
+          lower: 15,
+          state: ALARM_STATE.alarm,
+          message: 'Battery high',
+          delay: 5
+        } as Zone
+      ])
+      valueStream.push(12.6)
+      valueStream.push(11)
+      mock.timers.tick(20_000)
+      valueStream.push(16)
+
+      expect(
+        notifications()
+          .map((n) => n?.message)
+          .pop()
+      ).to.equal('Battery high')
+      expect(notifications()).to.have.length(2)
+    })
+
+    it('counts time in a more severe zone toward a less severe one', () => {
+      const { valueStream, states } = watch([
+        LOW_ABOVE_VERY_LOW,
+        { ...VERY_LOW, delay: 120 }
+      ])
+      valueStream.push(12.6)
+      valueStream.push(11)
+      mock.timers.tick(30_000)
+      valueStream.push(11.8)
+      mock.timers.tick(29_999)
+      expect(states()).to.deep.equal([ALARM_STATE.normal])
+
+      mock.timers.tick(1)
+      expect(states()).to.deep.equal([ALARM_STATE.normal, ALARM_STATE.warn])
+    })
+
+    it('raises nothing for a short dip into a more severe zone with a short delay', () => {
+      const { valueStream, states } = watch([
+        LOW_ABOVE_VERY_LOW,
+        { ...VERY_LOW, delay: 10 }
+      ])
+      valueStream.push(12.6)
+      valueStream.push(11.8)
+      mock.timers.tick(15_000)
+      valueStream.push(10.5)
+      mock.timers.tick(3_000)
+      valueStream.push(11.8)
+      mock.timers.tick(41_999)
+      expect(states()).to.deep.equal([ALARM_STATE.normal])
+
+      mock.timers.tick(1)
+      expect(states()).to.deep.equal([ALARM_STATE.normal, ALARM_STATE.warn])
+    })
+
+    it('moves to a less severe zone without waiting', () => {
+      const { valueStream, states } = watch([LOW_ABOVE_VERY_LOW, VERY_LOW])
+      valueStream.push(11)
+      mock.timers.tick(60_000)
+      valueStream.push(11.8)
+
+      expect(states()).to.deep.equal([ALARM_STATE.alarm, ALARM_STATE.warn])
+    })
+
+    it('moves to an equally severe zone without waiting', () => {
+      const { valueStream, notifications } = watch([
+        VERY_LOW,
+        { ...VERY_LOW, lower: 15, upper: undefined, message: 'Battery high' }
+      ])
+      valueStream.push(11)
+      mock.timers.tick(60_000)
+      valueStream.push(15.5)
+
+      expect(notifications().map((n) => n?.message)).to.deep.equal([
+        'Battery very low',
+        'Battery high'
+      ])
+    })
+
+    it('returns to normal without waiting', () => {
+      const { valueStream, states } = watch([LOW])
+      valueStream.push(11.8)
+      mock.timers.tick(60_000)
+      valueStream.push(12.6)
+
+      expect(states()).to.deep.equal([ALARM_STATE.warn, ALARM_STATE.normal])
+    })
+
+    it('takes a state it does not know as normal', () => {
+      const { valueStream, notifications } = watch([
+        {
+          lower: 12,
+          upper: 13,
+          state: 'constructor' as ALARM_STATE,
+          message: 'Odd'
+        },
+        LOW
+      ])
+      valueStream.push(12.5)
+      valueStream.push(11.8)
+      mock.timers.tick(59_999)
+      expect(notifications()).to.have.length(1)
+
+      mock.timers.tick(1)
+      expect(notifications()).to.have.length(2)
+    })
+
+    it('ignores a delay that is not a number', () => {
+      const { valueStream, states } = watch([
+        { ...LOW, delay: '60' as unknown as number }
+      ])
+      valueStream.push(11.8)
+
+      expect(states()).to.deep.equal([ALARM_STATE.warn])
+    })
+
+    it('keeps counting when the metadata is sent again with the same zones', () => {
+      const { metaBus, valueStream, states } = watch([LOW])
+      valueStream.push(11.8)
+      mock.timers.tick(30_000)
+      metaBus.push({
+        path: PATH,
+        value: { zones: [{ ...LOW }], displayName: 'House' }
+      })
+      mock.timers.tick(30_000)
+
+      expect(states()).to.deep.equal([ALARM_STATE.warn])
+    })
+
+    it('keeps counting when only the methods change', () => {
+      const { metaBus, valueStream, notifications } = watch([LOW])
+      valueStream.push(12.6)
+      valueStream.push(11.8)
+      mock.timers.tick(30_000)
+      metaBus.push({
+        path: PATH,
+        value: { zones: [LOW], warnMethod: [ALARM_METHOD.sound] }
+      })
+      mock.timers.tick(30_000)
+
+      expect(notifications().map((n) => [n?.state, n?.method])).to.deep.equal([
+        [ALARM_STATE.normal, [ALARM_METHOD.visual]],
+        [ALARM_STATE.warn, [ALARM_METHOD.sound]]
+      ])
+    })
+
+    it('sends a raised zone again with methods changed for it', () => {
+      const { metaBus, valueStream, notifications } = watch([
+        { ...LOW, delay: undefined }
+      ])
+      valueStream.push(11.8)
+      metaBus.push({
+        path: PATH,
+        value: { zones: [{ ...LOW, delay: undefined }], warnMethod: null }
+      })
+
+      expect(notifications().map((n) => n?.method)).to.deep.equal([
+        [ALARM_METHOD.visual],
+        []
+      ])
+    })
+
+    it('sends normal again with a normal method changed', () => {
+      const { metaBus, valueStream, notifications } = watch([LOW])
+      valueStream.push(12.6)
+      metaBus.push({ path: PATH, value: { zones: [LOW], normalMethod: null } })
+
+      expect(notifications().map((n) => n?.method)).to.deep.equal([
+        [ALARM_METHOD.visual],
+        []
+      ])
+    })
+
+    it('keeps counting when the same zones come with their fields reordered', () => {
+      const { metaBus, valueStream, states } = watch([LOW])
+      valueStream.push(12.6)
+      valueStream.push(11.8)
+      mock.timers.tick(30_000)
+      const { delay, message, state, upper, lower } = LOW
+      metaBus.push({
+        path: PATH,
+        value: { zones: [{ delay, message, state, upper, lower }] }
+      })
+      mock.timers.tick(30_000)
+
+      expect(states()).to.deep.equal([ALARM_STATE.normal, ALARM_STATE.warn])
+    })
+
+    it('takes a new message given for the same limits', () => {
+      const { metaBus, valueStream, notifications } = watch([
+        { ...LOW, delay: undefined }
+      ])
+      valueStream.push(12.6)
+      metaBus.push({
+        path: PATH,
+        value: {
+          zones: [{ ...LOW, delay: undefined, message: 'Start battery low' }]
+        }
+      })
+      valueStream.push(11.8)
+
+      expect(notifications().pop()?.message).to.equal('Start battery low')
+    })
+
+    it('keeps counting when only a message changes', () => {
+      const { metaBus, valueStream, notifications } = watch([LOW])
+      valueStream.push(12.6)
+      valueStream.push(11.8)
+      mock.timers.tick(30_000)
+      metaBus.push({
+        path: PATH,
+        value: { zones: [{ ...LOW, message: 'Start battery low' }] }
+      })
+      mock.timers.tick(30_000)
+
+      expect(notifications().map((n) => [n?.state, n?.message])).to.deep.equal([
+        [ALARM_STATE.normal, 'Value is within normal range'],
+        [ALARM_STATE.warn, 'Start battery low']
+      ])
+    })
+
+    it('sends a raised zone again with its new message', () => {
+      const { metaBus, valueStream, notifications } = watch([
+        { ...LOW, delay: undefined }
+      ])
+      valueStream.push(11.8)
+      metaBus.push({
+        path: PATH,
+        value: {
+          zones: [{ ...LOW, delay: undefined, message: 'Start battery low' }]
+        }
+      })
+
+      expect(notifications().map((n) => n?.message)).to.deep.equal([
+        'Battery low',
+        'Start battery low'
+      ])
+    })
+
+    it('takes a new delay given for the same limits', () => {
+      const { metaBus, valueStream, states } = watch([LOW])
+      valueStream.push(12.6)
+      metaBus.push({ path: PATH, value: { zones: [{ ...LOW, delay: 5 }] } })
+      valueStream.push(11.8)
+      mock.timers.tick(5_000)
+
+      expect(states()).to.deep.equal([ALARM_STATE.normal, ALARM_STATE.warn])
+    })
+
+    it('moves a raised alarm down at once after the zones change', () => {
+      const { metaBus, valueStream, states } = watch([
+        LOW_ABOVE_VERY_LOW,
+        VERY_LOW
+      ])
+      valueStream.push(11)
+      mock.timers.tick(60_000)
+      metaBus.push({
+        path: PATH,
+        value: { zones: [LOW_ABOVE_VERY_LOW, { ...VERY_LOW, delay: 90 }] }
+      })
+      valueStream.push(11.8)
+
+      expect(states()).to.deep.equal([ALARM_STATE.alarm, ALARM_STATE.warn])
+    })
+
+    it('takes a return to normal as the state before a zone edit', () => {
+      const { metaBus, valueStream, states } = watch([
+        LOW_ABOVE_VERY_LOW,
+        VERY_LOW
+      ])
+      valueStream.push(11)
+      mock.timers.tick(60_000)
+      valueStream.push(12.6)
+      metaBus.push({
+        path: PATH,
+        value: { zones: [LOW_ABOVE_VERY_LOW, { ...VERY_LOW, delay: 90 }] }
+      })
+      valueStream.push(11.8)
+      mock.timers.tick(59_999)
+      expect(states()).to.deep.equal([ALARM_STATE.alarm, ALARM_STATE.normal])
+
+      mock.timers.tick(1)
+      expect(states()).to.deep.equal([
+        ALARM_STATE.alarm,
+        ALARM_STATE.normal,
+        ALARM_STATE.warn
+      ])
+    })
+
+    it('takes a new method or message for a zone notified before a zone edit', () => {
+      const { metaBus, valueStream, notifications } = watch([
+        LOW_ABOVE_VERY_LOW,
+        VERY_LOW
+      ])
+      valueStream.push(11.8)
+      mock.timers.tick(60_000)
+      const zones = [LOW_ABOVE_VERY_LOW, { ...VERY_LOW, delay: 90 }]
+      metaBus.push({ path: PATH, value: { zones } })
+      valueStream.push(11)
+      metaBus.push({
+        path: PATH,
+        value: { zones, warnMethod: [ALARM_METHOD.sound] }
+      })
+      metaBus.push({
+        path: PATH,
+        value: {
+          zones: [{ ...zones[0], message: 'Start battery low' }, zones[1]],
+          warnMethod: [ALARM_METHOD.sound]
+        }
+      })
+      mock.timers.tick(89_999)
+      const sent = () =>
+        notifications().map((n) => [n?.state, n?.message, n?.method])
+      expect(sent()).to.deep.equal([
+        [ALARM_STATE.warn, 'Battery low', [ALARM_METHOD.visual]],
+        [ALARM_STATE.warn, 'Battery low', [ALARM_METHOD.sound]],
+        [ALARM_STATE.warn, 'Start battery low', [ALARM_METHOD.sound]]
+      ])
+
+      mock.timers.tick(1)
+      expect(sent().pop()?.[0]).to.equal(ALARM_STATE.alarm)
+    })
+
+    it('sends a raised zone again with a method changed along with its delay', () => {
+      const { metaBus, valueStream, notifications } = watch([LOW])
+      valueStream.push(11.8)
+      mock.timers.tick(60_000)
+      metaBus.push({
+        path: PATH,
+        value: {
+          zones: [{ ...LOW, delay: 30 }],
+          warnMethod: [ALARM_METHOD.sound]
+        }
+      })
+
+      expect(notifications().map((n) => [n?.state, n?.method])).to.deep.equal([
+        [ALARM_STATE.warn, [ALARM_METHOD.visual]],
+        [ALARM_STATE.warn, [ALARM_METHOD.sound]]
+      ])
+    })
+
+    it('waits the delay of a zone raised to a more severe state', () => {
+      const { metaBus, valueStream, states } = watch([LOW])
+      valueStream.push(11.8)
+      mock.timers.tick(60_000)
+      metaBus.push({
+        path: PATH,
+        value: { zones: [{ ...LOW, state: ALARM_STATE.alarm, delay: 30 }] }
+      })
+      valueStream.push(11.7)
+      mock.timers.tick(29_999)
+      expect(states()).to.deep.equal([ALARM_STATE.warn])
+
+      mock.timers.tick(1)
+      expect(states()).to.deep.equal([ALARM_STATE.warn, ALARM_STATE.alarm])
+    })
+
+    it('sends normal once across a zone edit', () => {
+      const { metaBus, valueStream, states } = watch([LOW])
+      valueStream.push(12.6)
+      metaBus.push({ path: PATH, value: { zones: [{ ...LOW, delay: 30 }] } })
+      valueStream.push(12.7)
+
+      expect(states()).to.deep.equal([ALARM_STATE.normal])
+    })
+
+    it('takes a new method for a notified zone the zones no longer hold', () => {
+      const { metaBus, valueStream, notifications } = watch([
+        LOW_ABOVE_VERY_LOW,
+        VERY_LOW
+      ])
+      valueStream.push(11.8)
+      mock.timers.tick(60_000)
+      valueStream.push(11)
+      metaBus.push({ path: PATH, value: { zones: [VERY_LOW] } })
+      metaBus.push({
+        path: PATH,
+        value: { zones: [VERY_LOW], warnMethod: [ALARM_METHOD.sound] }
+      })
+
+      expect(
+        notifications().map((n) => [n?.state, n?.message, n?.method])
+      ).to.deep.equal([
+        [ALARM_STATE.warn, 'Battery low', [ALARM_METHOD.visual]],
+        [ALARM_STATE.warn, 'Battery low', [ALARM_METHOD.sound]]
+      ])
+    })
+
+    it('raises a zone after a zone edit from the value seen before it', () => {
+      const { metaBus, valueStream, states } = watch([LOW])
+      valueStream.push(11.8)
+      mock.timers.tick(30_000)
+      metaBus.push({ path: PATH, value: { zones: [{ ...LOW, delay: 40 }] } })
+      mock.timers.tick(39_999)
+      expect(states()).to.deep.equal([])
+
+      mock.timers.tick(1)
+      expect(states()).to.deep.equal([ALARM_STATE.warn])
+    })
+
+    it('moves to normal at once when a zone edit leaves the value outside', () => {
+      const { metaBus, valueStream, states } = watch([LOW])
+      valueStream.push(11.8)
+      mock.timers.tick(60_000)
+      metaBus.push({ path: PATH, value: { zones: [{ ...LOW, upper: 11.5 }] } })
+
+      expect(states()).to.deep.equal([ALARM_STATE.warn, ALARM_STATE.normal])
+    })
+
+    it('forgets the state notified once the zones were removed', () => {
+      const { metaBus, valueStream, states } = watch([VERY_LOW])
+      valueStream.push(11)
+      mock.timers.tick(60_000)
+      metaBus.push({ path: PATH, value: { zones: null } })
+      metaBus.push({ path: PATH, value: { zones: [LOW] } })
+      valueStream.push(11.8)
+      mock.timers.tick(59_999)
+      expect(states()).to.deep.equal([ALARM_STATE.alarm, ALARM_STATE.normal])
+
+      mock.timers.tick(1)
+      expect(states()).to.deep.equal([
+        ALARM_STATE.alarm,
+        ALARM_STATE.normal,
+        ALARM_STATE.warn
+      ])
+    })
+
+    it('ignores zones that are not a list', () => {
+      const { metaBus, valueStream, states } = watch([LOW])
+      metaBus.push({ path: PATH, value: { zones: 'low' } })
+      valueStream.push(11.8)
+      mock.timers.tick(60_000)
+
+      expect(states()).to.deep.equal([ALARM_STATE.warn])
+    })
+
+    it('waits no longer than a timer can for a very long delay', () => {
+      const { valueStream, states } = watch([{ ...LOW, delay: 30 * 86_400 }])
+      valueStream.push(11.8)
+      mock.timers.tick(1_000)
+      expect(states()).to.deep.equal([])
+
+      mock.timers.tick(2 ** 31 - 1)
+      expect(states()).to.deep.equal([ALARM_STATE.warn])
+    })
+
+    it('drops a pending notification when the zones are removed', () => {
+      const { metaBus, valueStream, states } = watch([LOW])
+      valueStream.push(11.8)
+      metaBus.push({ path: PATH, value: { zones: null } })
+      mock.timers.tick(120_000)
+
+      expect(states()).to.deep.equal([ALARM_STATE.normal])
+    })
+  })
+
   describe('zone boundaries', () => {
     it('handles lower boundary correctly', () => {
       const zones: Zone[] = [
@@ -473,6 +1138,77 @@ describe('Zones', () => {
 
       removeMetadataFields(`vessels.self.${PATH}`, ['displayName'])
       expect(enter()).to.equal(`${PATH} between 0.08 and 0.2`)
+    })
+
+    it('sends the standing notification again with a new display name', () => {
+      const metaBus = new Bacon.Bus()
+      const valueStream = new Bacon.Bus()
+      const messages: (string | undefined)[] = []
+      new Zones(
+        {
+          getSelfMetaBus: () => metaBus,
+          getSelfStream: (_path: Path) => valueStream
+        } as never,
+        (delta: Delta) => {
+          const update = delta.updates[0]
+          messages.push(
+            hasValues(update)
+              ? asNotification(update.values[0].value).message
+              : undefined
+          )
+        }
+      )
+      const zones = [zoneWithoutMessage(0.08, 0.2)]
+      metaBus.push({ path: PATH, value: { zones } })
+      valueStream.push(0.1)
+      // A metadata update reaches the zones before the server keeps it
+      metaBus.push({ path: PATH, value: { zones, displayName: 'Fresh water' } })
+      metaBus.push({ path: PATH, value: { displayName: 'Fresh water port' } })
+      metaBus.push({ path: PATH, value: { zones } })
+
+      expect(messages).to.deep.equal([
+        `${PATH} between 0.08 and 0.2`,
+        'Fresh water between 0.08 and 0.2',
+        'Fresh water port between 0.08 and 0.2',
+        `${PATH} between 0.08 and 0.2`
+      ])
+    })
+
+    it('names a zone changed along with the display name once', () => {
+      const metaBus = new Bacon.Bus()
+      const valueStream = new Bacon.Bus()
+      const messages: (string | undefined)[] = []
+      new Zones(
+        {
+          getSelfMetaBus: () => metaBus,
+          getSelfStream: (_path: Path) => valueStream
+        } as never,
+        (delta: Delta) => {
+          const update = delta.updates[0]
+          messages.push(
+            hasValues(update)
+              ? asNotification(update.values[0].value).message
+              : undefined
+          )
+        }
+      )
+      metaBus.push({
+        path: PATH,
+        value: { zones: [zoneWithoutMessage(0.08, 0.2)] }
+      })
+      valueStream.push(0.1)
+      metaBus.push({
+        path: PATH,
+        value: {
+          zones: [zoneWithoutMessage(0.05, 0.2)],
+          displayName: 'Fresh water'
+        }
+      })
+
+      expect(messages).to.deep.equal([
+        `${PATH} between 0.08 and 0.2`,
+        'Fresh water between 0.05 and 0.2'
+      ])
     })
 
     it('states an open or a single-value range as such', () => {
