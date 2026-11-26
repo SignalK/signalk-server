@@ -25,7 +25,9 @@ import {
   hasValues,
   hasMeta,
   Context,
+  Meta,
   Path,
+  PathValue,
   RoutePermission
 } from '@signalk/server-api'
 import ms, { StringValue } from 'ms'
@@ -1366,6 +1368,42 @@ function tokenSecurityFactory(
     options = theConfig as TokenSecurityOptions
   }
 
+  // entries come straight from the client, so null or pathless entries are
+  // possible despite the types
+  function anyDeniesWrite(
+    entries: (PathValue | Meta | null | undefined)[],
+    identifier: string,
+    context: string,
+    source: string
+  ): boolean {
+    for (const entry of entries) {
+      if (
+        entry === null ||
+        entry === undefined ||
+        typeof entry.path !== 'string' ||
+        !strategy.checkACL(identifier, context, entry.path, source, 'write')
+      ) {
+        return true
+      }
+    }
+    return false
+  }
+
+  function readableEntries<T extends PathValue | Meta>(
+    entries: T[],
+    identifier: string,
+    context: string,
+    source: string
+  ): T[] {
+    const readable: T[] = []
+    for (const entry of entries) {
+      if (strategy.checkACL(identifier, context, entry.path, source, 'read')) {
+        readable.push(entry)
+      }
+    }
+    return readable
+  }
+
   strategy.shouldAllowWrite = function (
     req: Request | SecurityWSConnection,
     delta: Delta
@@ -1382,52 +1420,19 @@ function tokenSecurityFactory(
           ? 'vessels.self'
           : delta.context || 'vessels.self'
 
+      const identifier = skReq.skPrincipal.identifier
       const notAllowed = delta.updates.find((update: Update) => {
         let source = (update as { $source?: string }).$source
         if (!source) {
           source = getSourceId(update.source)
         }
 
-        if (hasValues(update)) {
-          return update.values.find((valuePath) => {
-            if (
-              valuePath === null ||
-              valuePath === undefined ||
-              typeof valuePath.path !== 'string'
-            ) {
-              return true
-            }
-            return (
-              strategy.checkACL(
-                skReq.skPrincipal!.identifier,
-                context,
-                valuePath.path,
-                source!,
-                'write'
-              ) === false
-            )
-          })
-        } else if (hasMeta(update)) {
-          return update.meta.find((metaPath) => {
-            if (
-              metaPath === null ||
-              metaPath === undefined ||
-              typeof metaPath.path !== 'string'
-            ) {
-              return true
-            }
-            return (
-              strategy.checkACL(
-                skReq.skPrincipal!.identifier,
-                context,
-                metaPath.path,
-                source!,
-                'write'
-              ) === false
-            )
-          })
-        }
-        return false
+        return (
+          (hasValues(update) &&
+            anyDeniesWrite(update.values, identifier, context, source!)) ||
+          (hasMeta(update) &&
+            anyDeniesWrite(update.meta, identifier, context, source!))
+        )
       })
 
       // true if we did not find anything disallowing the write
@@ -1482,41 +1487,25 @@ function tokenSecurityFactory(
         delta.context === app.selfContext
           ? 'vessels.self'
           : delta.context || 'vessels.self'
+      const identifier = principal.identifier
 
       filtered.updates = delta.updates
-        .map((update: Update) => {
-          if (hasValues(update)) {
-            const res = update.values
-              .map((valuePath) => {
-                return strategy.checkACL(
-                  principal.identifier,
-                  context,
-                  valuePath.path,
-                  update.source as unknown as string,
-                  'read'
-                )
-                  ? valuePath
-                  : null
-              })
-              .filter((vp): vp is NonNullable<typeof vp> => vp !== null)
-            const updatedUpdate = { ...update, values: res }
-            return res.length > 0 ? updatedUpdate : null
-          } else if (hasMeta(update)) {
-            const res = update.meta
-              .map((metaPath) => {
-                return strategy.checkACL(
-                  principal.identifier,
-                  context,
-                  metaPath.path,
-                  update.source as unknown as string,
-                  'read'
-                )
-                  ? metaPath
-                  : null
-              })
-              .filter((mp): mp is NonNullable<typeof mp> => mp !== null)
-            const updatedUpdate = { ...update, meta: res }
-            return res.length > 0 ? updatedUpdate : null
+        .map((update: Update): Update | null => {
+          const source = update.source as unknown as string
+          const values = hasValues(update)
+            ? readableEntries(update.values, identifier, context, source)
+            : undefined
+          const meta = hasMeta(update)
+            ? readableEntries(update.meta, identifier, context, source)
+            : undefined
+          if (values && meta) {
+            return values.length > 0 || meta.length > 0
+              ? { ...update, values, meta }
+              : null
+          } else if (values) {
+            return values.length > 0 ? { ...update, values } : null
+          } else if (meta) {
+            return meta.length > 0 ? { ...update, meta } : null
           }
           return update
         })
