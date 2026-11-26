@@ -9,7 +9,7 @@ The contract is described in "Authentication and Session Management" in `docs/de
 
 ## Find out where the browser stands
 
-Call `GET /skServer/loginStatus` when the webapp starts. It needs no authentication.
+Call `GET /skServer/loginStatus` when the webapp starts. It needs no authentication. Read the fields below only from a successful response; on an error status (it is rate limited, for example) show an error and let the user retry, since a missing `authenticationRequired` would otherwise look like security being off.
 
 - `authenticationRequired` missing or `false`: security is off and data access is open, though the server still refuses some admin operations. Show the webapp, never a login prompt.
 - `status` is `loggedIn`: `username` and `userLevel` (`readonly`, `readwrite` or `admin`) say who and with what rights.
