@@ -237,7 +237,7 @@ export default function Embedded() {
 
   return (
     <div
-      style={{ backgroundColor: 'aliceblue', height: 'calc(100vh - 105px)' }}
+      style={{ backgroundColor: 'aliceblue', minHeight: 'calc(100vh - 105px)' }}
     >
       <WebappErrorBoundary key={moduleId} webappName={moduleId || 'Unknown'}>
         <Suspense fallback="Loading...">
