@@ -18,14 +18,22 @@ import { createServer, Server, Socket } from 'net'
 import split from 'split'
 import { createDebug } from '../debug'
 import { Interface, SignalKServer } from '../types'
-import { Unsubscribes } from '@signalk/server-api'
+import { Delta, Unsubscribes } from '@signalk/server-api'
 import {
   BackpressureManager,
   parseBackpressureThresholds
 } from '../BackpressureManager'
+import { SkPrincipal } from '../security'
 const debug = createDebug('signalk-server:interfaces:tcp:signalk')
 
 const thresholds = parseBackpressureThresholds()
+
+// TCP clients cannot authenticate, so they get the same read access as
+// anonymous HTTP and WebSocket clients when allow_readonly is on.
+const ANONYMOUS_PRINCIPAL: SkPrincipal = {
+  identifier: 'AUTO',
+  permissions: 'readonly'
+}
 
 interface SocketWithId extends Socket {
   id?: number
@@ -173,9 +181,18 @@ function socketMessageHandler(
         (err: any) => {
           console.error(`Subscribe  failed:${err}`)
         },
-        (delta: any) => {
-          manager.send(delta)
-        }
+        (delta: Delta) => {
+          const filtered = app.securityStrategy.filterReadDelta(
+            ANONYMOUS_PRINCIPAL,
+            delta
+          )
+          if (filtered) {
+            manager.send(filtered)
+          }
+        },
+        // the cache bootstrap filters with this principal; the public
+        // SubscriptionManager type declares it as a string
+        ANONYMOUS_PRINCIPAL as unknown as string
       )
     } else if (msg.unsubscribe) {
       debug.enabled && debug(`unsubscribe:${JSON.stringify(msg)}`)
