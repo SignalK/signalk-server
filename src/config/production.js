@@ -15,6 +15,7 @@
 */
 
 const { isUndefined } = require('lodash')
+const { accessLogger } = require('./access-log')
 
 module.exports = function (app) {
   'use strict'
@@ -30,7 +31,7 @@ module.exports = function (app) {
     if (!accessLogging) {
       morganOptions.skip = () => true
     }
-    app.use(require('morgan')('combined', morganOptions))
+    app.use(accessLogger('combined', morganOptions))
     app.use(require('errorhandler')())
   }
 }
