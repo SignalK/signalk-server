@@ -11,7 +11,7 @@ The contract is described in "Authentication and Session Management" in `docs/de
 
 Call `GET /skServer/loginStatus` when the webapp starts. It needs no authentication.
 
-- `authenticationRequired` missing or `false`: security is off, every request has full access. Show the webapp, never a login prompt.
+- `authenticationRequired` missing or `false`: security is off and data access is open, though the server still refuses some admin operations. Show the webapp, never a login prompt.
 - `status` is `loggedIn`: `username` and `userLevel` (`readonly`, `readwrite` or `admin`) say who and with what rights.
 - `status` is `notLoggedIn` with security on: show what `readOnlyAccess` allows, or send the user to log in.
 
@@ -21,7 +21,7 @@ Fields that do not apply are left out: a missing flag means `false`, a missing `
 
 Use the server's session cookie. A webapp served by the server is on the server's origin, so `fetch` sends the HttpOnly cookie by default, and opening a WebSocket sends it too; neither needs a token. Every webapp on the server shares this session, including the Admin UI.
 
-During development, let the dev server proxy `/signalk`, `/skServer`, `/admin` and `/plugins` to the Signal K server, WebSockets included, so the webapp stays on one origin and the cookie, `loginStatus` and the login redirect below behave as in production. Calling the server from another origin instead needs `credentials: 'include'` and that origin in the server's `allowedCorsOrigins`, and the login redirect cannot return to it. That works only from the same site (the same host on another port): the session cookie is `SameSite=Strict`, so a webapp on another host or scheme never gets it and every request arrives logged out.
+During development, let the dev server proxy every request it does not serve itself to the Signal K server, WebSockets included, so the webapp stays on one origin and the cookie, `loginStatus` and the login redirect below behave as in production. Calling the server from another origin instead needs `credentials: 'include'` and that origin in the server's `allowedCorsOrigins`, and the login redirect cannot return to it. That works only from the same site (the same host on another port): the session cookie is `SameSite=Strict`, so a webapp on another host or scheme never gets it and every request arrives logged out.
 
 Do not keep a token in the webapp (localStorage, an `Authorization` header, a `?token=` query) unless it has no browser session to share, such as a native client. A webapp that logs in with its own token also sets the shared cookie, which confuses the sessions of the other webapps.
 
