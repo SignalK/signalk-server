@@ -946,6 +946,7 @@ jobs:
           // first. Anything caught is fatal — see the report below.
           const ASYNC_CRASH_DRAIN_MS = 1500;
           const asyncCrashes = [];
+          const reportedErrors = new Set();
           process.on('uncaughtException', (e) => {
             asyncCrashes.push('uncaught exception: ' + ((e && e.message) || String(e)));
           });
@@ -960,7 +961,7 @@ jobs:
           // doPluginStart in src/interfaces/plugins.ts), so the timer still
           // fires and still kills the server. Exiting on the throw alone
           // would report success for exactly that plugin.
-          const finish = async (code) => {
+          const finish = async (code, completed = false) => {
             // Let queued failures surface before deciding the verdict. A
             // microtask turn would cover an 'error' already on the queue, but
             // the failures worth catching are slower: a socket connect, a
@@ -991,6 +992,12 @@ jobs:
               console.log('optional), or await the operation so the failure reaches the');
               console.log('try/catch in start().');
               process.exit(1);
+            }
+            reportedErrors.forEach(msg => console.log('::warning::Plugin reported an error: ' + msg));
+            if (completed) {
+              console.log(reportedErrors.size > 0
+                ? 'Plugin lifecycle completed with reported errors; check required configuration and services.'
+                : 'Plugin lifecycle (start/stop/restart) is clean');
             }
             process.exit(code);
           };
@@ -1129,9 +1136,23 @@ jobs:
             debug: () => {},
             error: () => {},
             setPluginStatus: (msg) => console.log('  status: ' + msg),
-            setPluginError: (msg) => console.log('  error: ' + msg),
+            setPluginError: (msg) => {
+              console.log('  error: ' + msg);
+              if (msg) reportedErrors.add(String(msg));
+            },
             reportError: () => {},
             reportOutputMessages: () => {},
+
+            // ── Express route registration (handlers are not executed) ──
+            get: () => mockApp,
+            post: () => mockApp,
+            put: () => mockApp,
+            delete: () => mockApp,
+            patch: () => mockApp,
+            use: () => mockApp,
+            all: () => mockApp,
+            route: () => mockApp,
+            param: () => mockApp,
 
             // ── PUT / action handlers ─────────────────────────────
             registerPutHandler: () => {},
@@ -1268,8 +1289,7 @@ jobs:
             await finish(1);
           }
 
-          console.log('Plugin lifecycle (start/stop/restart) is clean');
-          await finish(0);
+          await finish(0, true);
           })().catch(e => {
             console.log('::error::Unexpected error during lifecycle check: ' + (e && e.message || String(e)));
             process.exit(1);
