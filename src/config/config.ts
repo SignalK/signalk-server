@@ -119,6 +119,8 @@ export interface Config {
     port?: number
     keepMostRecentLogsOnly?: boolean
     logCountToKeep?: number
+    /** Compress rotated data log files to `<name>.gz`. Default true. */
+    compressOldLogs?: boolean
     enablePluginLogging?: boolean
     loggingDirectory?: string
     /** Master switch for the staleness enforcer */

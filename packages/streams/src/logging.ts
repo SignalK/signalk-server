@@ -15,8 +15,12 @@
  */
 
 import FileTimestampStream from 'file-timestamp-stream'
+import { spawn } from 'child_process'
 import path from 'path'
 import fs from 'fs'
+import type { WriteStream } from 'fs'
+import { finished } from 'stream/promises'
+import { compressLogFile, STAGING_DIR_PREFIX } from './log-compressor'
 import type { CreateDebug } from './types'
 
 export interface LoggingApp {
@@ -26,6 +30,7 @@ export interface LoggingApp {
       loggingDirectory?: string
       keepMostRecentLogsOnly?: boolean
       logCountToKeep?: number
+      compressOldLogs?: boolean
     }
   }
 }
@@ -34,14 +39,16 @@ let debug: (...args: unknown[]) => void = require('debug')(
   'signalk:streams:logging'
 )
 
-const filenamePattern = /skserver-raw_\d\d\d\d-\d\d-\d\dT\d\d\.log/
+const filenamePattern = /skserver-raw_\d\d\d\d-\d\d-\d\dT\d\d\.log(\.gz)?$/
 const loggers: Record<string, FileTimestampStream> = {}
 
-class FileTimestampStreamWithDelete extends FileTimestampStream {
+export class FileTimestampStreamWithDelete extends FileTimestampStream {
   private readonly app: LoggingApp
   private readonly filesToKeep: number | undefined
   private readonly fullLogDir: string
-  private prevFilename: string | undefined
+  private readonly compressOldLogs: boolean
+  private readonly queuedForCompression = new Set<string>()
+  private notifiedRotationOf: string | undefined
 
   constructor(
     app: LoggingApp,
@@ -53,20 +60,72 @@ class FileTimestampStreamWithDelete extends FileTimestampStream {
     this.app = app
     this.filesToKeep = filesToKeep
     this.fullLogDir = fullLogDir
-    this.prevFilename = undefined
+    this.compressOldLogs = app.config.settings.compressOldLogs !== false
     debug = (options.createDebug ?? require('debug'))('signalk:streams:logging')
   }
 
   newFilename(): string {
-    if (this.prevFilename !== this.currentFilename) {
-      this.prevFilename = this.currentFilename
-      this.deleteOldFiles()
+    const nextFilename = super.newFilename()
+    const rotatedFilename = this.currentFilename
+    if (
+      rotatedFilename !== undefined &&
+      rotatedFilename !== nextFilename &&
+      rotatedFilename !== this.notifiedRotationOf
+    ) {
+      // The base class polls newFilename() every second, so only the first
+      // call after the filename changes belongs to this rotation. this.stream
+      // is still the stream of rotatedFilename: the base class ends it right
+      // after this method returns.
+      this.notifiedRotationOf = rotatedFilename
+      this.onRotate(rotatedFilename, this.stream)
     }
-    return super.newFilename()
+    return nextFilename
+  }
+
+  private onRotate(filename: string, stream: WriteStream | undefined): void {
+    this.deleteOldFiles()
+    if (!this.compressOldLogs || this.queuedForCompression.has(filename)) {
+      return
+    }
+    this.queuedForCompression.add(filename)
+    const compress = () => this.compressOldFile(filename)
+    if (stream && !stream.closed && !stream.writableFinished) {
+      finished(stream).then(compress, compress)
+    } else {
+      compress()
+    }
+  }
+
+  private compressOldFile(filename: string): void {
+    const worker = path.join(__dirname, 'log-compressor.js')
+    if (fs.existsSync(worker)) {
+      try {
+        const child = spawn(process.execPath, [worker, filename], {
+          detached: true,
+          // stderr stays attached: when the worker has to keep a staged copy it
+          // says so there, and that message must not disappear.
+          stdio: ['ignore', 'ignore', 'inherit']
+        })
+        // Without a listener an emitted 'error' would become an uncaught
+        // exception and take the server down.
+        child.on('error', (e: Error) => {
+          debug(`Log compressor failed to start: ${e.message}`)
+        })
+        child.unref()
+        return
+      } catch (e) {
+        debug(`Failed to spawn the log compressor: ${(e as Error).message}`)
+      }
+    }
+    // Running from TypeScript sources, where no compiled worker exists.
+    compressLogFile(filename).catch((e: Error) => {
+      console.error(`Error compressing ${filename}: ${e.message}`)
+    })
   }
 
   private deleteOldFiles(): void {
     debug('Checking for old log files')
+    this.recoverStaleStagingDirs()
     listLogFiles(this.app, (err, files) => {
       if (err) {
         console.error(err)
@@ -92,6 +151,103 @@ class FileTimestampStreamWithDelete extends FileTimestampStream {
       }
     })
   }
+
+  /**
+   * A compression run keeps its source in a directory of its own, so a run
+   * that is killed leaves the records behind there instead of losing them.
+   * Once such a directory is old enough that no run can still be using it, the
+   * records are put back under their own name and compressed from there, which
+   * is the same path a live run takes. Nothing is deleted: if the hour is in
+   * use again the staged copy is kept, since it may be the only copy of those
+   * records.
+   */
+  private recoverStaleStagingDirs(): void {
+    const cutoff = Date.now() - 60 * 60 * 1000
+    fs.readdir(this.fullLogDir, (err, names) => {
+      if (err) {
+        console.error(err)
+        return
+      }
+      for (const name of names) {
+        if (!name.startsWith(STAGING_DIR_PREFIX)) {
+          continue
+        }
+        const dir = path.join(this.fullLogDir, name)
+        fs.stat(dir, (statErr, stats) => {
+          if (statErr || !stats.isDirectory() || stats.mtimeMs > cutoff) {
+            return
+          }
+          this.recoverStagingDir(dir)
+        })
+      }
+    })
+  }
+
+  private recoverStagingDir(dir: string): void {
+    void (async () => {
+      let names: string[]
+      try {
+        names = await fs.promises.readdir(dir)
+      } catch (e) {
+        console.error(e)
+        return
+      }
+      const staged = names.filter((name) => name.endsWith('.log'))
+      if (staged.length === 0) {
+        if (names.length > 0) {
+          // Anything else in there was not put there by a run of ours, so it
+          // is left alone and reported instead of being swept away.
+          console.error(
+            `Keeping ${dir}: it holds ${names.join(', ')}, which is not a log file`
+          )
+          return
+        }
+        debug(`Removing empty staging directory ${dir}`)
+        await fs.promises.rmdir(dir).catch((e: Error) => console.error(e))
+        return
+      }
+      for (const name of staged) {
+        const stagedPath = path.join(dir, name)
+        const logPath = path.join(this.fullLogDir, name)
+        try {
+          // Fails with EEXIST rather than replacing a log file that exists.
+          await fs.promises.link(stagedPath, logPath)
+        } catch (e) {
+          if ((e as NodeJS.ErrnoException).code === 'EEXIST') {
+            console.error(
+              `Keeping ${stagedPath}: ${logPath} is in use again, the staged copy is left in place`
+            )
+            continue
+          }
+          try {
+            // Filesystems without hard links: an exclusive copy has the same
+            // non-overwriting guarantee.
+            await fs.promises.copyFile(
+              stagedPath,
+              logPath,
+              fs.constants.COPYFILE_EXCL
+            )
+          } catch (copyErr) {
+            console.error(
+              `Keeping ${stagedPath}: could not restore ${logPath} (${(copyErr as Error).message})`
+            )
+            continue
+          }
+        }
+        debug(`Recovered ${stagedPath} as ${logPath}`)
+        await fs.promises
+          .unlink(stagedPath)
+          .catch((e: Error) => console.error(e))
+        if (this.compressOldLogs) {
+          this.compressOldFile(logPath)
+        }
+      }
+      const remaining = await fs.promises.readdir(dir).catch(() => ['?'])
+      if (remaining.length === 0) {
+        await fs.promises.rmdir(dir).catch(() => undefined)
+      }
+    })()
+  }
 }
 
 export function getLogger(
@@ -106,20 +262,16 @@ export function getLogger(
 
     debug(`logging to ${fileName}`)
 
-    let fileTimestampStream: FileTimestampStream
-    if (
+    const keepOnlyRecent =
       app.config.settings.keepMostRecentLogsOnly === undefined ||
       app.config.settings.keepMostRecentLogsOnly
-    ) {
-      fileTimestampStream = new FileTimestampStreamWithDelete(
+    const fileTimestampStream: FileTimestampStream =
+      new FileTimestampStreamWithDelete(
         app,
         fullLogdir,
-        app.config.settings.logCountToKeep,
+        keepOnlyRecent ? app.config.settings.logCountToKeep : undefined,
         { path: fileName }
       )
-    } else {
-      fileTimestampStream = new FileTimestampStream({ path: fileName })
-    }
 
     loggers[fullLogdir] = fileTimestampStream
   }

@@ -26,6 +26,7 @@ interface ServerSettingsData {
   loggingDirectory?: string
   keepMostRecentLogsOnly?: boolean
   logCountToKeep?: string
+  compressOldLogs?: boolean
   courseApi?: {
     apiOnly?: boolean
   }
@@ -535,6 +536,34 @@ const ServerSettings: React.FC = () => {
                     <Form.Text muted>How many hourly files to keep</Form.Text>
                   </div>
                 </div>
+              </Col>
+            </Form.Group>
+            <Form.Group as={Row}>
+              <Col md="2">
+                <Form.Label htmlFor="compressOldLogs">
+                  Compress rotated data log files
+                </Form.Label>
+              </Col>
+              <Col xs="12" md={fieldColWidthMd}>
+                <Form.Label
+                  style={{ marginBottom: 0 }}
+                  className="switch switch-text switch-primary"
+                >
+                  <input
+                    type="checkbox"
+                    name="compressOldLogs"
+                    id="compressOldLogs"
+                    className="switch-input"
+                    onChange={handleChange}
+                    checked={settings.compressOldLogs !== false}
+                  />
+                  <span className="switch-label" data-on="On" data-off="Off" />
+                  <span className="switch-handle" />
+                </Form.Label>
+                <Form.Text muted>
+                  Rotated hourly files are gzipped in the background so history
+                  takes less disk space.
+                </Form.Text>
               </Col>
             </Form.Group>
             <Form.Group as={Row}>

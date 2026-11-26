@@ -11,6 +11,9 @@ import {
 } from './test-helpers'
 import { getFullLogDir, listLogFiles, getLogger } from './logging'
 import type { LoggingApp } from './logging'
+import { FileTimestampStreamWithDelete } from './logging'
+import { compressLogFile } from './log-compressor'
+import { gunzipSync } from 'zlib'
 
 function createLoggingApp(
   overrides: Partial<LoggingApp['config']> = {}
@@ -21,10 +24,29 @@ function createLoggingApp(
       settings: {
         loggingDirectory: overrides.settings?.loggingDirectory,
         keepMostRecentLogsOnly: overrides.settings?.keepMostRecentLogsOnly,
-        logCountToKeep: overrides.settings?.logCountToKeep
+        logCountToKeep: overrides.settings?.logCountToKeep,
+        compressOldLogs: overrides.settings?.compressOldLogs
       }
     }
   }
+}
+
+async function waitForFile(
+  dir: string,
+  matches: (name: string) => boolean,
+  timeoutMs = 5000
+): Promise<string> {
+  const deadline = Date.now() + timeoutMs
+  while (Date.now() < deadline) {
+    const found = fs.readdirSync(dir).find(matches)
+    if (found) {
+      return found
+    }
+    await delay(20)
+  }
+  throw new Error(
+    `Timed out waiting for a matching file, saw: ${fs.readdirSync(dir).join(', ')}`
+  )
 }
 
 describe('logging', () => {
@@ -237,6 +259,364 @@ describe('logging', () => {
           }
         }
       }, 10)
+    })
+  })
+
+  describe('log compression', () => {
+    let tmpDir: string
+
+    beforeEach(() => {
+      tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sk-log-test-'))
+    })
+
+    afterEach(() => {
+      fs.rmSync(tmpDir, { recursive: true, force: true })
+    })
+
+    it('compresses a log file and removes the original', async () => {
+      const file = path.join(tmpDir, 'skserver-raw_2024-01-15T12.log')
+      const content = '1700000000000;N;$GPGLL,4916.45,N\n'
+      fs.writeFileSync(file, content)
+
+      const compressed = await compressLogFile(file)
+
+      expect(compressed).to.equal(`${file}.gz`)
+      expect(fs.existsSync(file)).to.equal(false)
+      expect(gunzipSync(fs.readFileSync(compressed)).toString()).to.equal(
+        content
+      )
+    })
+
+    it('leaves no archive behind when the source cannot be read', async () => {
+      let error: Error | undefined
+      try {
+        await compressLogFile(path.join(tmpDir, 'missing.log'))
+      } catch (e) {
+        error = e as Error
+      }
+      expect(error).to.not.equal(undefined)
+      expect(fs.readdirSync(tmpDir)).to.have.length(0)
+    })
+
+    it('keeps an existing archive when the source cannot be read', async function () {
+      if (process.getuid?.() === 0) {
+        this.skip()
+      }
+      const file = path.join(tmpDir, 'skserver-raw_2024-01-15T12.log')
+      const archive = `${file}.gz`
+      fs.writeFileSync(file, 'unreadable hour\n')
+      fs.writeFileSync(archive, 'earlier hour')
+      fs.chmodSync(file, 0o000)
+
+      try {
+        let error: Error | undefined
+        try {
+          await compressLogFile(file)
+        } catch (e) {
+          error = e as Error
+        }
+        expect(error).to.not.equal(undefined)
+        expect(fs.readFileSync(archive, 'utf8')).to.equal('earlier hour')
+        expect(fs.existsSync(file)).to.equal(true)
+      } finally {
+        fs.chmodSync(file, 0o644)
+      }
+    })
+
+    it('never replaces a staging copy left behind by an interrupted run', async () => {
+      const file = path.join(tmpDir, 'skserver-raw_2024-01-15T12.log')
+      const leftoverDir = path.join(tmpDir, '.compress-abandoned')
+      fs.mkdirSync(leftoverDir)
+      const leftover = path.join(leftoverDir, 'skserver-raw_2024-01-15T12.log')
+      fs.writeFileSync(leftover, 'records from the interrupted run\n')
+      fs.writeFileSync(file, 'records from this run\n')
+
+      const compressed = await compressLogFile(file)
+
+      expect(fs.readFileSync(leftover, 'utf8')).to.equal(
+        'records from the interrupted run\n'
+      )
+      expect(gunzipSync(fs.readFileSync(compressed)).toString()).to.equal(
+        'records from this run\n'
+      )
+    })
+
+    it('keeps the source when it grew after the copy read it', async () => {
+      const file = path.join(tmpDir, 'skserver-raw_2024-01-15T12.log')
+      const content = '1700000000000;N;$GPGLL,4916.45,N\n'
+      fs.writeFileSync(file, content)
+
+      // A larger source size after the copy stands in for records that landed
+      // after the read reached the end of the file.
+      const realStat = fs.promises.stat
+      fs.promises.stat = ((p: fs.PathLike) =>
+        realStat(p).then((stats) =>
+          String(p).includes(`${path.sep}.compress-`)
+            ? Object.assign(stats, { size: Number(stats.size) + 1 })
+            : stats
+        )) as typeof fs.promises.stat
+      try {
+        let error: Error | undefined
+        try {
+          await compressLogFile(file)
+        } catch (e) {
+          error = e as Error
+        }
+        expect(error?.message).to.match(/grew while it was being compressed/)
+        expect(fs.readFileSync(file, 'utf8')).to.equal(content)
+        expect(fs.existsSync(`${file}.gz`)).to.equal(false)
+      } finally {
+        fs.promises.stat = realStat
+      }
+    })
+
+    it('leaves no archive behind when the source cannot be read and none existed', async function () {
+      if (process.getuid?.() === 0) {
+        this.skip()
+      }
+      const file = path.join(tmpDir, 'skserver-raw_2024-01-15T12.log')
+      fs.writeFileSync(file, 'unreadable hour\n')
+      fs.chmodSync(file, 0o000)
+
+      try {
+        let error: Error | undefined
+        try {
+          await compressLogFile(file)
+        } catch (e) {
+          error = e as Error
+        }
+        expect((error as NodeJS.ErrnoException)?.code).to.equal('EACCES')
+        expect(fs.readdirSync(tmpDir)).to.deep.equal([
+          'skserver-raw_2024-01-15T12.log'
+        ])
+      } finally {
+        fs.chmodSync(file, 0o644)
+      }
+    })
+
+    it('keeps both files when an archive already exists', async () => {
+      const file = path.join(tmpDir, 'skserver-raw_2024-01-15T12.log')
+      const archive = `${file}.gz`
+      const content = '1700000000000;N;$GPGLL,4916.45,N\n'
+      fs.writeFileSync(file, content)
+      fs.writeFileSync(archive, 'earlier hour')
+
+      let error: Error | undefined
+      try {
+        await compressLogFile(file)
+      } catch (e) {
+        error = e as Error
+      }
+
+      expect((error as NodeJS.ErrnoException)?.code).to.equal('EEXIST')
+      // The source is back under its own name and the earlier archive is
+      // untouched, so neither hour lost records.
+      expect(fs.readFileSync(file, 'utf8')).to.equal(content)
+      expect(fs.readFileSync(archive, 'utf8')).to.equal('earlier hour')
+      expect(fs.readdirSync(tmpDir).sort()).to.deep.equal([
+        'skserver-raw_2024-01-15T12.log',
+        'skserver-raw_2024-01-15T12.log.gz'
+      ])
+    })
+
+    it('lists compressed log files alongside uncompressed ones', (done) => {
+      fs.writeFileSync(path.join(tmpDir, 'skserver-raw_2024-01-15T12.log'), '')
+      fs.writeFileSync(
+        path.join(tmpDir, 'skserver-raw_2024-01-15T13.log.gz'),
+        ''
+      )
+
+      listLogFiles(createLoggingApp({ configPath: tmpDir }), (err, files) => {
+        expect(err).to.equal(undefined)
+        expect(files).to.have.length(2)
+        expect(files).to.include('skserver-raw_2024-01-15T13.log.gz')
+        done()
+      })
+    })
+
+    it('compresses a file once it has been rotated', async function () {
+      this.timeout(15000)
+      const app = createLoggingApp({ configPath: tmpDir })
+      const stream = new FileTimestampStreamWithDelete(app, tmpDir, undefined, {
+        path: path.join(tmpDir, 'skserver-raw_%Y-%m-%dT%H.%S.log')
+      })
+
+      try {
+        stream.write('1700000000000;first;record\n')
+        await delay(1100)
+        stream.write('1700000001000;second;record\n')
+
+        // The pipeline is done when the archive exists and its source is
+        // gone; gunzipping an archive that is still being written fails.
+        await waitForFile(
+          tmpDir,
+          (name) =>
+            name.endsWith('.log.gz') &&
+            !fs.existsSync(path.join(tmpDir, name.replace(/\.gz$/, '')))
+        )
+        const compressed = fs
+          .readdirSync(tmpDir)
+          .find((name) => name.endsWith('.log.gz'))!
+        const content = gunzipSync(
+          fs.readFileSync(path.join(tmpDir, compressed))
+        ).toString()
+        expect(content).to.equal('1700000000000;first;record\n')
+      } finally {
+        stream.destroy()
+      }
+    })
+
+    it('recovers a staged log left behind by an interrupted run', async function () {
+      this.timeout(15000)
+      const app = createLoggingApp({ configPath: tmpDir })
+      const stream = new FileTimestampStreamWithDelete(app, tmpDir, undefined, {
+        path: path.join(tmpDir, 'skserver-raw_%Y-%m-%dT%H.%S.log')
+      })
+      const abandoned = path.join(tmpDir, '.compress-abandoned')
+      fs.mkdirSync(abandoned)
+      const stagedName = 'skserver-raw_2020-01-01T00.log'
+      fs.writeFileSync(
+        path.join(abandoned, stagedName),
+        'records from the interrupted run\n'
+      )
+      const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000)
+      fs.utimesSync(abandoned, twoHoursAgo, twoHoursAgo)
+
+      try {
+        stream.write('1700000000000;first;record\n')
+        await delay(1100)
+        stream.write('1700000001000;second;record\n')
+
+        const archive = await waitForFile(
+          tmpDir,
+          (name) => name === `${stagedName}.gz`,
+          8000
+        )
+        expect(
+          gunzipSync(fs.readFileSync(path.join(tmpDir, archive))).toString()
+        ).to.equal('records from the interrupted run\n')
+        expect(fs.existsSync(abandoned)).to.equal(false)
+      } finally {
+        stream.destroy()
+      }
+    })
+
+    it('keeps a staged copy when its hour is in use again', async function () {
+      this.timeout(15000)
+      const app = createLoggingApp({ configPath: tmpDir })
+      const stream = new FileTimestampStreamWithDelete(app, tmpDir, undefined, {
+        path: path.join(tmpDir, 'skserver-raw_%Y-%m-%dT%H.%S.log')
+      })
+      const abandoned = path.join(tmpDir, '.compress-abandoned')
+      fs.mkdirSync(abandoned)
+      const stagedName = 'skserver-raw_2020-01-01T00.log'
+      fs.writeFileSync(path.join(abandoned, stagedName), 'older records\n')
+      const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000)
+      fs.utimesSync(abandoned, twoHoursAgo, twoHoursAgo)
+      fs.writeFileSync(path.join(tmpDir, stagedName), 'records in use\n')
+
+      try {
+        stream.write('1700000000000;first;record\n')
+        await delay(1100)
+        stream.write('1700000001000;second;record\n')
+        await waitForFile(tmpDir, (name) => name.endsWith('.log.gz'))
+        await delay(500)
+
+        expect(
+          fs.readFileSync(path.join(abandoned, stagedName), 'utf8')
+        ).to.equal('older records\n')
+        expect(fs.readFileSync(path.join(tmpDir, stagedName), 'utf8')).to.equal(
+          'records in use\n'
+        )
+      } finally {
+        stream.destroy()
+      }
+    })
+
+    it('restores a staged log without compressing it when compression is off', async function () {
+      this.timeout(15000)
+      const app = createLoggingApp({
+        configPath: tmpDir,
+        settings: { compressOldLogs: false }
+      })
+      const stream = new FileTimestampStreamWithDelete(app, tmpDir, undefined, {
+        path: path.join(tmpDir, 'skserver-raw_%Y-%m-%dT%H.%S.log')
+      })
+      const abandoned = path.join(tmpDir, '.compress-abandoned')
+      fs.mkdirSync(abandoned)
+      const stagedName = 'skserver-raw_2020-01-01T00.log'
+      fs.writeFileSync(path.join(abandoned, stagedName), 'older records\n')
+      const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000)
+      fs.utimesSync(abandoned, twoHoursAgo, twoHoursAgo)
+
+      try {
+        stream.write('1700000000000;first;record\n')
+        await delay(1100)
+        stream.write('1700000001000;second;record\n')
+        await waitForFile(tmpDir, (name) => name === stagedName)
+
+        expect(fs.readFileSync(path.join(tmpDir, stagedName), 'utf8')).to.equal(
+          'older records\n'
+        )
+        expect(fs.existsSync(`${path.join(tmpDir, stagedName)}.gz`)).to.equal(
+          false
+        )
+      } finally {
+        stream.destroy()
+      }
+    })
+
+    it('leaves a staging directory alone when it holds something else', async function () {
+      this.timeout(15000)
+      const app = createLoggingApp({ configPath: tmpDir })
+      const stream = new FileTimestampStreamWithDelete(app, tmpDir, undefined, {
+        path: path.join(tmpDir, 'skserver-raw_%Y-%m-%dT%H.%S.log')
+      })
+      const foreign = path.join(tmpDir, '.compress-foreign')
+      fs.mkdirSync(foreign)
+      fs.writeFileSync(path.join(foreign, 'custom.txt'), 'not ours\n')
+      const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000)
+      fs.utimesSync(foreign, twoHoursAgo, twoHoursAgo)
+
+      try {
+        stream.write('1700000000000;first;record\n')
+        await delay(1100)
+        stream.write('1700000001000;second;record\n')
+        await waitForFile(tmpDir, (name) => name.endsWith('.log.gz'))
+        await delay(300)
+
+        expect(
+          fs.readFileSync(path.join(foreign, 'custom.txt'), 'utf8')
+        ).to.equal('not ours\n')
+      } finally {
+        stream.destroy()
+      }
+    })
+
+    it('leaves rotated files uncompressed when compression is disabled', async function () {
+      this.timeout(15000)
+      const app = createLoggingApp({
+        configPath: tmpDir,
+        settings: { compressOldLogs: false }
+      })
+      const stream = new FileTimestampStreamWithDelete(app, tmpDir, undefined, {
+        path: path.join(tmpDir, 'skserver-raw_%Y-%m-%dT%H.%S.log')
+      })
+
+      try {
+        stream.write('1700000000000;first;record\n')
+        await delay(1100)
+        stream.write('1700000001000;second;record\n')
+        await delay(500)
+
+        const files = fs.readdirSync(tmpDir)
+        expect(files.filter((name) => name.endsWith('.log.gz'))).to.have.length(
+          0
+        )
+        expect(files.filter((name) => name.endsWith('.log'))).to.have.length(2)
+      } finally {
+        stream.destroy()
+      }
     })
   })
 })

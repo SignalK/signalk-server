@@ -20,13 +20,16 @@ declare module 'reconnect-core' {
 
 declare module 'file-timestamp-stream' {
   import { Writable } from 'stream'
+  import { WriteStream } from 'fs'
   interface FileTimestampStreamOptions {
     path: string
     flags?: string
   }
   class FileTimestampStream extends Writable {
     constructor(options: FileTimestampStreamOptions)
-    currentFilename: string
+    currentFilename?: string
+    /** WriteStream of `currentFilename`, open until the file is rotated. */
+    stream?: WriteStream
     newFilename(): string
   }
   export = FileTimestampStream
