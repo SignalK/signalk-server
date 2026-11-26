@@ -18,11 +18,8 @@ import {
   useSourcesData
 } from '../../store'
 import { useSourceAliases } from '../../hooks/useSourceAliases'
-import type {
-  GnssCorrectionMode,
-  GnssSensorConfig,
-  LoginStatus
-} from '../../store/types'
+import type { GnssCorrectionMode, GnssSensorConfig } from '../../store/types'
+import { isReadOnly } from '../../utils/editAccess'
 import {
   EMPTY_GNSS_CONFIG,
   GNSS_API_PATH,
@@ -66,10 +63,6 @@ const COLORS = ['#0d6efd', '#198754', '#dc3545', '#ffc107', '#0dcaf0']
 const SAVE_ERROR_CLEAR_MS = 8000
 const DEFAULT_SIDE: CenterlineSide = 'starboard'
 
-const isReadOnly = (loginStatus: LoginStatus) =>
-  loginStatus.authenticationRequired !== false &&
-  loginStatus.userLevel !== 'admin'
-
 const GnssPositionSettings: React.FC = () => {
   const gnssSensorsData = useGnssSensorsData()
   const positionSources = usePositionSources()
@@ -77,8 +70,6 @@ const GnssPositionSettings: React.FC = () => {
   const sourcesData = useSourcesData()
   const { getDisplayParts } = useSourceAliases()
   const loginStatus = useLoginStatus()
-  // Read-only visitors see the antenna layout; the server refuses their
-  // writes, so the controls that would send one are locked or hidden.
   const readOnly = isReadOnly(loginStatus)
 
   const updateGnssSensor = useStore((s) => s.updateGnssSensor)

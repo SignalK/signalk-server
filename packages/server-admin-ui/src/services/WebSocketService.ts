@@ -1,5 +1,6 @@
 import { useStore, type SignalKStore } from '../store'
 import { sanitizeGnssConfig } from '../store/slices/gnssPositionSlice'
+import { sanitizeDepthConfig } from '../store/slices/depthSensorsSlice'
 import { fetchAllData } from '../dataFetching'
 
 export type WebSocketStatus =
@@ -382,6 +383,18 @@ export class WebSocketService {
         useStore.getState().setGnssSensors(sanitizeGnssConfig(data))
         break
       }
+      case 'DEPTH_SOURCES':
+        useStore
+          .getState()
+          .setDepthSources(
+            Array.isArray(data)
+              ? data.filter((item): item is string => typeof item === 'string')
+              : []
+          )
+        break
+      case 'DEPTH_SENSORS':
+        useStore.getState().setDepthSensors(sanitizeDepthConfig(data))
+        break
       case 'RESTORESTATUS':
         this.zustandSetState({ restoreStatus: data } as Partial<SignalKStore>)
         break

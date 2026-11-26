@@ -35,9 +35,9 @@ export function startEvents(
  *
  * The admin UI renders these for every logged-in user: VESSEL_INFO in the
  * footer on every page, SERVERSTATISTICS and PROVIDERSTATUS on the dashboard,
- * POSITION_SOURCES and GNSS_SENSORS on the read-only GNSS preferences, and
- * RECEIVE_LOGIN_STATUS drives the login state itself (the equivalent REST
- * route is deliberately public too).
+ * POSITION_SOURCES, GNSS_SENSORS, DEPTH_SOURCES and DEPTH_SENSORS on the
+ * read-only sensor preferences, and RECEIVE_LOGIN_STATUS drives the login
+ * state itself (the equivalent REST route is deliberately public too).
  *
  * Everything else - server configuration, source and priority state, debug
  * settings, plugin and appstore activity - is admin-only. An allowlist rather
@@ -49,6 +49,8 @@ const NON_ADMIN_SERVER_EVENTS = new Set([
   'PROVIDERSTATUS',
   'POSITION_SOURCES',
   'GNSS_SENSORS',
+  'DEPTH_SOURCES',
+  'DEPTH_SENSORS',
   'RECEIVE_LOGIN_STATUS'
 ])
 

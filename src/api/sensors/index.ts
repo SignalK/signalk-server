@@ -10,8 +10,13 @@ import {
   GnssCorrectionStatus,
   GnssOffsetCorrector
 } from '../gnssOffsetCorrector'
-import { validateGnssConfigPayload, validateGnssSensorBounds } from './schemas'
-import { applyGnssSensorsAtomic } from './atomicApply'
+import {
+  validateDepthConfigPayload,
+  validateDepthSensorBounds,
+  validateGnssConfigPayload,
+  validateGnssSensorBounds
+} from './schemas'
+import { applyDepthSensors, applyGnssSensorsAtomic } from './atomicApply'
 import { readDesignLengthOverall } from './vesselDimensions'
 
 const SIGNALK_API_PATH = `/signalk/v2/api`
@@ -34,12 +39,12 @@ export class SensorsApi {
     this.initSensorsRoutes()
   }
 
-  private updateAllowed(request: Request): boolean {
+  private updateAllowed(request: Request, path = 'sensors.gnss'): boolean {
     return this.app.securityStrategy.shouldAllowPut(
       request,
       'vessels.self',
       null,
-      'sensors.gnss'
+      path
     )
   }
 
@@ -70,6 +75,14 @@ export class SensorsApi {
           : undefined,
       beam: typeof beamRaw === 'number' && beamRaw > 0 ? beamRaw : undefined
     }
+  }
+
+  private maximumDraft(): number | undefined {
+    const draft = this.app.config.baseDeltaEditor.getSelfValue(
+      'design.draft'
+    ) as { maximum?: unknown } | undefined
+    const maximum = draft?.maximum
+    return typeof maximum === 'number' && maximum > 0 ? maximum : undefined
   }
 
   private initSensorsRoutes() {
@@ -128,5 +141,54 @@ export class SensorsApi {
         )
       }
     )
+
+    this.initDepthRoutes()
+  }
+
+  private initDepthRoutes() {
+    const path = `${SENSORS_API_PATH}/depth`
+
+    this.app.get(path, (req: Request, res: Response) => {
+      debug.enabled && debug(`** ${req.method} ${req.path}`)
+      res.json({ sensors: this.app.config.settings.depthSensors ?? [] })
+    })
+
+    this.app.put(path, (req: Request, res: Response) => {
+      debug.enabled && debug(`** ${req.method} ${req.path}`)
+      if (!this.updateAllowed(req, 'sensors.depth')) {
+        res.status(403).json(Responses.unauthorised)
+        return
+      }
+      const validation = validateDepthConfigPayload(req.body)
+      if (!validation.ok) {
+        res
+          .status(400)
+          .json({ state: 'FAILED', statusCode: 400, message: validation.error })
+        return
+      }
+      const { lengthOverall, beam } = this.hullDimensions()
+      const boundsError = validateDepthSensorBounds(
+        validation.value.sensors,
+        lengthOverall,
+        beam,
+        this.maximumDraft()
+      )
+      if (boundsError) {
+        res
+          .status(400)
+          .json({ state: 'FAILED', statusCode: 400, message: boundsError })
+        return
+      }
+      applyDepthSensors(this.app, validation.value.sensors, res)
+    })
+
+    this.app.delete(path, (req: Request, res: Response) => {
+      debug.enabled && debug(`** ${req.method} ${req.path}`)
+      if (!this.updateAllowed(req, 'sensors.depth')) {
+        res.status(403).json(Responses.unauthorised)
+        return
+      }
+      applyDepthSensors(this.app, undefined, res)
+    })
   }
 }

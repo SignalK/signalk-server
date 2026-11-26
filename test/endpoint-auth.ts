@@ -162,8 +162,12 @@ describe('Endpoint authentication', function () {
     })
   })
 
-  describe('GNSS preferences endpoints answer read-only users', function () {
-    for (const path of ['/skServer/vessel', '/skServer/positionSources']) {
+  describe('sensor preferences endpoints answer read-only users', function () {
+    for (const path of [
+      '/skServer/vessel',
+      '/skServer/positionSources',
+      '/skServer/depthSources'
+    ]) {
       it(`GET ${path} rejects unauthenticated requests`, async function () {
         const status = await fetchEndpoint('GET', path)
         status.should.equal(401)
