@@ -41,6 +41,7 @@ import { ToPreferredDelta } from './deltaPriority'
 import { StreamBundle, toDelta } from './streambundle'
 import { ContextMatcher } from './types'
 import { wildcardMatcher } from './wildcard'
+import { isUnsubscribeAll, isUnsubscribeById } from './unsubscribe-message'
 const debug = createDebug('signalk-server:subscriptionmanager')
 
 interface BusesMap {
@@ -80,6 +81,13 @@ function runPerSubEngine(
   return { ...result, updates: surviving }
 }
 
+// The subscriptions named by a subscriptionId, per Unsubscribes array. A
+// WebSocket or TCP connection keeps one array, which makes the ids unique
+// per connection.
+const namedSubscriptions = new WeakMap<Unsubscribes, Map<string, () => void>>()
+
+const noop = () => {}
+
 class SubscriptionManager implements ISubscriptionManager {
   streambundle: StreamBundle
   selfContext: string
@@ -99,6 +107,84 @@ class SubscriptionManager implements ISubscriptionManager {
     sourcePolicy?: 'preferred' | 'all',
     excludeSources?: SourceRef[],
     trusted = false
+  ): () => void {
+    const id = command.subscriptionId
+    const named = namedSubscriptions.get(unsubscribes) ?? new Map()
+    if (id !== undefined) {
+      if (typeof id !== 'string' || id.length === 0) {
+        errorCallback('subscriptionId must be a non-empty string')
+        return noop
+      }
+      if (named.has(id)) {
+        errorCallback(`subscriptionId '${id}' is already in use`)
+        return noop
+      }
+    }
+
+    let ended = false
+    const own: Unsubscribes = []
+    // A callback can release the subscription during the cache replay that
+    // attach() runs, before attach() has registered every listener; one
+    // registered after that would be out of reach of every unsubscribe.
+    own.push = (...handles) => {
+      if (ended) {
+        handles.forEach((handle) => handle())
+        return own.length
+      }
+      return Array.prototype.push.apply(own, handles)
+    }
+    const end = () => {
+      ended = true
+      own.forEach((unsubscribe) => unsubscribe())
+      own.length = 0
+      // A second release after the id was taken again must leave the new
+      // owner's entry alone.
+      if (id !== undefined && named.get(id) === release) {
+        named.delete(id)
+      }
+    }
+    // Callers run the whole array with forEach, so end() must not remove
+    // itself from it; only a single unsubscribe does.
+    const release = () => {
+      end()
+      const index = unsubscribes.indexOf(end)
+      if (index >= 0) {
+        unsubscribes.splice(index, 1)
+      }
+    }
+    unsubscribes.push(end)
+    if (id !== undefined) {
+      named.set(id, release)
+      namedSubscriptions.set(unsubscribes, named)
+    }
+
+    try {
+      this.attach(
+        command,
+        own,
+        errorCallback,
+        (delta) => (ended ? undefined : callback(delta)),
+        user,
+        sourcePolicy,
+        excludeSources,
+        trusted
+      )
+    } catch (err) {
+      release()
+      throw err
+    }
+    return release
+  }
+
+  private attach(
+    command: SubscribeMessage,
+    unsubscribes: Unsubscribes,
+    errorCallback: (err: unknown) => void,
+    callback: SubscribeCallback,
+    user: string | undefined,
+    sourcePolicy: 'preferred' | 'all' | undefined,
+    excludeSources: SourceRef[] | undefined,
+    trusted: boolean
   ) {
     // The callback is plugin/client code that runs synchronously inside
     // Bacon dispatches: live bus fan-out, cache bootstrap replay and the
@@ -286,20 +372,19 @@ class SubscriptionManager implements ISubscriptionManager {
   }
 
   unsubscribe(msg: UnsubscribeMessage, unsubscribes: Unsubscribes) {
-    if (
-      msg.unsubscribe &&
-      msg.context === '*' &&
-      msg.unsubscribe &&
-      msg.unsubscribe.length === 1 &&
-      msg.unsubscribe[0].path === '*'
-    ) {
+    if (isUnsubscribeAll(msg)) {
       debug('Unsubscribe all')
       unsubscribes.forEach((unsubscribe) => unsubscribe())
       // clear unsubscribes
       unsubscribes.length = 0
+    } else if (isUnsubscribeById(msg)) {
+      const named = namedSubscriptions.get(unsubscribes)
+      for (const { subscriptionId } of msg.unsubscribe) {
+        named?.get(subscriptionId)?.()
+      }
     } else {
       throw new Error(
-        `Only '{"context":"*","unsubscribe":[{"path":"*"}]}' supported, received ${JSON.stringify(
+        `Only '{"context":"*","unsubscribe":[{"path":"*"}]}' or an unsubscribe listing subscriptionIds is supported, received ${JSON.stringify(
           msg
         )}`
       )
