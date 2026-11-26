@@ -20,6 +20,12 @@
 export type SignalKPermission = 'readonly' | 'readwrite' | 'admin'
 
 /**
+ * Claim used to match users against adminUsers/readwriteUsers.
+ * Restricted to claims Signal K already extracts from the ID token.
+ */
+export type OIDCIdentityClaim = 'email' | 'preferred_username' | 'sub'
+
+/**
  * OIDC Configuration - merged from environment variables and security.json
  */
 export interface OIDCConfig {
@@ -42,6 +48,18 @@ export interface OIDCConfig {
    * Both array and single string values are supported.
    */
   groupsAttribute?: string
+  /**
+   * Identities that grant admin permission, matched against identityClaim.
+   * Checked only when groups produce no match.
+   */
+  adminUsers?: string[]
+  /** Identities that grant readwrite permission, matched against identityClaim */
+  readwriteUsers?: string[]
+  /**
+   * Claim to match adminUsers/readwriteUsers against (default: 'email').
+   * Matching against 'email' requires the token to assert email_verified.
+   */
+  identityClaim?: OIDCIdentityClaim
   /**
    * Display name for the OIDC provider shown on the login button.
    * Default: 'SSO Login'
@@ -69,6 +87,9 @@ export interface PartialOIDCConfig {
   adminGroups?: string[]
   readwriteGroups?: string[]
   groupsAttribute?: string
+  adminUsers?: string[]
+  readwriteUsers?: string[]
+  identityClaim?: OIDCIdentityClaim
   providerName?: string
   autoLogin?: boolean
 }
@@ -102,6 +123,8 @@ export interface OIDCTokens {
 export interface OIDCUserInfo {
   sub: string
   email?: string
+  /** Whether the provider asserts the email address is verified */
+  emailVerified?: boolean
   name?: string
   preferredUsername?: string
   groups?: string[]
