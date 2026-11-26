@@ -192,6 +192,14 @@ export default function Sidebar({ location }: SidebarProps) {
       }
     }
 
+    const deprecatedCount = appStore.installed.filter(
+      (app) => app.deprecated
+    ).length
+    const deprecatedBadge: BadgeData | null =
+      deprecatedCount > 0
+        ? { variant: 'danger', text: `${deprecatedCount}`, color: 'danger' }
+        : null
+
     if (appStore.storeAvailable === false) {
       updatesBadge = {
         variant: 'danger',
@@ -321,12 +329,17 @@ export default function Sidebar({ location }: SidebarProps) {
           name: 'Apps & Plugins',
           url: '/apps',
           icon: 'icon-basket',
-          badges: [updatesBadge, unconfiguredBadge, historyProviderBadge],
+          badges: [
+            updatesBadge,
+            deprecatedBadge,
+            unconfiguredBadge,
+            historyProviderBadge
+          ],
           children: [
             {
               name: 'Store',
               url: '/apps/store',
-              badge: updatesBadge
+              badges: [updatesBadge, deprecatedBadge]
             },
             {
               name: 'Configuration',

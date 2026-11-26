@@ -6,6 +6,7 @@ import Sidebar from './Sidebar'
 
 const appStore = vi.hoisted(() => ({
   updates: [] as unknown[],
+  installed: [] as { name: string; deprecated?: boolean | string }[],
   storeAvailable: true,
   serverUpdate: undefined as string | undefined
 }))
@@ -55,6 +56,7 @@ describe('Sidebar', () => {
   afterEach(() => {
     document.body.classList.remove(MOBILE_SHOWN)
     appStore.serverUpdate = undefined
+    appStore.installed = []
     loginStatus.current = { authenticationRequired: false }
   })
 
@@ -102,6 +104,24 @@ describe('Sidebar', () => {
     renderSidebar()
     const server = screen.getByText('Server').closest('a')!
     expect(server.textContent).toContain('2.35.0')
+  })
+
+  it('flags installed apps npm marked deprecated on the Store entry', () => {
+    appStore.installed = [
+      { name: 'retired-plugin', deprecated: 'Use new-plugin instead' },
+      { name: 'current-plugin' }
+    ]
+    renderSidebar()
+    const store = screen.getByText('Store').closest('a')!
+    const badge = store.querySelector('.badge.bg-danger')
+    expect(badge?.textContent).toBe('1')
+  })
+
+  it('shows no deprecation badge while no installed app is deprecated', () => {
+    appStore.installed = [{ name: 'current-plugin' }]
+    renderSidebar()
+    const store = screen.getByText('Store').closest('a')!
+    expect(store.querySelector('.badge.bg-danger')).toBeNull()
   })
 
   it('shows the read-only pages to read-only visitors, without admin pages', () => {
