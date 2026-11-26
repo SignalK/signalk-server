@@ -1,6 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { useStore, useLoginStatus } from '../../store'
-import { notificationDataPath, resolveDisplayName } from './displayNameUtils'
+import {
+  canWriteDisplayName,
+  notificationDataPath,
+  resolveDisplayName
+} from './displayNameUtils'
 
 interface PathDisplayNameProps {
   context: string
@@ -13,6 +17,8 @@ const EDIT_INPUT_WIDTH = '220px'
 const PENCIL_OPACITY = 0.4
 const ITEM_GAP = '3px'
 const INLINE_PENCIL_LEFT_MARGIN = '4px'
+const SUGGESTION_PADDING = '0 4px'
+const SUGGESTION_BORDER_RADIUS = '3px'
 
 // Latest save revision per row, module-level so a virtualized
 // unmount/remount continues the same sequence — a stale settlement from
@@ -33,6 +39,9 @@ const PathDisplayName: React.FC<PathDisplayNameProps> = ({ context, path }) => {
     const resolved = resolveDisplayName(s.signalkMeta[context], path)
     return resolved ? `${resolved.metaPath}\0${resolved.name}` : null
   })
+  const suggestions = useStore((s) =>
+    context === 'self' ? s.labelSuggestions[path] : undefined
+  )
   const [isEditing, setIsEditing] = useState(false)
   const [editValue, setEditValue] = useState('')
   const [saveFailed, setSaveFailed] = useState(false)
@@ -55,8 +64,7 @@ const PathDisplayName: React.FC<PathDisplayNameProps> = ({ context, path }) => {
   const canEdit =
     context === 'self' &&
     notificationDataPath(path) === undefined &&
-    (!loginStatus.authenticationRequired ||
-      (loginStatus.status === 'loggedIn' && loginStatus.userLevel === 'admin'))
+    canWriteDisplayName(loginStatus)
 
   const handleStartEdit = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.stopPropagation()
@@ -66,12 +74,7 @@ const PathDisplayName: React.FC<PathDisplayNameProps> = ({ context, path }) => {
     setIsEditing(true)
   }
 
-  const handleSave = () => {
-    if (isCancelRef.current) {
-      isCancelRef.current = false
-      return
-    }
-    const trimmed = editValue.trim()
+  const saveName = (trimmed: string) => {
     if (trimmed !== (name ?? '')) {
       // Editable rows resolve at their own path only, so the previous
       // value for a revert is simply the currently shown name. Revert
@@ -116,6 +119,14 @@ const PathDisplayName: React.FC<PathDisplayNameProps> = ({ context, path }) => {
           onFailure()
         })
     }
+  }
+
+  const handleSave = () => {
+    if (isCancelRef.current) {
+      isCancelRef.current = false
+      return
+    }
+    saveName(editValue.trim())
     // Press-Enter calls this directly and then setIsEditing(false)
     // unmounts the input, which fires onBlur and re-enters handleSave.
     // Re-using the cancel ref short-circuits that second pass.
@@ -224,6 +235,33 @@ const PathDisplayName: React.FC<PathDisplayNameProps> = ({ context, path }) => {
       >
         {failure}
         {pencil}
+        {canEdit &&
+          suggestions?.map((label) => (
+            <button
+              key={label}
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                setSaveFailed(false)
+                saveName(label)
+              }}
+              title={`Use the NMEA 2000 bus label "${label}" as displayName`}
+              aria-label={`Use bus label ${label} as displayName for ${path}`}
+              className="path-displayname-suggestion text-muted"
+              style={{
+                cursor: 'pointer',
+                fontSize: SUB_LINE_FONT_SIZE,
+                fontStyle: 'italic',
+                background: 'none',
+                border: '1px dashed currentColor',
+                borderRadius: SUGGESTION_BORDER_RADIUS,
+                padding: SUGGESTION_PADDING,
+                color: 'inherit'
+              }}
+            >
+              {label}
+            </button>
+          ))}
       </span>
     )
   }
