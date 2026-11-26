@@ -129,11 +129,72 @@ describe('load() gives the server a self identity', () => {
     expect(fs.existsSync(baseDeltasFile())).to.be.false
   })
 
-  it('does not overwrite a baseDeltas.json it cannot parse', () => {
-    writeBaseDeltas('{ this is not json')
-    expect(loadFrom().selfId).to.match(UUID_PATTERN)
-    expect(fs.readFileSync(baseDeltasFile(), 'utf8')).to.equal(
-      '{ this is not json'
+  it('preserves malformed data before subsequent runtime saves', async () => {
+    const damaged = '{ "name": "Aline", "mmsi": "244123456"'
+    writeBaseDeltas(damaged)
+    const app = loadFrom()
+    app.config.baseDeltaEditor.setSelfValue('name', 'Replacement')
+    await app.config.baseDeltaEditor.save(baseDeltasFile())
+    const backups = fs
+      .readdirSync(dir)
+      .filter((f) => f.startsWith('baseDeltas.json.corrupt-'))
+    expect(backups).to.have.length(1)
+    expect(fs.readFileSync(path.join(dir, backups[0]), 'utf8')).to.equal(
+      damaged
     )
+    expect(loadFrom().config.vesselName).to.equal('Replacement')
+    expect(loadFrom().selfId).to.equal(app.selfId)
+  })
+
+  it('preserves both damaged files when recovery repeats in the same millisecond', () => {
+    const now = Date.now
+    Date.now = () => 1700000000000
+    try {
+      for (const damaged of ['{ first', '{ second']) {
+        writeBaseDeltas(damaged)
+        loadFrom()
+      }
+    } finally {
+      Date.now = now
+    }
+    const backups = fs
+      .readdirSync(dir)
+      .filter((f) => f.startsWith('baseDeltas.json.corrupt-'))
+    expect(backups).to.have.length(2)
+    expect(
+      backups.map((f) => fs.readFileSync(path.join(dir, f), 'utf8'))
+    ).to.have.members(['{ first', '{ second'])
+  })
+
+  it('preserves valid JSON with an invalid top-level structure', () => {
+    writeBaseDeltas('{"name":"Aline"}')
+    loadFrom()
+    const backups = fs
+      .readdirSync(dir)
+      .filter((f) => f.startsWith('baseDeltas.json.corrupt-'))
+    expect(backups).to.have.length(1)
+    expect(fs.readFileSync(path.join(dir, backups[0]), 'utf8')).to.equal(
+      '{"name":"Aline"}'
+    )
+  })
+
+  it('does not move a directory mistaken for baseDeltas.json', () => {
+    fs.mkdirSync(baseDeltasFile())
+    expect(() => loadFrom()).to.throw()
+    expect(fs.statSync(baseDeltasFile()).isDirectory()).to.be.true
+  })
+  it('preserves the original when the backup cannot be created', () => {
+    const damaged = '{ incomplete'
+    writeBaseDeltas(damaged)
+    const rename = fs.renameSync
+    fs.renameSync = () => {
+      throw new Error('backup unavailable')
+    }
+    try {
+      expect(() => loadFrom()).to.throw('backup unavailable')
+      expect(fs.readFileSync(baseDeltasFile(), 'utf8')).to.equal(damaged)
+    } finally {
+      fs.renameSync = rename
+    }
   })
 })
