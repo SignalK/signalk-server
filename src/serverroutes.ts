@@ -1064,7 +1064,7 @@ module.exports = function (
             res
               .status(403)
               .send(
-                'Enter the setup code the server printed in its log when it started'
+                'Enter the setup code the server printed to its console output when it started'
               )
             return
           }

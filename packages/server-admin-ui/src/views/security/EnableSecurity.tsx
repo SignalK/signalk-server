@@ -218,8 +218,9 @@ export default function EnableSecurity() {
                           <>
                             <p className="text-muted mb-2">
                               You are connecting from outside the local network.
-                              Enter the setup code the server printed in its log
-                              when it started.
+                              Enter the setup code the server printed to its
+                              console output (service or container log) when it
+                              started.
                             </p>
                             <InputGroup className="mb-4">
                               <InputGroup.Text>

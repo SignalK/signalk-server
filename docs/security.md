@@ -43,7 +43,7 @@ Security can be enabled in several ways:
 
 When security is enabled, the next time you access the Admin UI it will prompt you to create an administrator account. During this setup you can optionally enable [Allow Readonly Access](#allow-readonly-access) if you want unauthenticated users to be able to view data.
 
-Until that account exists, whoever reaches the Admin UI first can create it. If you create it from an internet address rather than from the local network or a VPN, the Admin UI also asks for the setup code that the server prints in its log when it starts, so that a stranger who finds the server cannot claim it.
+Until that account exists, whoever reaches the Admin UI first can create it. If you create it from an internet address rather than from the local network or a VPN, the Admin UI also asks for the setup code that the server prints to its console output when it starts, so that a stranger who finds the server cannot claim it. The code appears where the service or container output goes, such as `journalctl` or `docker logs`, not in the Admin UI's Server Log.
 
 Behind a reverse proxy the server sees the proxy's address, so it can tell an internet visitor only from the `X-Forwarded-For` header. Make sure the proxy sends it, as in the [nginx example](#example-nginx-reverse-proxy) below; a proxy on the same machine that leaves it out makes every visitor look local, and the setup code is not asked for.
 
