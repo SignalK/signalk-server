@@ -22,6 +22,7 @@
  */
 
 import Execute from './execute'
+import { seatalkArgs } from './seatalk-args'
 import type { CreateDebug } from './types'
 
 const pythonScript = `
@@ -103,7 +104,7 @@ export default class PigpioSeatalk extends Execute {
     super({
       ...options,
       debug: createDebug('signalk:streams:pigpio-seatalk'),
-      command: `python -u -c '${pythonScript}' ${options.gpio} ${options.gpioInvert} `
+      command: `python -u -c '${pythonScript}' ${seatalkArgs(options.gpio, options.gpioInvert)}`
     })
   }
 }
