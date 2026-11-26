@@ -44,6 +44,11 @@ export type AppstoreView = 'All' | 'Installed' | 'Updates' | 'Installing'
  * the grace so slow-starting provider backends don't flash the warning
  * badge on every restart.
  */
+export interface RestartDialogState {
+  /** Whether the server keeps its latest values over a restart, if known. */
+  keepsData?: boolean
+}
+
 export interface HistoryProvidersState {
   ids: string[]
   defaultId: string | undefined
@@ -60,6 +65,7 @@ export interface AppSliceState {
   serverSpecification: ServerSpecification
   restarting: boolean
   restartRequired: boolean
+  restartDialog: RestartDialogState | null
   accessRequests: AccessRequest[]
   devices: DeviceInfo[]
   discoveredProviders: DiscoveredProvider[]
@@ -150,6 +156,7 @@ export interface AppSliceActions {
   setServerStatistics: (stats: ServerStatistics) => void
   setProviderStatus: (status: ProviderStatus[]) => void
   setRestarting: (restarting: boolean) => void
+  setRestartDialog: (restartDialog: RestartDialogState | null) => void
   setRestartRequired: (restartRequired: boolean) => void
   setAccessRequests: (requests: AccessRequest[]) => void
   setDevices: (devices: DeviceInfo[]) => void
@@ -247,6 +254,7 @@ const initialAppState: AppSliceState = {
   serverSpecification: {},
   restarting: false,
   restartRequired: false,
+  restartDialog: null,
   accessRequests: [],
   devices: [],
   discoveredProviders: [],
@@ -343,6 +351,10 @@ export const createAppSlice: StateCreator<AppSlice, [], [], AppSlice> = (
 
   setRestarting: (restarting) => {
     set({ restarting })
+  },
+
+  setRestartDialog: (restartDialog) => {
+    set({ restartDialog })
   },
 
   setRestartRequired: (restartRequired) => {

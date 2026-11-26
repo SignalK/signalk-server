@@ -760,4 +760,37 @@ describe('Mixed source shapes for one NMEA0183 source', function () {
     expect(entry.talker).to.equal('II')
     expect(entry.sentences).to.have.property('HDM', '2016-07-28T18:18:47.000Z')
   })
+
+  it('restoreDelta adds values without emitting or marking the source seen', function () {
+    const fullSignalK = new FullSignalK('urn:mrn:imo:mmsi:200000000')
+    const emitted: unknown[] = []
+    fullSignalK.on('delta', (d) => emitted.push(d))
+    const lastModified = Date.parse('2026-11-10T19:00:00.000Z')
+
+    fullSignalK.restoreDelta(
+      {
+        context: 'vessels.urn:mrn:imo:mmsi:200000000',
+        updates: [
+          {
+            $source: 'can0.35',
+            timestamp: '2026-11-10T18:59:00.000Z',
+            values: [{ path: 'tanks.fuel.0.currentLevel', value: 0.62 }]
+          }
+        ]
+      },
+      lastModified
+    )
+
+    const leaf =
+      fullSignalK.retrieve().vessels['urn:mrn:imo:mmsi:200000000'].tanks.fuel[
+        '0'
+      ].currentLevel
+    expect(leaf.value).to.equal(0.62)
+    expect(leaf.timestamp).to.equal('2026-11-10T18:59:00.000Z')
+    expect(emitted).to.have.length(0)
+    expect(fullSignalK.sourceMeta).to.not.have.property('can0.35')
+    expect(
+      fullSignalK.lastModifieds['vessels.urn:mrn:imo:mmsi:200000000']
+    ).to.equal(lastModified)
+  })
 })

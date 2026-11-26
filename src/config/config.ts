@@ -114,6 +114,13 @@ export interface Config {
     proxy_ssl?: boolean
     hostname?: string
     pruneContextsMinutes?: number
+    /** Save own vessel's cached values on a clean stop and restore them on
+     * the next start. */
+    restoreOwnData?: boolean
+    /** With restoreOwnData, also save and restore other vessels. */
+    restoreOtherVessels?: boolean
+    /** Saved values are not restored after a longer downtime, in minutes. */
+    restoreMaxAgeMinutes?: number
     mdns?: boolean
     sslport?: number
     port?: number
