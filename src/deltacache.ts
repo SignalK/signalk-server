@@ -30,7 +30,7 @@ import {
   NormalizedDelta,
   SourceRef
 } from '@signalk/server-api'
-import { isFanOutPriorities } from './deltaPriority'
+import { isFanOutPriorities, sourceRefIdentity } from './deltaPriority'
 
 const SOURCES_CACHE_FILE = 'sources-cache.json'
 
@@ -1317,17 +1317,32 @@ export default class DeltaCache {
             const owner = pathOwner.get(p)
             // Path owned by another active group → skip.
             if (owner && owner !== sg.id && !sg.inactive) continue
-            // Require ≥2 group sources to have published this path
-            // (now or ever). Otherwise a plugin source in the group
-            // drags every unrelated path it emits into the group card.
+            // The engine (resolvePrecedences in deltaPriority.ts) claims a
+            // path for a group as soon as ONE of its sources publishes it,
+            // and routes it once two publishers have been seen on the path
+            // (routesPath). Mirror that rule here. Requiring two group
+            // members used to hide paths the engine really does rank
+            // through this group: a single group member publishing
+            // alongside an outside source left the user with a Preferred
+            // badge and no explanation on this page.
+            //
+            // The two-publisher gate is what keeps a plugin source from
+            // dragging every path it alone emits onto the group card.
+            //
+            // Count device identities, not transport-qualified refs: the
+            // same device reachable as can1.c078... and remote.c078... is
+            // one publisher, and the engine's routesPath gate (identities
+            // in pathSeenPublishers) keeps such a path unrouted unless an
+            // override exists. Listing it here would show a card for a path
+            // the engine does not rank through this group.
             const allTime = pathPublishersAllTime[p]
             if (!allTime) continue
-            let groupCount = 0
+            const identities = new Set<string>()
             for (const ref of allTime) {
-              if (savedSet.has(ref)) groupCount++
-              if (groupCount >= 2) break
+              identities.add(sourceRefIdentity(ref))
+              if (identities.size >= 2) break
             }
-            if (groupCount < 2) continue
+            if (identities.size < 2) continue
             groupPaths.add(p)
           }
         }

@@ -1033,6 +1033,139 @@ describe('Deltacache', () => {
       })
   })
 
+  it('getReconciledGroups lists a path one group member ranks alongside an outside source', function () {
+    // Reproduces #3330. The engine claims a path for a group as soon as
+    // ONE member publishes it (resolvePrecedences), so a gateway that
+    // also emits a tank reading ranks that reading through the group.
+    // The page required TWO group members on the path, so the path was
+    // missing from the card and the group's Preferred badge on the Data
+    // Browser had no visible explanation.
+    const PATH_ONE_MEMBER = 'tanks.fuel.1.currentLevel'
+    const PATH_GROUPED = 'navigation.speedOverGround'
+    const settings = theServer.app.config.settings
+    settings.priorityGroups = [
+      {
+        id: 'gatewayGroup',
+        sources: ['gatewaySource', 'gpsSource']
+      }
+    ]
+    const send = (source, path, value) =>
+      doSendADelta({
+        context: 'vessels.self',
+        updates: [
+          {
+            $source: source,
+            timestamp: '2024-02-02T10:00:00.000Z',
+            values: [{ path, value }]
+          }
+        ]
+      })
+
+    return send('gatewaySource', PATH_GROUPED, 3)
+      .then(() => send('gpsSource', PATH_GROUPED, 4))
+      .then(() => send('gatewaySource', PATH_ONE_MEMBER, -0.004))
+      .then(() => send('tankSourceOutsideGroup', PATH_ONE_MEMBER, 55))
+      .then(() => {
+        const reconciled = theServer.app.deltaCache.getReconciledGroups()
+        const group = reconciled.find(
+          (g) => g.matchedSavedId === 'gatewayGroup'
+        )
+        group.should.not.equal(undefined)
+        // Two publishers on the path, one of them in the group: the engine
+        // ranks it through the group, so the card has to show it.
+        group.paths.should.include(PATH_ONE_MEMBER)
+        group.paths.should.include(PATH_GROUPED)
+      })
+      .finally(() => {
+        delete settings.priorityGroups
+      })
+  })
+
+  it('getReconciledGroups leaves out a path only one publisher was ever seen on', function () {
+    // The other half of the rule: routesPath needs two publishers before
+    // the engine resolves anything, so a lone source must not fill the
+    // card with every path it happens to emit.
+    const PATH_SINGLE = 'environment.depth.singlePublisherOnly'
+    const PATH_GROUPED = 'navigation.speedOverGround'
+    const settings = theServer.app.config.settings
+    settings.priorityGroups = [
+      {
+        id: 'loneGroup',
+        sources: ['loneA', 'loneB']
+      }
+    ]
+    const send = (source, path, value) =>
+      doSendADelta({
+        context: 'vessels.self',
+        updates: [
+          {
+            $source: source,
+            timestamp: '2024-02-03T10:00:00.000Z',
+            values: [{ path, value }]
+          }
+        ]
+      })
+
+    return send('loneA', PATH_GROUPED, 3)
+      .then(() => send('loneB', PATH_GROUPED, 4))
+      .then(() => send('loneA', PATH_SINGLE, 7))
+      .then(() => {
+        const reconciled = theServer.app.deltaCache.getReconciledGroups()
+        const group = reconciled.find((g) => g.matchedSavedId === 'loneGroup')
+        group.should.not.equal(undefined)
+        group.paths.should.include(PATH_GROUPED)
+        group.paths.should.not.include(PATH_SINGLE)
+      })
+      .finally(() => {
+        delete settings.priorityGroups
+      })
+  })
+
+  it('getReconciledGroups counts one device behind two transports as one publisher', function () {
+    // The same instrument reachable over CAN and over a remote gateway is
+    // two refs but one publisher. routesPath counts sourceRefIdentity
+    // values, so the engine leaves this path unrouted and the card must not
+    // list it.
+    const NAME = 'a1b2c3d4e5f60718'
+    const PATH_ONE_DEVICE = 'environment.salinity.oneTransportOnly'
+    const PATH_GROUPED = 'environment.turbidity.oneTransportGrouped'
+    const settings = theServer.app.config.settings
+    settings.priorityGroups = [
+      {
+        id: 'transportGroup',
+        sources: [`can1.${NAME}`, 'tankSource']
+      }
+    ]
+    const send = (source, path, value) =>
+      doSendADelta({
+        context: 'vessels.self',
+        updates: [
+          {
+            $source: source,
+            timestamp: '2024-02-04T10:00:00.000Z',
+            values: [{ path, value }]
+          }
+        ]
+      })
+
+    return send(`can1.${NAME}`, PATH_ONE_DEVICE, 3)
+      .then(() => send(`remote.${NAME}`, PATH_ONE_DEVICE, 4))
+      .then(() => send(`can1.${NAME}`, PATH_GROUPED, 0.5))
+      .then(() => send('tankSource', PATH_GROUPED, 55))
+      .then(() => {
+        const reconciled = theServer.app.deltaCache.getReconciledGroups()
+        const group = reconciled.find(
+          (g) => g.matchedSavedId === 'transportGroup'
+        )
+        group.should.not.equal(undefined)
+        group.paths.should.include(PATH_GROUPED)
+        group.paths.should.not.include(PATH_ONE_DEVICE)
+      })
+      .finally(() => {
+        delete settings.priorityGroups
+      })
+  })
+
   it('deleteContext removes the context entries from preferredSources', function () {
     // Regression test for a memory leak: preferredSources is keyed
     // `${context}\0${path}` and previously only grew, since

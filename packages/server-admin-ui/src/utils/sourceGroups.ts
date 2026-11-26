@@ -99,3 +99,25 @@ export interface ReconciledGroup {
   paths: string[]
   newcomerSources: string[]
 }
+
+/**
+ * The sources written back to the saved ranking when a group is saved.
+ *
+ * A newcomer is a source that started publishing one of the group's paths
+ * after the ranking was saved. It is shown for information only: making it a
+ * saved member means the engine ranks every other path it publishes through
+ * this group, so that has to be the user's decision (issue #3330). An
+ * unrelated Save — a fallback timeout, one override row — must therefore not
+ * carry the newcomer along, and the displayed ordering minus the unaccepted
+ * newcomers is what belongs in the payload.
+ */
+export function savedMembership(group: {
+  sources: string[]
+  newcomerSources: string[]
+}): string[] {
+  if (group.newcomerSources.length === 0) {
+    return group.sources
+  }
+  const unaccepted = new Set(group.newcomerSources)
+  return group.sources.filter((src) => !unaccepted.has(src))
+}

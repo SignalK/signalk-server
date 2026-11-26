@@ -6,6 +6,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faGripVertical } from '@fortawesome/free-solid-svg-icons/faGripVertical'
 import { faChevronDown } from '@fortawesome/free-solid-svg-icons/faChevronDown'
 import { faChevronRight } from '@fortawesome/free-solid-svg-icons/faChevronRight'
+import { faPlus } from '@fortawesome/free-solid-svg-icons/faPlus'
 import { faTrash } from '@fortawesome/free-solid-svg-icons/faTrash'
 import { faTriangleExclamation } from '@fortawesome/free-solid-svg-icons/faTriangleExclamation'
 import {
@@ -35,6 +36,7 @@ import {
 } from '../../store'
 import { getWebSocketService } from '../../hooks/useWebSocket'
 import type { ReconciledGroup } from '../../utils/sourceGroups'
+import { savedMembership } from '../../utils/sourceGroups'
 import {
   canonicaliseSourceRef,
   isN2kSource,
@@ -61,8 +63,10 @@ interface SortableSourceRowProps {
   isNewcomer: boolean
   isPlugin: boolean
   canRemove: boolean
+  canAccept: boolean
   onSelect: () => void
   onRemove?: () => void
+  onAccept?: () => void
   deviceDot?: { color: string; canName: string }
   deviceLabel?: string
 }
@@ -80,8 +84,10 @@ const SortableSourceRow: React.FC<SortableSourceRowProps> = ({
   isNewcomer,
   isPlugin,
   canRemove,
+  canAccept,
   onSelect,
   onRemove,
+  onAccept,
   deviceDot,
   deviceLabel
 }) => {
@@ -181,7 +187,7 @@ const SortableSourceRow: React.FC<SortableSourceRowProps> = ({
               bg="warning"
               text="dark"
               style={{ fontSize: '0.7em' }}
-              title="This source started publishing a path in this group after the ranking was saved. Drag it where you want it and Save to include it."
+              title="This source started publishing a path in this group after the ranking was saved. It is shown for information only: it joins the saved ranking once you add it."
             >
               New
             </Badge>
@@ -200,6 +206,17 @@ const SortableSourceRow: React.FC<SortableSourceRowProps> = ({
           </span>
         </span>
       </button>
+      {canAccept && onAccept && (
+        <button
+          type="button"
+          className="pg-source-remove"
+          aria-label={`Add ${label} to this group`}
+          title="Add this source to the saved ranking. Until you do, it is listed for information only and is not saved with the group."
+          onClick={onAccept}
+        >
+          <FontAwesomeIcon icon={faPlus} />
+        </button>
+      )}
       {canRemove && onRemove && (
         <button
           type="button"
@@ -638,7 +655,26 @@ const PriorityGroupCard: React.FC<PriorityGroupCardProps> = ({
     const sources = [...stableSources]
     const [moved] = sources.splice(from, 1)
     sources.splice(to, 0, moved)
-    setGroupSources(group.id, sources)
+    // A drag places one source. If that one is a newcomer the drag is the
+    // user's decision to rank it; the newcomers they have not touched stay
+    // out of the saved ranking instead of riding along with the reorder.
+    const keep = new Set([...savedMembership(group), moved])
+    setGroupSources(
+      group.id,
+      sources.filter((src) => keep.has(src))
+    )
+  }
+
+  // Adding a newcomer writes the saved ranking as it is now, plus this one
+  // source. Any other newcomer stays out of it: joining the saved membership
+  // hands the group's ranking to every other path that source publishes, so
+  // each one has to be the user's call.
+  const handleAcceptNewcomer = (sourceRef: string) => {
+    const keep = new Set([...savedMembership(group), sourceRef])
+    setGroupSources(
+      group.id,
+      group.sources.filter((src) => keep.has(src))
+    )
   }
 
   const isRanked = group.matchedSavedId !== null
@@ -684,7 +720,7 @@ const PriorityGroupCard: React.FC<PriorityGroupCardProps> = ({
               bg="warning"
               text="dark"
               className="ms-2"
-              title="A new source has started publishing a path in this group since the ranking was saved. Click Save to append it at the bottom, or drag it into place first."
+              title="A new source has started publishing a path in this group since the ranking was saved. It is listed for information only: add it with the + on its row, or drag it into place, if it should be ranked."
             >
               {group.newcomerSources.length} new source
               {group.newcomerSources.length === 1 ? '' : 's'}
@@ -875,7 +911,13 @@ const PriorityGroupCard: React.FC<PriorityGroupCardProps> = ({
                                 isNewcomer={newcomerSet.has(src)}
                                 isPlugin={isPlugin}
                                 canRemove={canRemove}
+                                canAccept={isAdmin && isNewcomer}
                                 onSelect={() => handleSelectSource(src)}
+                                onAccept={
+                                  isAdmin && isNewcomer
+                                    ? () => handleAcceptNewcomer(src)
+                                    : undefined
+                                }
                                 onRemove={
                                   canRemove
                                     ? () =>
