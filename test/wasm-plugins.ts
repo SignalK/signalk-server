@@ -25,7 +25,13 @@ import {
   getAdminToken
 } from './servertestutilities'
 import type { PluginRoutePermission, SecurityStrategy } from '../src/security'
-import { getWasmPlugin, reloadWasmPlugin } from '../dist/wasm/loader'
+import {
+  getWasmPlugin,
+  handleWasmPluginCrash,
+  reloadWasmPlugin,
+  unloadWasmPlugin
+} from '../dist/wasm/loader'
+import { socketManager } from '../dist/wasm/bindings/socket-manager'
 
 interface PluginInfo {
   id: string
@@ -691,6 +697,40 @@ export function plugin_stop(): i32 {
 
       expect(getWasmPlugin(packageName)?.status).to.equal('running')
       expect(server!.app.signalk.listenerCount('delta')).to.equal(listeners)
+    })
+
+    it('closes the sockets of a crashed plugin before restarting it', async function () {
+      expect(await reload('two')).to.equal(200)
+      expect(await waitForStatus('build two')).to.equal('build two')
+      const closedFor: string[] = []
+      const closeAllForPlugin = socketManager.closeAllForPlugin
+      socketManager.closeAllForPlugin = (pluginId: string) => {
+        closedFor.push(pluginId)
+        closeAllForPlugin.call(socketManager, pluginId)
+      }
+      try {
+        getWasmPlugin(packageName)!.status = 'crashed'
+        await reloadWasmPlugin(server!.app, packageName)
+      } finally {
+        socketManager.closeAllForPlugin = closeAllForPlugin
+      }
+
+      expect(closedFor).to.deep.equal([packageName])
+    })
+
+    // Last in this block: the probe stays unloaded
+    it('does not restart a crashed plugin after it was unloaded', async function () {
+      expect(await reload('two')).to.equal(200)
+      expect(await waitForStatus('build two')).to.equal('build two')
+      const plugin = getWasmPlugin(packageName)!
+
+      await handleWasmPluginCrash(server!.app, packageName, new Error('probe'))
+      const backoff = plugin.restartBackoff
+      await unloadWasmPlugin(server!.app, packageName)
+      await new Promise((resolve) => setTimeout(resolve, backoff + 500))
+
+      expect(plugin.status).to.equal('stopped')
+      expect(plugin.statusMessage).to.equal('Unloaded')
     })
   })
 

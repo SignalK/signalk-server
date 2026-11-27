@@ -200,6 +200,21 @@ function stopPollAndDeltas(pluginId: string): void {
   }
 }
 
+function cancelRestart(pluginId: string): void {
+  const timer = restartTimers.get(pluginId)
+  if (timer) {
+    clearTimeout(timer)
+    restartTimers.delete(pluginId)
+  }
+}
+
+// A plugin that is not running never went through stopWasmPlugin, so a
+// crashed one still holds its poll timer, delta listener and sockets.
+function releaseStoppedPlugin(pluginId: string): void {
+  stopPollAndDeltas(pluginId)
+  socketManager.closeAllForPlugin(pluginId)
+}
+
 /**
  * Stop a WASM plugin
  */
@@ -212,13 +227,7 @@ export async function stopWasmPlugin(pluginId: string): Promise<void> {
   debug(`Stopping WASM plugin: ${pluginId}`)
 
   try {
-    // Cancel any pending restart timers
-    const timer = restartTimers.get(pluginId)
-    if (timer) {
-      clearTimeout(timer)
-      restartTimers.delete(pluginId)
-    }
-
+    cancelRestart(pluginId)
     stopPollAndDeltas(pluginId)
 
     if (plugin.instance) {
@@ -261,13 +270,13 @@ export async function unloadWasmPlugin(
   debug(`Unloading WASM plugin: ${pluginId}`)
 
   try {
+    // A pending crash restart would start the unloaded plugin again
+    cancelRestart(pluginId)
     // Stop the plugin first if running
     if (plugin.status === 'running') {
       await stopWasmPlugin(pluginId)
     } else {
-      // A crashed plugin keeps its poll timer and delta listener, and the
-      // start below would add a second pair beside them
-      stopPollAndDeltas(pluginId)
+      releaseStoppedPlugin(pluginId)
     }
     cleanupWasmPutHandlers(plugin.packageName)
 
@@ -345,9 +354,8 @@ export async function reloadWasmPlugin(
     if (plugin.status === 'running') {
       await stopWasmPlugin(pluginId)
     } else {
-      // A crashed plugin keeps its poll timer and delta listener, and the
-      // start below would add a second pair beside them
-      stopPollAndDeltas(pluginId)
+      // the start below would otherwise add a second set beside them
+      releaseStoppedPlugin(pluginId)
     }
 
     // Save current configuration
