@@ -196,6 +196,10 @@ module.exports = (server: CourseComputerApp): Plugin => {
   // own identity, so a late failure clears only the guard it set.
   let advancedFrom: { from: string; attempt: symbol } | undefined
 
+  // The route point the course last announced. The stored route lags it
+  // while the route's waypoints are fetched, and must not be advanced then.
+  let announcedRoute: string | undefined
+
   // ******** REQUIRED PLUGIN DEFINITION *******
   const plugin: Plugin = {
     id: 'course-provider',
@@ -253,6 +257,7 @@ module.exports = (server: CourseComputerApp): Plugin => {
       activeDest = false
       metaSent = false
       advancedFrom = undefined
+      announcedRoute = undefined
       resetCaches()
 
       initSubscriptions(SRC_PATHS)
@@ -396,6 +401,7 @@ module.exports = (server: CourseComputerApp): Plugin => {
         srcPaths['navigation.course.nextPoint'] = ci.nextPoint
         srcPaths['navigation.course.previousPoint'] = ci.previousPoint
         srcPaths['activeRoute'] = ci.activeRoute
+        announcedRoute = routePointKey(ci.activeRoute)
         if (ci.activeRoute) {
           // split('/').slice(-1)[0] is structurally always defined on a
           // non-empty string, but `noUncheckedIndexedAccess` types it as
@@ -460,7 +466,8 @@ module.exports = (server: CourseComputerApp): Plugin => {
 
     // Once the course has moved on (or was cleared), the point advanced from
     // may be reached again later, e.g. when the route is restarted.
-    if (advancedFrom && advancedFrom.from !== routePointKey(value)) {
+    announcedRoute = routePointKey(value)
+    if (advancedFrom && advancedFrom.from !== announcedRoute) {
       advancedFrom = undefined
     }
 
@@ -785,6 +792,7 @@ module.exports = (server: CourseComputerApp): Plugin => {
     )?.position
     if (
       !route?.href ||
+      routePointKey(route) !== announcedRoute ||
       typeof route.pointIndex !== 'number' ||
       typeof route.pointTotal !== 'number' ||
       !Array.isArray(route.waypoints) ||

@@ -596,6 +596,12 @@ describe('route advance', () => {
       [4, 61],
       [4, 61.1],
       [4, 61.2]
+    ],
+    // Starts at r1's first point.
+    r3: [
+      [3, 60],
+      [5, 62],
+      [5, 62.1]
     ]
   }
 
@@ -648,15 +654,19 @@ describe('route advance', () => {
       distance?: number
       passedPerpendicular?: boolean
       activateRoute?: (dest: unknown) => Promise<void>
+      // A route whose waypoints are never fetched.
+      unfetched?: string
     } = {}
   ) => {
     const started = startPluginCapturingDelta({
       startArgs: opts.startArgs ?? {},
       activateRoute: opts.activateRoute,
       getResource: (_type, id) =>
-        Promise.resolve({
-          feature: { geometry: { coordinates: ROUTES[id] } }
-        }),
+        id === opts.unfetched
+          ? new Promise(() => undefined)
+          : Promise.resolve({
+              feature: { geometry: { coordinates: ROUTES[id] } }
+            }),
       calcsReturn: {
         gc: { distance: opts.distance ?? 20 },
         rl: {},
@@ -767,6 +777,17 @@ describe('route advance', () => {
       ARRIVAL,
       PERPENDICULAR
     ])
+    stop()
+  })
+
+  it('does not advance the old route when the new one starts at the same point', async () => {
+    const { server, position, select, stop } = await follow(0, {
+      unfetched: 'r3'
+    })
+    await select('r3', 0)
+    await position()
+
+    expect(server.activateRoute.called).to.equal(false)
     stop()
   })
 
