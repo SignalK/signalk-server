@@ -15,6 +15,8 @@ allow the following notifications to be raised:
 
 - **`notifications.navigation.perpendicularPassed`**: _alert_ message is sent when the perpendicular line (relative to `navigation.course.previousPoint.position` at the destination has been passed by the vessel.
 
+While a route is followed, these notifications are raised only at its last point when the plugin moves the route on by itself (see _Route advance_ below).
+
 ## Configuration
 
 **Notifications:** provides configuration for generated notifications.
@@ -25,3 +27,12 @@ allow the following notifications to be raised:
 
 - **GreatCircle (default)**: populates values using _GreatCircle_ calculations.
 - **Rhumbline**: populates values using _Rhumbline_ calculations.
+
+**Route advance:** when an active route moves on to its next point by itself.
+
+- **On whichever comes first (default)**: on entering the arrival circle or on passing the perpendicular.
+- **On entering the arrival circle**: never with an arrival circle of 0.
+- **On passing the perpendicular**
+- **Never**: the route moves on only when a user or another application selects the next point.
+
+The plugin advances through the Course API, by starting the route again at its next point. Chart plotters can read the setting at `/plugins/course-provider/autoAdvance` (`{ "value": "either" }`) to know whether they need to move the route on themselves.

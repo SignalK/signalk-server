@@ -32,7 +32,19 @@ interface CourseAppConfig {
   calculations: {
     method: CalcMethodType
   }
+  autoAdvance: AutoAdvance
 }
+
+// When a followed route moves on to its next point: on entering the arrival
+// circle, on passing the line through the point perpendicular to the leg,
+// on whichever comes first, or never.
+const AUTO_ADVANCE_MODES = [
+  'off',
+  'arrivalCircle',
+  'perpendicular',
+  'either'
+] as const
+type AutoAdvance = (typeof AUTO_ADVANCE_MODES)[number]
 
 type CalcMethodType = 'GreatCircle' | 'Rhumbline'
 
@@ -45,7 +57,8 @@ const DEFAULT_CONFIG: CourseAppConfig = {
   },
   calculations: {
     method: 'GreatCircle'
-  }
+  },
+  autoAdvance: 'either'
 }
 
 const CONFIG_SCHEMA = {
@@ -83,6 +96,20 @@ const CONFIG_SCHEMA = {
           enum: ['GreatCircle', 'Rhumbline']
         }
       }
+    },
+    autoAdvance: {
+      type: 'string',
+      title: 'Advance an active route to its next point',
+      description:
+        'The route moves on by itself at every point but the last, with no notification there.',
+      default: DEFAULT_CONFIG.autoAdvance,
+      enum: AUTO_ADVANCE_MODES,
+      enumNames: [
+        'Never',
+        'On entering the arrival circle',
+        'On passing the perpendicular',
+        'On whichever comes first'
+      ]
     }
   }
 }
@@ -164,6 +191,19 @@ module.exports = (server: CourseComputerApp): Plugin => {
 
   let metaSent = false
 
+  // The route point last advanced from, so the ticks before the course
+  // catches up with the advance do not advance again. Each attempt has its
+  // own identity, so a late failure clears only the guard it set.
+  let advancedFrom: { from: string; attempt: symbol } | undefined
+
+  // The active route as the course announced it. The Course API publishes
+  // it in the same delta as the next point, so the two always agree; the
+  // stored route lags them while its waypoints are fetched.
+  let courseRoute: ActiveRoute | null = null
+
+  // The destination the arrival watchers last measured against.
+  let watchedDestination: string | undefined
+
   // ******** REQUIRED PLUGIN DEFINITION *******
   const plugin: Plugin = {
     id: 'course-provider',
@@ -172,6 +212,12 @@ module.exports = (server: CourseComputerApp): Plugin => {
     uiSchema: () => CONFIG_UISCHEMA,
     start: (options: CourseAppConfig) => {
       doStartup(options)
+    },
+    // Lets a chart plotter tell whether it has to move the route on itself.
+    registerWithRouter: (router) => {
+      router.access('readonly').get('/autoAdvance', (_req, res) => {
+        res.json({ value: config?.autoAdvance ?? DEFAULT_CONFIG.autoAdvance })
+      })
     },
     stop: () => {
       doShutdown()
@@ -191,7 +237,10 @@ module.exports = (server: CourseComputerApp): Plugin => {
     calculations: {
       ...DEFAULT_CONFIG.calculations,
       ...options.calculations
-    }
+    },
+    autoAdvance: AUTO_ADVANCE_MODES.includes(options.autoAdvance as AutoAdvance)
+      ? (options.autoAdvance as AutoAdvance)
+      : DEFAULT_CONFIG.autoAdvance
   })
 
   let config: CourseAppConfig
@@ -211,6 +260,9 @@ module.exports = (server: CourseComputerApp): Plugin => {
       // previous run's latched state or a stale cached calculation.
       activeDest = false
       metaSent = false
+      advancedFrom = undefined
+      courseRoute = null
+      watchedDestination = undefined
       resetCaches()
 
       initSubscriptions(SRC_PATHS)
@@ -354,6 +406,7 @@ module.exports = (server: CourseComputerApp): Plugin => {
         srcPaths['navigation.course.nextPoint'] = ci.nextPoint
         srcPaths['navigation.course.previousPoint'] = ci.previousPoint
         srcPaths['activeRoute'] = ci.activeRoute
+        courseRoute = ci.activeRoute ? { ...ci.activeRoute } : null
         if (ci.activeRoute) {
           // split('/').slice(-1)[0] is structurally always defined on a
           // non-empty string, but `noUncheckedIndexedAccess` types it as
@@ -414,6 +467,13 @@ module.exports = (server: CourseComputerApp): Plugin => {
   const handleActiveRoute = async (value: any) => {
     if (server.debug.enabled) {
       server.debug(`*** handleActiveRoute *** ${JSON.stringify(value)}`)
+    }
+
+    // Once the course has moved on (or was cleared), the point advanced from
+    // may be reached again later, e.g. when the route is restarted.
+    courseRoute = value
+    if (advancedFrom && advancedFrom.from !== routePointKey(courseRoute)) {
+      advancedFrom = undefined
     }
 
     if (!value || typeof value?.href !== 'string') {
@@ -496,8 +556,10 @@ module.exports = (server: CourseComputerApp): Plugin => {
         ? -1
         : arrivalCircleRange
 
+    rearmOnNewDestination()
     watchArrival.value = result.gc?.distance ?? -1
     watchPassedDest.value = result.passedPerpendicular ? 1 : 0
+    advanceOnArrival(result)
     courseCalcs = result
     server.handleMessage(
       plugin.id,
@@ -663,7 +725,7 @@ module.exports = (server: CourseComputerApp): Plugin => {
       : [ALARM_METHOD.visual]
 
     if (event.type === 'enter') {
-      if (srcPaths['navigation.position']) {
+      if (srcPaths['navigation.position'] && !advancesFromNextPoint()) {
         emitNotification(
           new NotificationMgr(
             'navigation.course.arrivalCircleEntered',
@@ -697,7 +759,7 @@ module.exports = (server: CourseComputerApp): Plugin => {
       ? [ALARM_METHOD.sound, ALARM_METHOD.visual]
       : [ALARM_METHOD.visual]
     if (event.type === 'enter') {
-      if (srcPaths['navigation.position']) {
+      if (srcPaths['navigation.position'] && !advancesFromNextPoint()) {
         emitNotification(
           new NotificationMgr(
             'navigation.course.perpendicularPassed',
@@ -715,6 +777,97 @@ module.exports = (server: CourseComputerApp): Plugin => {
         new NotificationMgr('navigation.course.perpendicularPassed', null)
       )
     }
+  }
+
+  // A new destination starts outside its arrival zones, so a vessel already
+  // inside the next point's circle when it becomes the destination is told.
+  // The route point is part of the destination, as a route may hold
+  // consecutive points at the same position.
+  const rearmOnNewDestination = () => {
+    const next = (
+      srcPaths['navigation.course.nextPoint'] as
+        | { position?: { latitude: number; longitude: number } }
+        | null
+        | undefined
+    )?.position
+    const destination = next
+      ? `${routePointKey(courseRoute) ?? ''}|${next.longitude},${next.latitude}`
+      : undefined
+    if (destination !== watchedDestination) {
+      watchedDestination = destination
+      watchArrival.reset()
+      watchPassedDest.reset()
+    }
+  }
+
+  // ********* Route advance *****************
+
+  const routePointKey = (
+    route: ActiveRoute | null | undefined
+  ): string | undefined =>
+    route ? `${route.href}|${route.reverse}|${route.pointIndex}` : undefined
+
+  const followedRoute = (): ActiveRoute | undefined =>
+    typeof courseRoute?.href === 'string' &&
+    typeof courseRoute.pointIndex === 'number' &&
+    typeof courseRoute.pointTotal === 'number'
+      ? courseRoute
+      : undefined
+
+  const advancesFromNextPoint = (): boolean => {
+    const route = followedRoute()
+    const mode = config.autoAdvance
+    return (
+      route !== undefined &&
+      route.pointIndex + 1 < route.pointTotal &&
+      mode !== 'off' &&
+      !(mode === 'arrivalCircle' && watchArrival.rangeMax <= 0)
+    )
+  }
+
+  const hasArrived = (result: CourseData): boolean => {
+    const distance = result.gc?.distance
+    const inCircle =
+      typeof distance === 'number' &&
+      distance >= 0 &&
+      watchArrival.rangeMax > 0 &&
+      distance <= watchArrival.rangeMax
+    switch (config.autoAdvance) {
+      case 'arrivalCircle':
+        return inCircle
+      case 'perpendicular':
+        return result.passedPerpendicular
+      case 'either':
+        return inCircle || result.passedPerpendicular
+      default:
+        return false
+    }
+  }
+
+  const advanceOnArrival = (result: CourseData) => {
+    const route = followedRoute()
+    if (!route || !advancesFromNextPoint() || !hasArrived(result)) {
+      return
+    }
+    const from = routePointKey(route) as string
+    if (advancedFrom?.from === from) {
+      return
+    }
+    const attempt = Symbol(from)
+    advancedFrom = { from, attempt }
+    server
+      .activateRoute({
+        href: route.href,
+        pointIndex: route.pointIndex + 1,
+        reverse: route.reverse
+      })
+      .catch((error: Error) => {
+        // Cleared so the next position update tries again.
+        if (advancedFrom?.attempt === attempt) {
+          advancedFrom = undefined
+        }
+        server.debug(`Route advance failed: ${error.message}`)
+      })
   }
 
   // send notification delta message

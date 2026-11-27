@@ -29,4 +29,19 @@ describe('Watcher', () => {
 
     expect(events).to.deep.equal(['enter', 'exit'])
   })
+
+  it('reports a value inside the range as entered again after a reset', () => {
+    const watcher = new Watcher()
+    watcher.rangeMin = 10
+    watcher.rangeMax = 20
+
+    const events: string[] = []
+    watcher.register((event) => events.push(event.type))
+
+    watcher.value = 15
+    watcher.reset()
+    watcher.value = 15
+
+    expect(events).to.deep.equal(['enter', 'exit', 'enter'])
+  })
 })

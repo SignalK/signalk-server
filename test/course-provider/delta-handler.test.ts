@@ -43,6 +43,10 @@ interface StartOptions {
    * `{}` is what a server passes before the settings were ever saved.
    */
   startArgs?: Record<string, unknown>
+  /** The server's Course API activateRoute(). */
+  activateRoute?: (dest: unknown) => Promise<void>
+  /** The server's resourcesApi.getResource(). */
+  getResource?: (type: string, id: string) => Promise<unknown>
 }
 
 // Stub `calcs`/`parseSKPaths` so the dispatcher can run inline without
@@ -55,6 +59,8 @@ function startPluginCapturingDelta(opts: StartOptions = {}): {
   calcsSpy: CalcsSpy
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   server: any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  plugin: any
 } {
   const fixed: CourseData = opts.calcsReturn ?? {
     gc: {},
@@ -84,6 +90,8 @@ function startPluginCapturingDelta(opts: StartOptions = {}): {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       start: (options: any) => void
       stop: () => void
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      registerWithRouter: (router: any) => void
     }
 
   let capturedDeltaCallback: DeltaCallback | null = null
@@ -96,6 +104,7 @@ function startPluginCapturingDelta(opts: StartOptions = {}): {
     handleMessage: spy(),
     getSelfPath: spy(() => null),
     getCourse: spy(() => Promise.resolve(null)),
+    activateRoute: spy(opts.activateRoute ?? (() => Promise.resolve())),
     get: spy(),
     subscriptionmanager: {
       subscribe: spy(
@@ -111,7 +120,7 @@ function startPluginCapturingDelta(opts: StartOptions = {}): {
       )
     },
     resourcesApi: {
-      getResource: spy(() => Promise.resolve(null))
+      getResource: spy(opts.getResource ?? (() => Promise.resolve(null)))
     }
   }
 
@@ -128,6 +137,7 @@ function startPluginCapturingDelta(opts: StartOptions = {}): {
 
   return {
     stop: () => plugin.stop(),
+    plugin,
     // Stop and re-start the SAME plugin closure, returning the delta
     // callback captured by the fresh subscription. Used to assert that
     // doStartup resets the in-process latches (metaSent/activeDest).
@@ -553,5 +563,414 @@ describe('notification settings', () => {
         calculations: { method: 'GreatCircle' }
       })
     ).to.deep.equal([PERPENDICULAR])
+  })
+})
+
+describe('route advance', () => {
+  const ARRIVAL = 'notifications.navigation.course.arrivalCircleEntered'
+  const PERPENDICULAR = 'notifications.navigation.course.perpendicularPassed'
+  const HREF = '/resources/routes/r1'
+  const HREF2 = '/resources/routes/r2'
+
+  const raisedNotifications = (
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    server: any
+  ): string[] =>
+    server.handleMessage.calls
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .flatMap((call: any[]) => call[1]?.updates ?? [])
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .flatMap((u: any) => u.values ?? [])
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .filter((v: any) => v.path?.startsWith('notifications.') && v.value)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .map((v: any) => v.path)
+
+  const clearedNotifications = (
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    server: any
+  ): string[] =>
+    server.handleMessage.calls
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .flatMap((call: any[]) => call[1]?.updates ?? [])
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .flatMap((u: any) => u.values ?? [])
+      .filter(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (v: any) => v.path?.startsWith('notifications.') && v.value === null
+      )
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .map((v: any) => v.path)
+
+  const ROUTES: Record<string, number[][]> = {
+    r1: [
+      [3, 60],
+      [3, 60.1],
+      [3, 60.2]
+    ],
+    r2: [
+      [4, 61],
+      [4, 61.1],
+      [4, 61.2]
+    ],
+    // Starts at r1's first point.
+    r3: [
+      [3, 60],
+      [5, 62],
+      [5, 62.1]
+    ],
+    // Ends with two points at the same position.
+    r4: [
+      [6, 63],
+      [6, 63.1],
+      [6, 63.1]
+    ],
+    // Starts with two points at the same position.
+    r5: [
+      [7, 64],
+      [7, 64],
+      [7, 64.1]
+    ]
+  }
+
+  // The course as the server publishes it when following a route: the
+  // active route and its point at pointIndex as the next point.
+  const courseDelta = (id: string | null, pointIndex = 0) => ({
+    updates: [
+      {
+        values: [
+          {
+            path: 'navigation.course.activeRoute',
+            value: id
+              ? {
+                  href: `/resources/routes/${id}`,
+                  pointIndex,
+                  pointTotal: 3,
+                  reverse: false
+                }
+              : null
+          },
+          {
+            path: 'navigation.course.nextPoint',
+            value: id
+              ? {
+                  type: 'RoutePoint',
+                  position: {
+                    longitude: ROUTES[id]![pointIndex]![0],
+                    latitude: ROUTES[id]![pointIndex]![1]
+                  }
+                }
+              : null
+          }
+        ]
+      }
+    ]
+  })
+
+  const settle = () => new Promise((resolve) => setImmediate(resolve))
+
+  // Follows route r1 (or opts.route) at pointIndex, then reports positions
+  // that are `distance` metres from the next point inside a 50 m arrival
+  // circle.
+  const follow = async (
+    pointIndex: number,
+    opts: {
+      startArgs?: Record<string, unknown>
+      distance?: number
+      passedPerpendicular?: boolean
+      activateRoute?: (dest: unknown) => Promise<void>
+      route?: string
+    } = {}
+  ) => {
+    let held = false
+    const calcs = {
+      gc: { distance: opts.distance ?? 20 },
+      rl: {},
+      passedPerpendicular: opts.passedPerpendicular ?? true
+    } as CourseData
+    const started = startPluginCapturingDelta({
+      startArgs: opts.startArgs ?? {},
+      activateRoute: opts.activateRoute,
+      getResource: (_type, id) =>
+        held
+          ? new Promise(() => undefined)
+          : Promise.resolve({
+              feature: { geometry: { coordinates: ROUTES[id] } }
+            }),
+      calcsReturn: calcs
+    })
+    started.deltaCallback({
+      updates: [
+        { values: [{ path: 'navigation.course.arrivalCircle', value: 50 }] }
+      ]
+    })
+    const select = async (id: string | null, index = 0) => {
+      started.deltaCallback(courseDelta(id, index))
+      await settle()
+    }
+    await select(opts.route ?? 'r1', pointIndex)
+    // Moves to `distance` metres from the next point, if given.
+    const position = (distance?: number) => {
+      if (distance !== undefined) {
+        calcs.gc.distance = distance
+      }
+      started.deltaCallback(positionDelta(10, 20))
+      return settle()
+    }
+    // Waypoints fetched from now on never arrive.
+    const hold = () => {
+      held = true
+    }
+    return { ...started, position, select, hold }
+  }
+
+  it('moves on from an intermediate point once, without notifications', async () => {
+    const { server, position, stop } = await follow(0)
+    await position()
+    await position()
+
+    expect(server.activateRoute.calls).to.deep.equal([
+      [{ href: HREF, pointIndex: 1, reverse: false }]
+    ])
+    expect(raisedNotifications(server)).to.deep.equal([])
+    stop()
+  })
+
+  it('stays at the last point and notifies the arrival', async () => {
+    const { server, position, stop } = await follow(2)
+    await position()
+
+    expect(server.activateRoute.called).to.equal(false)
+    expect(raisedNotifications(server)).to.have.members([
+      ARRIVAL,
+      PERPENDICULAR
+    ])
+    stop()
+  })
+
+  it('leaves the route alone and notifies when switched off', async () => {
+    const { server, position, stop } = await follow(0, {
+      startArgs: { autoAdvance: 'off' }
+    })
+    await position()
+
+    expect(server.activateRoute.called).to.equal(false)
+    expect(raisedNotifications(server)).to.have.members([
+      ARRIVAL,
+      PERPENDICULAR
+    ])
+    stop()
+  })
+
+  it('waits for the arrival circle in arrivalCircle mode', async () => {
+    const { server, position, stop } = await follow(0, {
+      startArgs: { autoAdvance: 'arrivalCircle' },
+      distance: 80
+    })
+    await position()
+
+    expect(server.activateRoute.called).to.equal(false)
+    stop()
+  })
+
+  it('moves on when the perpendicular is passed outside the circle', async () => {
+    const { server, position, stop } = await follow(0, { distance: 80 })
+    await position()
+
+    expect(server.activateRoute.calls.length).to.equal(1)
+    stop()
+  })
+
+  it('tries again on the next position after a failed advance', async () => {
+    let attempts = 0
+    const { server, position, stop } = await follow(0, {
+      activateRoute: () =>
+        ++attempts === 1
+          ? Promise.reject(new Error('route not found'))
+          : Promise.resolve()
+    })
+    await position()
+    await position()
+
+    expect(server.activateRoute.calls.length).to.equal(2)
+    stop()
+  })
+
+  it('moves on along a newly selected route before its waypoints load', async () => {
+    const { server, position, select, hold, stop } = await follow(0, {
+      distance: 80,
+      passedPerpendicular: false
+    })
+    hold()
+    await select('r2', 0)
+    await position(20)
+
+    expect(server.activateRoute.calls).to.deep.equal([
+      [{ href: HREF2, pointIndex: 1, reverse: false }]
+    ])
+    expect(raisedNotifications(server)).to.deep.equal([])
+    stop()
+  })
+
+  it('moves on along a new route that starts at the same point, without notifications', async () => {
+    const { server, position, select, hold, stop } = await follow(0, {
+      distance: 51,
+      passedPerpendicular: false
+    })
+    await position()
+    hold()
+    await select('r3', 0)
+    await position(49)
+
+    expect(server.activateRoute.calls).to.deep.equal([
+      [{ href: '/resources/routes/r3', pointIndex: 1, reverse: false }]
+    ])
+    expect(raisedNotifications(server)).to.deep.equal([])
+    stop()
+  })
+
+  it('notifies the arrival at the last point when its circle overlaps the previous one', async () => {
+    const { server, position, select, stop } = await follow(1, {
+      passedPerpendicular: false
+    })
+    await position()
+    await select('r1', 2)
+    await position()
+
+    expect(server.activateRoute.calls).to.deep.equal([
+      [{ href: HREF, pointIndex: 2, reverse: false }]
+    ])
+    expect(raisedNotifications(server)).to.deep.equal([ARRIVAL])
+    stop()
+  })
+
+  it('notifies the arrival at the last point when it repeats the previous one', async () => {
+    const { server, position, select, stop } = await follow(1, {
+      route: 'r4',
+      passedPerpendicular: false
+    })
+    await position()
+    await select('r4', 2)
+    await position()
+
+    expect(server.activateRoute.calls).to.deep.equal([
+      [{ href: '/resources/routes/r4', pointIndex: 2, reverse: false }]
+    ])
+    expect(raisedNotifications(server)).to.deep.equal([ARRIVAL])
+    stop()
+  })
+
+  it('moves on from an intermediate point repeating the previous one, without notifications', async () => {
+    const { server, position, select, hold, stop } = await follow(0, {
+      route: 'r5',
+      passedPerpendicular: false
+    })
+    await position()
+    hold()
+    await select('r5', 1)
+    await position()
+
+    expect(
+      server.activateRoute.calls.map(
+        (call: [{ pointIndex: number }]) => call[0].pointIndex
+      )
+    ).to.deep.equal([1, 2])
+    expect(raisedNotifications(server)).to.deep.equal([])
+    stop()
+  })
+
+  it('notifies the arrival at a waypoint chosen inside its circle after a route', async () => {
+    const { server, position, deltaCallback, stop } = await follow(2, {
+      passedPerpendicular: false
+    })
+    await position()
+    deltaCallback({
+      updates: [
+        {
+          values: [
+            { path: 'navigation.course.activeRoute', value: null },
+            {
+              path: 'navigation.course.nextPoint',
+              value: {
+                type: 'Location',
+                position: { longitude: 8, latitude: 65 }
+              }
+            }
+          ]
+        }
+      ]
+    })
+    await position()
+
+    expect(raisedNotifications(server)).to.deep.equal([ARRIVAL, ARRIVAL])
+    stop()
+  })
+
+  it('clears the arrival when the destination is cleared', async () => {
+    const { server, position, select, stop } = await follow(2, {
+      passedPerpendicular: false
+    })
+    await position()
+    await select(null)
+    await position()
+
+    expect(clearedNotifications(server)).to.include(ARRIVAL)
+    stop()
+  })
+
+  it('advances again from a point reached a second time', async () => {
+    const { server, position, select, stop } = await follow(0)
+    await position()
+    await select('r1', 1)
+    await select(null)
+    await select('r1', 0)
+    await position()
+
+    expect(server.activateRoute.calls.length).to.equal(2)
+    stop()
+  })
+
+  it('keeps a newer advance guarded when an older one fails late', async () => {
+    let failFirst: (error: Error) => void = () => undefined
+    const { server, position, select, stop } = await follow(0, {
+      activateRoute: (dest) =>
+        (dest as { href: string }).href === HREF
+          ? new Promise((_resolve, reject) => {
+              failFirst = reject
+            })
+          : new Promise(() => undefined)
+    })
+    await position()
+    await select('r2', 0)
+    await position()
+    failFirst(new Error('route not found'))
+    await settle()
+    await position()
+
+    expect(
+      server.activateRoute.calls.map((call: [{ href: string }]) => call[0].href)
+    ).to.deep.equal([HREF, HREF2])
+    stop()
+  })
+
+  it('tells chart plotters the configured mode', () => {
+    const { plugin, stop } = startPluginCapturingDelta({
+      startArgs: { autoAdvance: 'perpendicular' }
+    })
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const routes: Record<string, (req: any, res: any) => void> = {}
+    plugin.registerWithRouter({
+      access: (level: string) => ({
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        get: (path: string, handler: (req: any, res: any) => void) => {
+          routes[`${level} ${path}`] = handler
+        }
+      })
+    })
+    const json = spy()
+    routes['readonly /autoAdvance']!({}, { json })
+
+    expect(json.lastCall).to.deep.equal([{ value: 'perpendicular' }])
+    stop()
   })
 })
