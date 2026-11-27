@@ -909,12 +909,27 @@ describe('Course Api concurrent requests', () => {
     }
   }
 
+  const VESSEL_POSITION = { latitude: -35.45, longitude: 138.0 }
+  const INGEST_TIMEOUT_MS = 2000
+
+  // Starts a server that knows the vessel position, which the course needs
+  // for its previous point. The test delta endpoint answers before the
+  // delta is ingested, so wait for the position to land.
   const start = async () => {
     const started = await startServer()
-    await started.sendDelta('navigation.position', {
-      latitude: -35.45,
-      longitude: 138.0
-    })
+    await started.sendDelta('navigation.position', VESSEL_POSITION)
+    const deadline = Date.now() + INGEST_TIMEOUT_MS
+    while (
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (started.server.app.signalk as any).self?.navigation?.position?.value
+        ?.latitude !== VESSEL_POSITION.latitude
+    ) {
+      if (Date.now() > deadline) {
+        await started.stop()
+        throw new Error('vessel position was not ingested')
+      }
+      await new Promise((resolve) => setTimeout(resolve, 10))
+    }
     return started
   }
 
