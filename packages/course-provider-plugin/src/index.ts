@@ -200,7 +200,8 @@ module.exports = (server: CourseComputerApp): Plugin => {
   // while the route's waypoints are fetched, and must not be advanced then.
   let announcedRoute: string | undefined
 
-  // The next point the arrival watchers last measured against.
+  // The next point, and the route point it is, that the arrival watchers
+  // last measured against.
   let watchedDestination: string | undefined
 
   // ******** REQUIRED PLUGIN DEFINITION *******
@@ -787,7 +788,10 @@ module.exports = (server: CourseComputerApp): Plugin => {
         | null
         | undefined
     )?.position
-    const destination = next ? `${next.longitude},${next.latitude}` : undefined
+    // A route may hold consecutive points at the same position.
+    const destination = next
+      ? `${announcedRoute ?? ''}|${next.longitude},${next.latitude}`
+      : undefined
     if (destination !== watchedDestination) {
       watchedDestination = destination
       watchArrival.reset()

@@ -602,6 +602,12 @@ describe('route advance', () => {
       [3, 60],
       [5, 62],
       [5, 62.1]
+    ],
+    // Ends with two points at the same position.
+    r4: [
+      [6, 63],
+      [6, 63.1],
+      [6, 63.1]
     ]
   }
 
@@ -645,8 +651,9 @@ describe('route advance', () => {
 
   const settle = () => new Promise((resolve) => setImmediate(resolve))
 
-  // Follows route r1 at pointIndex, then reports positions that are
-  // `distance` metres from the next point inside a 50 m arrival circle.
+  // Follows route r1 (or opts.route) at pointIndex, then reports positions
+  // that are `distance` metres from the next point inside a 50 m arrival
+  // circle.
   const follow = async (
     pointIndex: number,
     opts: {
@@ -656,6 +663,7 @@ describe('route advance', () => {
       activateRoute?: (dest: unknown) => Promise<void>
       // A route whose waypoints are never fetched.
       unfetched?: string
+      route?: string
     } = {}
   ) => {
     const started = startPluginCapturingDelta({
@@ -686,7 +694,7 @@ describe('route advance', () => {
       started.deltaCallback(courseDelta(id, index, nextPointOf))
       await settle()
     }
-    await select('r1', pointIndex)
+    await select(opts.route ?? 'r1', pointIndex)
     const position = () => {
       started.deltaCallback(positionDelta(10, 20))
       return settle()
@@ -801,6 +809,22 @@ describe('route advance', () => {
 
     expect(server.activateRoute.calls).to.deep.equal([
       [{ href: HREF, pointIndex: 2, reverse: false }]
+    ])
+    expect(raisedNotifications(server)).to.deep.equal([ARRIVAL])
+    stop()
+  })
+
+  it('notifies the arrival at the last point when it repeats the previous one', async () => {
+    const { server, position, select, stop } = await follow(1, {
+      route: 'r4',
+      passedPerpendicular: false
+    })
+    await position()
+    await select('r4', 2)
+    await position()
+
+    expect(server.activateRoute.calls).to.deep.equal([
+      [{ href: '/resources/routes/r4', pointIndex: 2, reverse: false }]
     ])
     expect(raisedNotifications(server)).to.deep.equal([ARRIVAL])
     stop()
