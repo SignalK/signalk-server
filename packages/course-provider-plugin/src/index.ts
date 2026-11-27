@@ -788,9 +788,12 @@ module.exports = (server: CourseComputerApp): Plugin => {
         | null
         | undefined
     )?.position
-    // A route may hold consecutive points at the same position.
+    // A route may hold consecutive points at the same position. The stored
+    // route, not the announced one, tells them apart: until its waypoints
+    // are fetched it is not known whether the new point is advanced from.
+    const route = srcPaths['activeRoute'] as ActiveRoute | null | undefined
     const destination = next
-      ? `${announcedRoute ?? ''}|${next.longitude},${next.latitude}`
+      ? `${routePointKey(route) ?? ''}|${next.longitude},${next.latitude}`
       : undefined
     if (destination !== watchedDestination) {
       watchedDestination = destination

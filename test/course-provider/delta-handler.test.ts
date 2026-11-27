@@ -608,6 +608,12 @@ describe('route advance', () => {
       [6, 63],
       [6, 63.1],
       [6, 63.1]
+    ],
+    // Starts with two points at the same position.
+    r5: [
+      [7, 64],
+      [7, 64],
+      [7, 64.1]
     ]
   }
 
@@ -666,11 +672,12 @@ describe('route advance', () => {
       route?: string
     } = {}
   ) => {
+    let held = false
     const started = startPluginCapturingDelta({
       startArgs: opts.startArgs ?? {},
       activateRoute: opts.activateRoute,
       getResource: (_type, id) =>
-        id === opts.unfetched
+        held || id === opts.unfetched
           ? new Promise(() => undefined)
           : Promise.resolve({
               feature: { geometry: { coordinates: ROUTES[id] } }
@@ -699,7 +706,11 @@ describe('route advance', () => {
       started.deltaCallback(positionDelta(10, 20))
       return settle()
     }
-    return { ...started, position, select }
+    // Waypoints fetched from now on never arrive.
+    const hold = () => {
+      held = true
+    }
+    return { ...started, position, select, hold }
   }
 
   it('moves on from an intermediate point once, without notifications', async () => {
@@ -827,6 +838,21 @@ describe('route advance', () => {
       [{ href: '/resources/routes/r4', pointIndex: 2, reverse: false }]
     ])
     expect(raisedNotifications(server)).to.deep.equal([ARRIVAL])
+    stop()
+  })
+
+  it('does not notify an intermediate point repeating the previous one while its route loads', async () => {
+    const { server, position, select, hold, stop } = await follow(0, {
+      route: 'r5',
+      passedPerpendicular: false
+    })
+    await position()
+    hold()
+    await select('r5', 1)
+    await position()
+
+    expect(server.activateRoute.calls.length).to.equal(1)
+    expect(raisedNotifications(server)).to.deep.equal([])
     stop()
   })
 
