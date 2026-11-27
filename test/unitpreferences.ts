@@ -233,6 +233,16 @@ describe('Unit Preferences', function () {
       })
     })
 
+    it('shows watermaker water in ppm', function () {
+      expect(
+        resolvePathDisplayUnits('watermaker.main.salinity', { units: 'ratio' })
+      ).to.include({
+        category: 'dissolvedSolids',
+        targetUnit: 'ppm',
+        formula: 'value * 1000000'
+      })
+    })
+
     it('resolves a path stored with the broader category in the narrower one it is listed under', function () {
       expect(
         resolvePathDisplayUnits('propulsion.port.revolutions', {
@@ -322,6 +332,7 @@ describe('Unit Preferences', function () {
         expect(categories.rotationalSpeed).to.deep.equal(categories.frequency)
         expect(categories.fluidPressure).to.deep.equal(categories.pressure)
         expect(categories.salinity).to.deep.equal(categories.percentage)
+        expect(categories.dissolvedSolids).to.deep.equal(categories.percentage)
       })
 
       it('shows them in the unit of the broader category', function () {

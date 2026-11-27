@@ -272,7 +272,11 @@
     },
     "salinity": {
       "siUnit": "ratio",
-      "paths": ["environment.water.salinity", "watermaker.*.salinity"]
+      "paths": ["environment.water.salinity"]
+    },
+    "dissolvedSolids": {
+      "siUnit": "ratio",
+      "paths": ["watermaker.*.salinity"]
     },
     "charge": {
       "siUnit": "C",

@@ -88,11 +88,12 @@ The following categories are available by default:
 - **rotationalSpeed**: Engine and alternator speed (Base: Hz). Examples: `propulsion.*.revolutions`.
 - **time**: Durations (Base: s).
 - **percentage**: Ratios and levels (Base: ratio 0-1). Examples: `tanks.*.currentLevel`, `electrical.batteries.*.capacity.stateOfCharge`.
-- **salinity**: Salt content of water (Base: ratio). Examples: `environment.water.salinity`, `watermaker.*.salinity`.
+- **salinity**: Salt content of sea water, shown in ppt (Base: ratio). Examples: `environment.water.salinity`.
+- **dissolvedSolids**: Salt content of fresh water, shown in ppm (Base: ratio). Examples: `watermaker.*.salinity`.
 
 Additional categories include `dateTime`, `epoch` for time representations, and `unitless`/`boolean` for data that doesn't require conversion.
 
-`fluidPressure` is a kind of `pressure`, `rotationalSpeed` a kind of `frequency`, and `salinity` a kind of `percentage`. A preset without an entry for the narrower category uses the one for the broader category. A path listed under the narrower category stays in it when its metadata names the broader one; to show it in another unit, give it a target unit.
+`fluidPressure` is a kind of `pressure`, `rotationalSpeed` a kind of `frequency`, and `salinity` and `dissolvedSolids` kinds of `percentage`. A preset without an entry for the narrower category uses the one for the broader category. A path listed under the narrower category stays in it when its metadata names the broader one; to show it in another unit, give it a target unit.
 
 ## For Client Application Developers
 
