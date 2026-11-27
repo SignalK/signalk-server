@@ -17,6 +17,7 @@ import {
   usePresets,
   useStore
 } from '../../store'
+import UnitPreferencesLoadNotice from '../../components/UnitPreferencesLoadNotice'
 
 type UploadStatus = 'uploading' | 'success' | 'duplicate' | 'error' | null
 
@@ -272,6 +273,7 @@ const UnitPreferencesSettings: React.FC = () => {
         <FontAwesomeIcon icon={faSliders} /> <strong>Unit Preferences</strong>
       </Card.Header>
       <Card.Body>
+        <UnitPreferencesLoadNotice />
         <Form.Group as={Row} className="mb-3">
           <Col md={2}>
             <Form.Label>Display Units</Form.Label>
@@ -286,6 +288,9 @@ const UnitPreferencesSettings: React.FC = () => {
                 disabled={!canChoose}
                 style={{ maxWidth: '300px' }}
               >
+                {!presets.some((p) => p.name === activePreset) && (
+                  <option value={activePreset}>{activePreset} (missing)</option>
+                )}
                 <optgroup label="Built-in">
                   {builtInPresets.map((p) => (
                     <option key={p.name} value={p.name}>
