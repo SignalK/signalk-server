@@ -17,6 +17,7 @@ import * as skConfig from './config/config'
 import { ConfigApp } from './config/config'
 import { getMetadata, removeMetadataFields } from '@signalk/path-metadata'
 import {
+  narrowToListedCategory,
   resolveDisplayUnits,
   stripResolvedDisplayUnits,
   validateCategoryAssignment
@@ -303,12 +304,16 @@ export function start(app: PutApp): void {
     }
 
     if (metaValue.displayUnits) {
-      metaValue.displayUnits = stripResolvedDisplayUnits(
+      // An echoed resolution is told from an override in the category it was
+      // resolved in, so the category is narrowed only afterwards.
+      const stored = stripResolvedDisplayUnits(
         metaValue.displayUnits as DisplayUnitsMetadata,
         (previousMeta as { displayUnits?: DisplayUnitsMetadata } | null)
           ?.displayUnits,
         username
       )
+      metaValue.displayUnits =
+        stored && narrowToListedCategory(metaPath, stored)
     }
 
     app.config.baseDeltaEditor.setMeta(context, metaPath, metaValue)

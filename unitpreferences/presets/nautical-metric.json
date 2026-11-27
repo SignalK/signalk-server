@@ -24,6 +24,11 @@
       "targetUnit": "mbar",
       "displayFormat": "0"
     },
+    "fluidPressure": {
+      "baseUnit": "Pa",
+      "targetUnit": "bar",
+      "displayFormat": "0.0"
+    },
     "depth": {
       "baseUnit": "m",
       "targetUnit": "m",
@@ -69,10 +74,25 @@
       "targetUnit": "percent",
       "displayFormat": "0"
     },
+    "salinity": {
+      "baseUnit": "ratio",
+      "targetUnit": "ppt",
+      "displayFormat": "0.0"
+    },
+    "dissolvedSolids": {
+      "baseUnit": "ratio",
+      "targetUnit": "ppm",
+      "displayFormat": "0"
+    },
     "frequency": {
       "baseUnit": "Hz",
-      "targetUnit": "rpm",
+      "targetUnit": "Hz",
       "displayFormat": "0.0"
+    },
+    "rotationalSpeed": {
+      "baseUnit": "Hz",
+      "targetUnit": "rpm",
+      "displayFormat": "0"
     },
     "time": {
       "baseUnit": "s",

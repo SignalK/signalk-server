@@ -3,6 +3,7 @@
     "speed": "m/s",
     "temperature": "K",
     "pressure": "Pa",
+    "fluidPressure": "Pa",
     "distance": "m",
     "depth": "m",
     "angle": "rad",
@@ -13,7 +14,10 @@
     "current": "A",
     "power": "W",
     "percentage": "ratio",
+    "salinity": "ratio",
+    "dissolvedSolids": "ratio",
     "frequency": "Hz",
+    "rotationalSpeed": "Hz",
     "time": "s",
     "charge": "C",
     "volumeRate": "m3/s",
@@ -31,6 +35,7 @@
     "speed",
     "temperature",
     "pressure",
+    "fluidPressure",
     "distance",
     "depth",
     "angle",
@@ -41,7 +46,10 @@
     "current",
     "power",
     "percentage",
+    "salinity",
+    "dissolvedSolids",
     "frequency",
+    "rotationalSpeed",
     "time",
     "charge",
     "volumeRate",
@@ -54,5 +62,11 @@
     "unitless",
     "boolean",
     "dataSize"
-  ]
+  ],
+  "parentCategories": {
+    "fluidPressure": "pressure",
+    "rotationalSpeed": "frequency",
+    "salinity": "percentage",
+    "dissolvedSolids": "percentage"
+  }
 }

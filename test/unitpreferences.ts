@@ -13,6 +13,10 @@ import {
   loadUserPreferences,
   saveUserPreferences
 } from '../dist/unitpreferences/loader'
+import {
+  resolvePathDisplayUnits,
+  stripResolvedDisplayUnits
+} from '../dist/unitpreferences/resolver'
 
 const sleep = (ms: number): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, ms))
@@ -178,6 +182,198 @@ describe('Unit Preferences', function () {
     })
   })
 
+  describe('Narrower categories', function () {
+    const displayUnitsOf = async (skPath: string, value: number) => {
+      await sendDelta(skPath, value)
+      await sleep(50)
+      const res = await fetch(
+        `${host}/signalk/v1/api/vessels/self/${skPath.replace(/\./g, '/')}/meta`
+      )
+      expect(res.status).to.equal(200)
+      return (await res.json()).displayUnits
+    }
+
+    it('shows engine speed in rpm and AC frequency in Hz', async function () {
+      expect(
+        await displayUnitsOf('propulsion.port.revolutions', 30)
+      ).to.include({
+        category: 'rotationalSpeed',
+        targetUnit: 'rpm',
+        formula: 'value * 60'
+      })
+      expect(
+        await displayUnitsOf('electrical.ac.shore.phase.A.frequency', 50)
+      ).to.include({
+        category: 'frequency',
+        targetUnit: 'Hz',
+        formula: 'value'
+      })
+    })
+
+    it('shows engine pressures in bar and air pressure in mbar', async function () {
+      expect(
+        await displayUnitsOf('propulsion.port.oilPressure', 400000)
+      ).to.include({ category: 'fluidPressure', targetUnit: 'bar' })
+      expect(
+        await displayUnitsOf('environment.outside.pressure', 101300)
+      ).to.include({ category: 'pressure', targetUnit: 'mbar' })
+      // Not listed, so the pressure category is the one for its unit
+      expect(
+        await displayUnitsOf('environment.inside.pressure', 101300)
+      ).to.include({ category: 'pressure', targetUnit: 'mbar' })
+    })
+
+    it('shows salinity in ppt', async function () {
+      expect(
+        await displayUnitsOf('environment.water.salinity', 0.035)
+      ).to.include({
+        category: 'salinity',
+        targetUnit: 'ppt',
+        formula: 'value * 1000'
+      })
+    })
+
+    it('shows watermaker water in ppm', function () {
+      expect(
+        resolvePathDisplayUnits('watermaker.main.salinity', { units: 'ratio' })
+      ).to.include({
+        category: 'dissolvedSolids',
+        targetUnit: 'ppm',
+        formula: 'value * 1000000'
+      })
+    })
+
+    it('resolves a path stored with the broader category in the narrower one it is listed under', function () {
+      expect(
+        resolvePathDisplayUnits('propulsion.port.revolutions', {
+          units: 'Hz',
+          displayUnits: { category: 'frequency' }
+        })
+      ).to.include({ category: 'rotationalSpeed', targetUnit: 'rpm' })
+      expect(
+        resolvePathDisplayUnits('propulsion.port.oilPressure', {
+          units: 'Pa',
+          displayUnits: { category: 'pressure', targetUnit: 'psi' }
+        })
+      ).to.include({ category: 'fluidPressure', targetUnit: 'psi' })
+    })
+
+    it('keeps a stored category the path is not listed under a narrower kind of', function () {
+      expect(
+        resolvePathDisplayUnits('electrical.ac.shore.phase.A.frequency', {
+          units: 'Hz',
+          displayUnits: { category: 'frequency' }
+        })
+      ).to.include({ category: 'frequency', targetUnit: 'Hz' })
+      expect(
+        resolvePathDisplayUnits('environment.outside.pressure', {
+          units: 'Pa',
+          displayUnits: { category: 'fluidPressure' }
+        })
+      ).to.include({ category: 'fluidPressure', targetUnit: 'bar' })
+    })
+
+    describe('in a preset written without them', function () {
+      const TEST_USER = 'narrower-categories-user'
+      const presetName = 'without-narrower-categories'
+      const presetPath = path.join(
+        serverTestConfigDirectory(),
+        'unitpreferences',
+        'presets',
+        'custom',
+        `${presetName}.json`
+      )
+
+      before(function () {
+        fs.mkdirSync(path.dirname(presetPath), { recursive: true })
+        fs.writeFileSync(
+          presetPath,
+          JSON.stringify({
+            version: '1.0.0',
+            name: presetName,
+            categories: {
+              pressure: {
+                baseUnit: 'Pa',
+                targetUnit: 'psi',
+                displayFormat: '0'
+              },
+              percentage: { baseUnit: 'ratio', targetUnit: 'percent' },
+              frequency: {
+                baseUnit: 'Hz',
+                targetUnit: 'rpm',
+                displayFormat: '0.0'
+              }
+            }
+          })
+        )
+        invalidatePresetCache(presetName)
+        saveUserPreferences(TEST_USER, { activePreset: presetName })
+      })
+
+      after(async function () {
+        fs.unlinkSync(presetPath)
+        invalidatePresetCache(presetName)
+        await rimraf(
+          path.join(
+            serverTestConfigDirectory(),
+            'applicationData',
+            'users',
+            TEST_USER
+          )
+        )
+      })
+
+      it("serves the preset with the broader category's unit for them", async function () {
+        const res = await fetch(
+          `${host}/signalk/v1/unitpreferences/presets/${presetName}`
+        )
+        expect(res.status).to.equal(200)
+        const { categories } = await res.json()
+        expect(categories.rotationalSpeed).to.deep.equal(categories.frequency)
+        expect(categories.fluidPressure).to.deep.equal(categories.pressure)
+        expect(categories.salinity).to.deep.equal(categories.percentage)
+        expect(categories.dissolvedSolids).to.deep.equal(categories.percentage)
+      })
+
+      it('shows them in the unit of the broader category', function () {
+        expect(
+          resolvePathDisplayUnits(
+            'propulsion.port.revolutions',
+            { units: 'Hz' },
+            TEST_USER
+          )
+        ).to.include({
+          category: 'rotationalSpeed',
+          targetUnit: 'rpm',
+          displayFormat: '0.0'
+        })
+        expect(
+          resolvePathDisplayUnits(
+            'propulsion.port.oilPressure',
+            { units: 'Pa' },
+            TEST_USER
+          )
+        ).to.include({
+          category: 'fluidPressure',
+          targetUnit: 'psi',
+          displayFormat: '0'
+        })
+      })
+
+      it('stores no override when a client echoes that unit back', function () {
+        const echoed = resolvePathDisplayUnits(
+          'propulsion.port.revolutions',
+          { units: 'Hz' },
+          TEST_USER
+        )
+        expect(echoed).to.not.equal(null)
+        expect(
+          stripResolvedDisplayUnits(echoed!, undefined, TEST_USER)
+        ).to.deep.equal({ category: 'rotationalSpeed' })
+      })
+    })
+  })
+
   describe('PUT meta displayUnits', function () {
     it('path-level targetUnit override takes precedence over preset', async function () {
       await sendDelta('navigation.speedOverGround', 5)
@@ -206,6 +402,57 @@ describe('Unit Preferences', function () {
       const meta = await getRes.json()
       expect(meta.displayUnits.targetUnit).to.equal('km/h')
       expect(meta.displayUnits.formula).to.include('3.6')
+    })
+
+    it('stores a broader category in the narrower one the path is listed under', async function () {
+      const sent = {
+        // as the Data Browser stores a category it shows
+        'propulsion.starboard.revolutions': { category: 'frequency' },
+        // a resolution in the broader category echoed back
+        'propulsion.center.revolutions': {
+          category: 'frequency',
+          targetUnit: 'Hz',
+          formula: 'value',
+          inverseFormula: 'value',
+          symbol: 'Hz',
+          displayFormat: '0.0'
+        }
+      }
+      for (const [skPath, displayUnits] of Object.entries(sent)) {
+        const putRes = await fetch(
+          `${host}/signalk/v1/api/vessels/self/${skPath.replace(/\./g, '/')}.meta`,
+          {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ value: { displayUnits } })
+          }
+        )
+        expect(putRes.status).to.equal(202)
+      }
+      await sleep(200)
+
+      const baseDeltas = JSON.parse(
+        fs.readFileSync(
+          path.join(serverTestConfigDirectory(), 'baseDeltas.json'),
+          'utf-8'
+        )
+      ) as Array<{
+        updates: Array<{
+          meta?: Array<{
+            path: string
+            value: { displayUnits?: { category: string } }
+          }>
+        }>
+      }>
+      const stored = baseDeltas
+        .flatMap((delta) => delta.updates)
+        .flatMap((update) => update.meta ?? [])
+      for (const skPath of Object.keys(sent)) {
+        expect(
+          stored.find((meta) => meta.path === skPath)?.value.displayUnits,
+          skPath
+        ).to.deep.equal({ category: 'rotationalSpeed' })
+      }
     })
 
     it('rejects category with mismatched SI unit', async function () {
@@ -319,6 +566,34 @@ describe('Unit Preferences', function () {
       )
     })
 
+    it('serves a custom preset written after it was asked for', async function () {
+      const presetName = 'written-later-preset'
+      const presetPath = path.join(
+        serverTestConfigDirectory(),
+        'unitpreferences',
+        'presets',
+        'custom',
+        `${presetName}.json`
+      )
+      const url = `${host}/signalk/v1/unitpreferences/presets/${presetName}`
+      try {
+        expect((await fetch(url)).status).to.equal(404)
+        fs.mkdirSync(path.dirname(presetPath), { recursive: true })
+        fs.writeFileSync(
+          presetPath,
+          JSON.stringify({
+            version: '1.0.0',
+            name: presetName,
+            categories: { speed: { baseUnit: 'm/s', targetUnit: 'kn' } }
+          })
+        )
+        expect((await fetch(url)).status).to.equal(200)
+      } finally {
+        if (fs.existsSync(presetPath)) fs.unlinkSync(presetPath)
+        invalidatePresetCache(presetName)
+      }
+    })
+
     it('invalidatePresetCache forces re-read of a custom preset on disk', async function () {
       const TEST_USER = 'cache-test-user'
       const presetName = 'invalidate-test-preset'
@@ -390,8 +665,19 @@ describe('Unit Preferences', function () {
         'voltage'
       )
       expect(getDefaultCategory('propulsion.port.oilPressure')).to.equal(
-        'pressure'
+        'fluidPressure'
       )
+    })
+
+    it('lists the pressures of engines, tanks and watermakers as fluid pressures', function () {
+      for (const p of [
+        'propulsion.port.fuel.pressure',
+        'propulsion.port.transmission.oilPressure',
+        'tanks.fuel.0.pressure',
+        'watermaker.0.feedPressure'
+      ]) {
+        expect(getDefaultCategory(p), p).to.equal('fluidPressure')
+      }
     })
 
     it('does not let wildcard span path segments', function () {

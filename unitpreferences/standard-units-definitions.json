@@ -457,6 +457,18 @@
         "inverseFormula": "value * 0.01",
         "symbol": "%",
         "longName": "percent"
+      },
+      "ppt": {
+        "formula": "value * 1000",
+        "inverseFormula": "value * 0.001",
+        "symbol": "ppt",
+        "longName": "parts per thousand"
+      },
+      "ppm": {
+        "formula": "value * 1000000",
+        "inverseFormula": "value * 0.000001",
+        "symbol": "ppm",
+        "longName": "parts per million"
       }
     }
   },

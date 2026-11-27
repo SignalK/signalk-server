@@ -54,12 +54,22 @@
     },
     "pressure": {
       "siUnit": "Pa",
+      "paths": ["environment.outside.pressure"]
+    },
+    "fluidPressure": {
+      "siUnit": "Pa",
       "paths": [
-        "environment.outside.pressure",
         "propulsion.*.oilPressure",
         "propulsion.*.fuelPressure",
+        "propulsion.*.fuel.pressure",
         "propulsion.*.coolantPressure",
-        "propulsion.*.boostPressure"
+        "propulsion.*.boostPressure",
+        "propulsion.*.transmission.oilPressure",
+        "tanks.*.*.pressure",
+        "watermaker.*.preFilterPressure",
+        "watermaker.*.postFilterPressure",
+        "watermaker.*.feedPressure",
+        "watermaker.*.systemHighPressure"
       ]
     },
     "depth": {
@@ -200,9 +210,13 @@
     },
     "frequency": {
       "siUnit": "Hz",
+      "paths": ["electrical.inverters.*.ac.frequency"]
+    },
+    "rotationalSpeed": {
+      "siUnit": "Hz",
       "paths": [
         "propulsion.*.revolutions",
-        "electrical.inverters.*.ac.frequency"
+        "electrical.alternators.*.revolutions"
       ]
     },
     "volume": {
@@ -255,6 +269,14 @@
         "electrical.chargers.*.chargeCurrentLimit",
         "electrical.displays.*.*.brightness"
       ]
+    },
+    "salinity": {
+      "siUnit": "ratio",
+      "paths": ["environment.water.salinity"]
+    },
+    "dissolvedSolids": {
+      "siUnit": "ratio",
+      "paths": ["watermaker.*.salinity"]
     },
     "charge": {
       "siUnit": "C",
