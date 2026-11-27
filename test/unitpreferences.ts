@@ -223,13 +223,13 @@ describe('Unit Preferences', function () {
       ).to.include({ category: 'pressure', targetUnit: 'mbar' })
     })
 
-    it('shows salinity in ppm', async function () {
+    it('shows salinity in ppt', async function () {
       expect(
         await displayUnitsOf('environment.water.salinity', 0.035)
       ).to.include({
         category: 'salinity',
-        targetUnit: 'ppm',
-        formula: 'value * 1000000'
+        targetUnit: 'ppt',
+        formula: 'value * 1000'
       })
     })
 
