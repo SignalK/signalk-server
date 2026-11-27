@@ -70,7 +70,8 @@ export async function loginAction(
 export async function enableSecurity(
   userId: string,
   password: string,
-  allowReadonly?: boolean
+  allowReadonly?: boolean,
+  setupCode?: string
 ): Promise<string | null> {
   const payload: Record<string, unknown> = {
     userId,
@@ -79,6 +80,9 @@ export async function enableSecurity(
   }
   if (allowReadonly) {
     payload.allow_readonly = true
+  }
+  if (setupCode) {
+    payload.setupCode = setupCode
   }
   const response = await fetch(`${window.serverRoutesPrefix}/enableSecurity`, {
     method: 'POST',

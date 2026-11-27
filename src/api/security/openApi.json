@@ -75,6 +75,10 @@
             "type": "boolean",
             "description": "Security is enabled but no user exists yet, so the first admin can still be created."
           },
+          "securitySetupCodeRequired": {
+            "type": "boolean",
+            "description": "Creating the first admin from this address needs the one-time setup code the server printed in its log. Sent only while no user exists and the request comes from an internet address."
+          },
           "oidcEnabled": {
             "type": "boolean",
             "description": "OpenID Connect login is configured."

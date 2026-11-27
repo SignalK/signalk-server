@@ -78,6 +78,9 @@ import availableInterfaces from './interfaces'
 import redirects from './redirects.json'
 import rateLimit from 'express-rate-limit'
 import { execSync } from 'child_process'
+import { randomBytes, timingSafeEqual } from 'crypto'
+import { isInternetAddress } from './internetAddress'
+import { isIP } from 'net'
 import {
   recommendedVersion as recommendedNodeVersion,
   testedNodeVersions
@@ -202,6 +205,7 @@ const MAX_STALE_CHECK_INTERVAL_MS = 60 * 1000
 const MIN_AUTO_TIMEOUT_SAMPLES = 2
 const MAX_AUTO_TIMEOUT_SAMPLES = 1000
 const MAX_AUTO_TIMEOUT_WARMUP_SECONDS = 3600
+const SETUP_CODE_BYTES = 6
 
 const stalenessSettingsSchema = Type.Object({
   enforceDataTimeouts: Type.Optional(Type.Boolean()),
@@ -531,12 +535,52 @@ module.exports = function (
     process.env.DISABLE_SECURITY_ACTIVATION === '1' ||
     process.env.DISABLE_SECURITY_ACTIVATION === 'true'
 
+  // Whoever creates the first admin account owns the server, so on a server
+  // reachable from the internet that must be someone who can read its log.
+  let firstAdminSetupCode: string | undefined
+  // Every hop counts, whether or not the proxy settings trust it: a client
+  // can add made-up local addresses to X-Forwarded-For, but cannot remove
+  // the real ones its own connection or a proxy put there. A port some
+  // proxies add is dropped, and a hop that still is no address counts as the
+  // internet, so a format not recognised here never skips the code.
+  const hopAddress = (hop: string) =>
+    /^\[([^\]]+)\](?::\d+)?$/.exec(hop)?.[1] ??
+    /^(\d{1,3}(?:\.\d{1,3}){3}):\d+$/.exec(hop)?.[1] ??
+    hop
+  const isInternetHop = (hop: string) => {
+    const address = hopAddress(hop)
+    return isIP(address) === 0 || isInternetAddress(address)
+  }
+  const crossesInternet = (req: Request) => {
+    const forwarded = req.headers['x-forwarded-for']
+    const hops = (Array.isArray(forwarded) ? forwarded : [forwarded ?? ''])
+      .flatMap((value) => value.split(','))
+      .map((hop) => hop.trim())
+      .filter((hop) => hop.length > 0)
+    return (
+      isInternetAddress(req.socket.remoteAddress) || hops.some(isInternetHop)
+    )
+  }
+  const needsSetupCode = (req: Request) =>
+    firstAdminSetupCode !== undefined && crossesInternet(req)
+  const matchesSetupCode = (code: unknown) => {
+    if (firstAdminSetupCode === undefined || typeof code !== 'string') {
+      return false
+    }
+    const expected = Buffer.from(firstAdminSetupCode)
+    const given = Buffer.from(code.trim().toLowerCase())
+    return given.length === expected.length && timingSafeEqual(given, expected)
+  }
+
   const getLoginStatus = (req: Request, res: Response) => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const result: any = app.securityStrategy.getLoginStatus(req)
     result.securityWasEnabled = securityWasEnabled
     if (securityActivationDisabled) {
       delete result.noUsers
+    }
+    if (needsSetupCode(req)) {
+      result.securitySetupCodeRequired = true
     }
 
     setNoCache(res)
@@ -931,6 +975,13 @@ module.exports = function (
         }
       )
     } else {
+      firstAdminSetupCode = randomBytes(SETUP_CODE_BYTES).toString('hex')
+      // Straight to the process output: console output also lands in the
+      // server log, which the Admin UI shows to anyone while security is off.
+      fs.writeSync(
+        process.stdout.fd,
+        `To create the first admin account from an internet address, enter the setup code ${firstAdminSetupCode}\n`
+      )
       app.post(
         `${SERVERROUTESPREFIX}/enableSecurity`,
         (req: Request, res: Response) => {
@@ -997,6 +1048,7 @@ module.exports = function (
                         return
                       }
                       securityWasEnabled = true
+                      firstAdminSetupCode = undefined
                       res.send('Security restored, please restart the server')
                     }
                   )
@@ -1006,6 +1058,14 @@ module.exports = function (
                 }
               }
             )
+            return
+          }
+          if (needsSetupCode(req) && !matchesSetupCode(req.body.setupCode)) {
+            res
+              .status(403)
+              .send(
+                'Enter the setup code the server printed to its console output when it started'
+              )
             return
           }
           if (app.securityStrategy.isDummy()) {
@@ -1072,6 +1132,7 @@ module.exports = function (
                     )
                   } else {
                     securityWasEnabled = true
+                    firstAdminSetupCode = undefined
                     response.send('Security enabled')
                   }
                 })
