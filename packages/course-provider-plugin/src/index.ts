@@ -32,7 +32,19 @@ interface CourseAppConfig {
   calculations: {
     method: CalcMethodType
   }
+  autoAdvance: AutoAdvance
 }
+
+// When a followed route moves on to its next point: on entering the arrival
+// circle, on passing the line through the point perpendicular to the leg,
+// on whichever comes first, or never.
+const AUTO_ADVANCE_MODES = [
+  'off',
+  'arrivalCircle',
+  'perpendicular',
+  'either'
+] as const
+type AutoAdvance = (typeof AUTO_ADVANCE_MODES)[number]
 
 type CalcMethodType = 'GreatCircle' | 'Rhumbline'
 
@@ -45,7 +57,8 @@ const DEFAULT_CONFIG: CourseAppConfig = {
   },
   calculations: {
     method: 'GreatCircle'
-  }
+  },
+  autoAdvance: 'either'
 }
 
 const CONFIG_SCHEMA = {
@@ -83,6 +96,20 @@ const CONFIG_SCHEMA = {
           enum: ['GreatCircle', 'Rhumbline']
         }
       }
+    },
+    autoAdvance: {
+      type: 'string',
+      title: 'Advance an active route to its next point',
+      description:
+        'The route moves on by itself at every point but the last, with no notification there.',
+      default: DEFAULT_CONFIG.autoAdvance,
+      enum: AUTO_ADVANCE_MODES,
+      enumNames: [
+        'Never',
+        'On entering the arrival circle',
+        'On passing the perpendicular',
+        'On whichever comes first'
+      ]
     }
   }
 }
@@ -164,6 +191,10 @@ module.exports = (server: CourseComputerApp): Plugin => {
 
   let metaSent = false
 
+  // The route point last advanced from, so the ticks before the course
+  // catches up with the advance do not advance again.
+  let advancedFrom: string | undefined
+
   // ******** REQUIRED PLUGIN DEFINITION *******
   const plugin: Plugin = {
     id: 'course-provider',
@@ -172,6 +203,12 @@ module.exports = (server: CourseComputerApp): Plugin => {
     uiSchema: () => CONFIG_UISCHEMA,
     start: (options: CourseAppConfig) => {
       doStartup(options)
+    },
+    // Lets a chart plotter tell whether it has to move the route on itself.
+    registerWithRouter: (router) => {
+      router.access('readonly').get('/autoAdvance', (_req, res) => {
+        res.json({ value: config?.autoAdvance ?? DEFAULT_CONFIG.autoAdvance })
+      })
     },
     stop: () => {
       doShutdown()
@@ -191,7 +228,10 @@ module.exports = (server: CourseComputerApp): Plugin => {
     calculations: {
       ...DEFAULT_CONFIG.calculations,
       ...options.calculations
-    }
+    },
+    autoAdvance: AUTO_ADVANCE_MODES.includes(options.autoAdvance as AutoAdvance)
+      ? (options.autoAdvance as AutoAdvance)
+      : DEFAULT_CONFIG.autoAdvance
   })
 
   let config: CourseAppConfig
@@ -211,6 +251,7 @@ module.exports = (server: CourseComputerApp): Plugin => {
       // previous run's latched state or a stale cached calculation.
       activeDest = false
       metaSent = false
+      advancedFrom = undefined
       resetCaches()
 
       initSubscriptions(SRC_PATHS)
@@ -498,6 +539,7 @@ module.exports = (server: CourseComputerApp): Plugin => {
 
     watchArrival.value = result.gc?.distance ?? -1
     watchPassedDest.value = result.passedPerpendicular ? 1 : 0
+    advanceOnArrival(result)
     courseCalcs = result
     server.handleMessage(
       plugin.id,
@@ -663,7 +705,7 @@ module.exports = (server: CourseComputerApp): Plugin => {
       : [ALARM_METHOD.visual]
 
     if (event.type === 'enter') {
-      if (srcPaths['navigation.position']) {
+      if (srcPaths['navigation.position'] && !advancesFromNextPoint()) {
         emitNotification(
           new NotificationMgr(
             'navigation.course.arrivalCircleEntered',
@@ -697,7 +739,7 @@ module.exports = (server: CourseComputerApp): Plugin => {
       ? [ALARM_METHOD.sound, ALARM_METHOD.visual]
       : [ALARM_METHOD.visual]
     if (event.type === 'enter') {
-      if (srcPaths['navigation.position']) {
+      if (srcPaths['navigation.position'] && !advancesFromNextPoint()) {
         emitNotification(
           new NotificationMgr(
             'navigation.course.perpendicularPassed',
@@ -715,6 +757,70 @@ module.exports = (server: CourseComputerApp): Plugin => {
         new NotificationMgr('navigation.course.perpendicularPassed', null)
       )
     }
+  }
+
+  // ********* Route advance *****************
+
+  const followedRoute = (): ActiveRoute | undefined => {
+    const route = srcPaths['activeRoute'] as ActiveRoute | null | undefined
+    return route?.href &&
+      typeof route.pointIndex === 'number' &&
+      typeof route.pointTotal === 'number'
+      ? route
+      : undefined
+  }
+
+  const advancesFromNextPoint = (): boolean => {
+    const route = followedRoute()
+    const mode = config.autoAdvance
+    return (
+      route !== undefined &&
+      route.pointIndex + 1 < route.pointTotal &&
+      mode !== 'off' &&
+      !(mode === 'arrivalCircle' && watchArrival.rangeMax <= 0)
+    )
+  }
+
+  const hasArrived = (result: CourseData): boolean => {
+    const distance = result.gc?.distance
+    const inCircle =
+      typeof distance === 'number' &&
+      distance >= 0 &&
+      watchArrival.rangeMax > 0 &&
+      distance <= watchArrival.rangeMax
+    switch (config.autoAdvance) {
+      case 'arrivalCircle':
+        return inCircle
+      case 'perpendicular':
+        return result.passedPerpendicular
+      case 'either':
+        return inCircle || result.passedPerpendicular
+      default:
+        return false
+    }
+  }
+
+  const advanceOnArrival = (result: CourseData) => {
+    const route = followedRoute()
+    if (!route || !advancesFromNextPoint() || !hasArrived(result)) {
+      return
+    }
+    const from = `${route.href}|${route.reverse}|${route.pointIndex}`
+    if (advancedFrom === from) {
+      return
+    }
+    advancedFrom = from
+    server
+      .activateRoute({
+        href: route.href,
+        pointIndex: route.pointIndex + 1,
+        reverse: route.reverse
+      })
+      .catch((error: Error) => {
+        // Cleared so the next position update tries again.
+        advancedFrom = undefined
+        server.debug(`Route advance failed: ${error.message}`)
+      })
   }
 
   // send notification delta message
