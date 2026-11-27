@@ -146,10 +146,32 @@ function applyProviderSettings(
   return true
 }
 
+function allowsExecuteConnections(): boolean {
+  const value = process.env.ALLOW_EXECUTE_CONNECTIONS
+  return value === '1' || value === 'true'
+}
+
+function isExecute(provider: PipedProvider | undefined): boolean {
+  return provider?.pipeElements[0]?.options.type === 'Execute'
+}
+
+// An Execute connection runs any command on the host, so only the operator
+// may allow managing them here, where only they can: in the environment.
+function refusesExecute(
+  provider: ProviderRequest,
+  existing: PipedProvider | undefined
+): boolean {
+  return (
+    (provider.type === 'Execute' || isExecute(existing)) &&
+    !allowsExecuteConnections()
+  )
+}
+
 function isValidProviderBody(body: unknown): body is ProviderRequest {
   if (!body || typeof body !== 'object' || Array.isArray(body)) return false
   const b = body as Record<string, unknown>
   if (b.id !== undefined && typeof b.id !== 'string') return false
+  if (b.type !== undefined && typeof b.type !== 'string') return false
   if (
     b.options !== undefined &&
     (typeof b.options !== 'object' || Array.isArray(b.options))
@@ -194,7 +216,11 @@ module.exports = function (app: App) {
     `${SERVERROUTESPREFIX}/providers/:id`,
     (req: Request, res: Response) => {
       if (!isValidProviderBody(req.body)) {
-        res.status(400).send('Invalid provider: id and options object required')
+        res
+          .status(400)
+          .send(
+            'Invalid provider: id and type must be strings, options an object'
+          )
         return
       }
       updateProvider(req.params.id, req.body as ProviderRequest, res)
@@ -203,7 +229,11 @@ module.exports = function (app: App) {
 
   app.post(`${SERVERROUTESPREFIX}/providers`, (req: Request, res: Response) => {
     if (!isValidProviderBody(req.body)) {
-      res.status(400).send('Invalid provider: id and options object required')
+      res
+        .status(400)
+        .send(
+          'Invalid provider: id and type must be strings, options an object'
+        )
       return
     }
     updateProvider(null, req.body as ProviderRequest, res)
@@ -260,6 +290,15 @@ module.exports = function (app: App) {
 
     if (!provider.id || provider.id.length === 0) {
       res.status(401).send('Please enter a provider ID')
+      return
+    }
+
+    if (refusesExecute(provider, existing)) {
+      res
+        .status(400)
+        .send(
+          'Execute connections run a shell command on the server. Add them in settings.json, or start the server with ALLOW_EXECUTE_CONNECTIONS=true to manage them here.'
+        )
       return
     }
 

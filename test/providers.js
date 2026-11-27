@@ -284,6 +284,161 @@ describe('Providers', (_) => {
   })
 })
 
+describe('Providers that run shell commands', () => {
+  let server, url
+
+  const savedExecute = {
+    id: 'savedExecute',
+    pipeElements: [
+      {
+        type: 'providers/simple',
+        options: {
+          logging: false,
+          type: 'Execute',
+          subOptions: { command: 'cat /dev/null' }
+        }
+      }
+    ],
+    enabled: false
+  }
+
+  before(async function () {
+    const port = await freeport()
+    url = `http://0.0.0.0:${port}`
+    const serverApp = new Server({
+      config: {
+        settings: {
+          port,
+          interfaces: { plugins: false },
+          pipedProviders: [savedExecute]
+        }
+      }
+    })
+    server = await serverApp.start()
+  })
+
+  after(async function () {
+    delete process.env.ALLOW_EXECUTE_CONNECTIONS
+    await server.stop()
+  })
+
+  const send = (method, path, body) =>
+    fetch(`${url}/skServer/providers${path}`, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    })
+  const ids = () => server.app.config.settings.pipedProviders.map((p) => p.id)
+  const savedCommand = (id) =>
+    server.app.config.settings.pipedProviders.find((p) => p.id === id)
+      .pipeElements[0].options.subOptions.command
+
+  it('refuses a new Execute connection', async function () {
+    const res = await send('post', '', {
+      id: 'planted',
+      enabled: true,
+      type: 'Execute',
+      options: { command: 'touch /tmp/planted', dataType: 'NMEA0183' }
+    })
+    res.status.should.equal(400)
+    ids().should.not.include('planted')
+  })
+
+  it('refuses a connection type that is not a string', async function () {
+    const res = await send('post', '', {
+      id: 'plantedArray',
+      enabled: true,
+      type: ['Execute'],
+      options: { command: 'touch /tmp/planted', dataType: 'Multiplexed' }
+    })
+    res.status.should.equal(400)
+    ids().should.not.include('plantedArray')
+  })
+
+  it('refuses turning a connection into an Execute connection', async function () {
+    let res = await send('post', '', {
+      id: 'plain',
+      enabled: false,
+      type: 'NMEA0183',
+      options: { type: 'tcp', host: 'localhost', port: 10110 }
+    })
+    res.status.should.equal(200)
+    res = await send('put', '/plain', {
+      id: 'plain',
+      enabled: false,
+      type: 'Execute',
+      options: { command: 'touch /tmp/planted' }
+    })
+    res.status.should.equal(400)
+    server.app.config.settings.pipedProviders
+      .find((p) => p.id === 'plain')
+      .pipeElements[0].options.type.should.equal('NMEA0183')
+  })
+
+  it('refuses changing the command of a saved Execute connection', async function () {
+    const res = await send('put', '/savedExecute', {
+      id: 'savedExecute',
+      enabled: false,
+      type: 'Execute',
+      options: { command: 'touch /tmp/planted' }
+    })
+    res.status.should.equal(400)
+    savedCommand('savedExecute').should.equal('cat /dev/null')
+  })
+
+  it('refuses any other update of a saved Execute connection', async function () {
+    const res = await send('put', '/savedExecute', {
+      id: 'savedExecute',
+      enabled: true,
+      type: 'Execute',
+      options: { command: 'cat /dev/null' }
+    })
+    res.status.should.equal(400)
+    server.app.config.settings.pipedProviders
+      .find((p) => p.id === 'savedExecute')
+      .enabled.should.equal(false)
+  })
+
+  it('accepts Execute connections when the environment allows them', async function () {
+    process.env.ALLOW_EXECUTE_CONNECTIONS = 'true'
+    try {
+      const res = await send('put', '/savedExecute', {
+        id: 'savedExecute',
+        enabled: false,
+        type: 'Execute',
+        options: { command: 'cat /dev/zero' }
+      })
+      res.status.should.equal(200)
+      savedCommand('savedExecute').should.equal('cat /dev/zero')
+    } finally {
+      delete process.env.ALLOW_EXECUTE_CONNECTIONS
+    }
+  })
+
+  it('never lets a shell parse connection settings', async function () {
+    const marker = require('path').join(
+      require('os').tmpdir(),
+      `sk-provider-injection-${process.pid}`
+    )
+    const fs = require('fs')
+    fs.rmSync(marker, { force: true })
+    for (const [type, options] of [
+      ['NMEA2000', { type: 'ngt-1', device: `/dev/null; touch ${marker}` }],
+      ['NMEA2000', { type: 'canbus', interface: `can0; touch ${marker}` }]
+    ]) {
+      const res = await send('post', '', {
+        id: `injected-${options.type}`,
+        enabled: true,
+        type,
+        options
+      })
+      res.status.should.equal(200)
+    }
+    await new Promise((resolve) => setTimeout(resolve, 1000))
+    fs.existsSync(marker).should.equal(false)
+  })
+})
+
 function checkExistingProvider(existing) {
   existing.id.should.equal('existing')
   existing.enabled.should.equal(false)
