@@ -468,6 +468,15 @@ export class CourseApi {
     }
   }
 
+  // Server.stop() runs this before a restart in the same process; a timer
+  // or subscription left behind would clear or rewrite the course of the
+  // Course API that the restart creates.
+  stop() {
+    this.unsubscribes.forEach((unsubscribe) => unsubscribe())
+    this.unsubscribes.length = 0
+    this.clearExternalNavigationState()
+  }
+
   private markExternalNavigationUpdate() {
     this.externalNavLastUpdate = Date.now()
     this.scheduleExternalNavigationTimeout()

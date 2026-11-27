@@ -540,6 +540,112 @@ describe('Course Api', () => {
     stop()
   })
 
+  it('leaves the course of a server restarted in the same process alone', async function () {
+    // The stale-course timeout of the first server is 15 s.
+    this.timeout(90000)
+    const first = await startServer()
+    try {
+      await first.sendDelta('navigation.position', {
+        latitude: 43.02,
+        longitude: 7.84
+      })
+      await first.sendADelta({
+        updates: [
+          {
+            source: {
+              label: 'nmea',
+              type: 'NMEA0183',
+              talker: 'GP',
+              sentence: 'RMB'
+            },
+            $source: 'nmea.GP',
+            values: [
+              {
+                path: 'navigation.courseRhumbline.nextPoint.position',
+                value: { latitude: 43.03, longitude: 7.94 }
+              }
+            ]
+          }
+        ]
+      })
+      const deadline = Date.now() + 5000
+      while (
+        !((await first.selfGetJson('navigation/course')) as CourseInfo)
+          .nextPoint
+      ) {
+        if (Date.now() > deadline) throw new Error('external course not set')
+        await new Promise((resolve) => setTimeout(resolve, 100))
+      }
+    } finally {
+      await first.stop()
+    }
+    // An external update reaching the stopped server must not revive its
+    // course, which would arm its stale-course timeout again.
+    first.server.app.handleMessage('nmea.GP', {
+      updates: [
+        {
+          source: {
+            label: 'nmea',
+            type: 'NMEA0183',
+            talker: 'GP',
+            sentence: 'RMB'
+          },
+          values: [
+            {
+              path: 'navigation.courseRhumbline.nextPoint.position',
+              value: { latitude: 43.04, longitude: 7.95 }
+            }
+          ]
+        }
+      ]
+    })
+
+    const port = await freeport()
+    const second = await startServerP(port, false, {
+      settings: { interfaces: { plugins: true } }
+    })
+    try {
+      const destination = { latitude: -35.5, longitude: 138.7 }
+      const sendPosition = fetch(
+        `http://localhost:${port}/signalk/v1/api/_test/delta`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            context: 'vessels.self',
+            updates: [
+              {
+                values: [
+                  {
+                    path: 'navigation.position',
+                    value: { latitude: -35.45, longitude: 138.0 }
+                  }
+                ]
+              }
+            ]
+          })
+        }
+      )
+      await sendPosition
+      const response = await fetch(
+        `http://localhost:${port}/signalk/v2/api/vessels/self/navigation/course/destination`,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ position: destination })
+        }
+      )
+      response.status.should.equal(200)
+      await persistedCourse((course) => course?.nextPoint?.position)
+
+      await new Promise((resolve) => setTimeout(resolve, 16000))
+      const saved = JSON.parse(await readFile(courseFile(), 'utf8'))
+      expect(saved.nextPoint?.position).to.deep.equal(destination)
+    } finally {
+      await second.stop()
+    }
+  })
+
   it('rebases external NMEA0183 previousPoint using Signal K XTE sign', async function () {
     const { server, selfGetJson, sendDelta, stop } = await startServer()
     const vesselPosition = { latitude: 43.02, longitude: 7.84 }
