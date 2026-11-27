@@ -586,6 +586,22 @@ describe('route advance', () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .map((v: any) => v.path)
 
+  const clearedNotifications = (
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    server: any
+  ): string[] =>
+    server.handleMessage.calls
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .flatMap((call: any[]) => call[1]?.updates ?? [])
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .flatMap((u: any) => u.values ?? [])
+      .filter(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (v: any) => v.path?.startsWith('notifications.') && v.value === null
+      )
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .map((v: any) => v.path)
+
   const ROUTES: Record<string, number[][]> = {
     r1: [
       [3, 60],
@@ -619,11 +635,7 @@ describe('route advance', () => {
 
   // The course as the server publishes it when following a route: the
   // active route and its point at pointIndex as the next point.
-  const courseDelta = (
-    id: string | null,
-    pointIndex = 0,
-    nextPointOf = id
-  ) => ({
+  const courseDelta = (id: string | null, pointIndex = 0) => ({
     updates: [
       {
         values: [
@@ -640,12 +652,12 @@ describe('route advance', () => {
           },
           {
             path: 'navigation.course.nextPoint',
-            value: nextPointOf
+            value: id
               ? {
                   type: 'RoutePoint',
                   position: {
-                    longitude: ROUTES[nextPointOf]![pointIndex]![0],
-                    latitude: ROUTES[nextPointOf]![pointIndex]![1]
+                    longitude: ROUTES[id]![pointIndex]![0],
+                    latitude: ROUTES[id]![pointIndex]![1]
                   }
                 }
               : null
@@ -667,42 +679,41 @@ describe('route advance', () => {
       distance?: number
       passedPerpendicular?: boolean
       activateRoute?: (dest: unknown) => Promise<void>
-      // A route whose waypoints are never fetched.
-      unfetched?: string
       route?: string
     } = {}
   ) => {
     let held = false
+    const calcs = {
+      gc: { distance: opts.distance ?? 20 },
+      rl: {},
+      passedPerpendicular: opts.passedPerpendicular ?? true
+    } as CourseData
     const started = startPluginCapturingDelta({
       startArgs: opts.startArgs ?? {},
       activateRoute: opts.activateRoute,
       getResource: (_type, id) =>
-        held || id === opts.unfetched
+        held
           ? new Promise(() => undefined)
           : Promise.resolve({
               feature: { geometry: { coordinates: ROUTES[id] } }
             }),
-      calcsReturn: {
-        gc: { distance: opts.distance ?? 20 },
-        rl: {},
-        passedPerpendicular: opts.passedPerpendicular ?? true
-      } as CourseData
+      calcsReturn: calcs
     })
     started.deltaCallback({
       updates: [
         { values: [{ path: 'navigation.course.arrivalCircle', value: 50 }] }
       ]
     })
-    const select = async (
-      id: string | null,
-      index = 0,
-      nextPointOf: string | null = id
-    ) => {
-      started.deltaCallback(courseDelta(id, index, nextPointOf))
+    const select = async (id: string | null, index = 0) => {
+      started.deltaCallback(courseDelta(id, index))
       await settle()
     }
     await select(opts.route ?? 'r1', pointIndex)
-    const position = () => {
+    // Moves to `distance` metres from the next point, if given.
+    const position = (distance?: number) => {
+      if (distance !== undefined) {
+        calcs.gc.distance = distance
+      }
       started.deltaCallback(positionDelta(10, 20))
       return settle()
     }
@@ -785,28 +796,36 @@ describe('route advance', () => {
     stop()
   })
 
-  it('does not advance the old route while a new one is being selected', async () => {
-    const { server, position, select, stop } = await follow(0)
-    // r2's next point is known, r1 is still the route its waypoints match.
-    await select('r1', 0, 'r2')
-    await position()
+  it('moves on along a newly selected route before its waypoints load', async () => {
+    const { server, position, select, hold, stop } = await follow(0, {
+      distance: 80,
+      passedPerpendicular: false
+    })
+    hold()
+    await select('r2', 0)
+    await position(20)
 
-    expect(server.activateRoute.called).to.equal(false)
-    expect(raisedNotifications(server)).to.have.members([
-      ARRIVAL,
-      PERPENDICULAR
+    expect(server.activateRoute.calls).to.deep.equal([
+      [{ href: HREF2, pointIndex: 1, reverse: false }]
     ])
+    expect(raisedNotifications(server)).to.deep.equal([])
     stop()
   })
 
-  it('does not advance the old route when the new one starts at the same point', async () => {
-    const { server, position, select, stop } = await follow(0, {
-      unfetched: 'r3'
+  it('moves on along a new route that starts at the same point, without notifications', async () => {
+    const { server, position, select, hold, stop } = await follow(0, {
+      distance: 51,
+      passedPerpendicular: false
     })
-    await select('r3', 0)
     await position()
+    hold()
+    await select('r3', 0)
+    await position(49)
 
-    expect(server.activateRoute.called).to.equal(false)
+    expect(server.activateRoute.calls).to.deep.equal([
+      [{ href: '/resources/routes/r3', pointIndex: 1, reverse: false }]
+    ])
+    expect(raisedNotifications(server)).to.deep.equal([])
     stop()
   })
 
@@ -841,7 +860,7 @@ describe('route advance', () => {
     stop()
   })
 
-  it('does not notify an intermediate point repeating the previous one while its route loads', async () => {
+  it('moves on from an intermediate point repeating the previous one, without notifications', async () => {
     const { server, position, select, hold, stop } = await follow(0, {
       route: 'r5',
       passedPerpendicular: false
@@ -851,8 +870,51 @@ describe('route advance', () => {
     await select('r5', 1)
     await position()
 
-    expect(server.activateRoute.calls.length).to.equal(1)
+    expect(
+      server.activateRoute.calls.map(
+        (call: [{ pointIndex: number }]) => call[0].pointIndex
+      )
+    ).to.deep.equal([1, 2])
     expect(raisedNotifications(server)).to.deep.equal([])
+    stop()
+  })
+
+  it('notifies the arrival at a waypoint chosen inside its circle after a route', async () => {
+    const { server, position, deltaCallback, stop } = await follow(2, {
+      passedPerpendicular: false
+    })
+    await position()
+    deltaCallback({
+      updates: [
+        {
+          values: [
+            { path: 'navigation.course.activeRoute', value: null },
+            {
+              path: 'navigation.course.nextPoint',
+              value: {
+                type: 'Location',
+                position: { longitude: 8, latitude: 65 }
+              }
+            }
+          ]
+        }
+      ]
+    })
+    await position()
+
+    expect(raisedNotifications(server)).to.deep.equal([ARRIVAL, ARRIVAL])
+    stop()
+  })
+
+  it('clears the arrival when the destination is cleared', async () => {
+    const { server, position, select, stop } = await follow(2, {
+      passedPerpendicular: false
+    })
+    await position()
+    await select(null)
+    await position()
+
+    expect(clearedNotifications(server)).to.include(ARRIVAL)
     stop()
   })
 

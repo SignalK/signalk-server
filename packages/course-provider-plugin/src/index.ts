@@ -196,12 +196,12 @@ module.exports = (server: CourseComputerApp): Plugin => {
   // own identity, so a late failure clears only the guard it set.
   let advancedFrom: { from: string; attempt: symbol } | undefined
 
-  // The route point the course last announced. The stored route lags it
-  // while the route's waypoints are fetched, and must not be advanced then.
-  let announcedRoute: string | undefined
+  // The active route as the course announced it. The Course API publishes
+  // it in the same delta as the next point, so the two always agree; the
+  // stored route lags them while its waypoints are fetched.
+  let courseRoute: ActiveRoute | null = null
 
-  // The next point, and the route point it is, that the arrival watchers
-  // last measured against.
+  // The destination the arrival watchers last measured against.
   let watchedDestination: string | undefined
 
   // ******** REQUIRED PLUGIN DEFINITION *******
@@ -261,7 +261,7 @@ module.exports = (server: CourseComputerApp): Plugin => {
       activeDest = false
       metaSent = false
       advancedFrom = undefined
-      announcedRoute = undefined
+      courseRoute = null
       watchedDestination = undefined
       resetCaches()
 
@@ -406,7 +406,7 @@ module.exports = (server: CourseComputerApp): Plugin => {
         srcPaths['navigation.course.nextPoint'] = ci.nextPoint
         srcPaths['navigation.course.previousPoint'] = ci.previousPoint
         srcPaths['activeRoute'] = ci.activeRoute
-        announcedRoute = routePointKey(ci.activeRoute)
+        courseRoute = ci.activeRoute ? { ...ci.activeRoute } : null
         if (ci.activeRoute) {
           // split('/').slice(-1)[0] is structurally always defined on a
           // non-empty string, but `noUncheckedIndexedAccess` types it as
@@ -471,8 +471,8 @@ module.exports = (server: CourseComputerApp): Plugin => {
 
     // Once the course has moved on (or was cleared), the point advanced from
     // may be reached again later, e.g. when the route is restarted.
-    announcedRoute = routePointKey(value)
-    if (advancedFrom && advancedFrom.from !== announcedRoute) {
+    courseRoute = value
+    if (advancedFrom && advancedFrom.from !== routePointKey(courseRoute)) {
       advancedFrom = undefined
     }
 
@@ -781,6 +781,8 @@ module.exports = (server: CourseComputerApp): Plugin => {
 
   // A new destination starts outside its arrival zones, so a vessel already
   // inside the next point's circle when it becomes the destination is told.
+  // The route point is part of the destination, as a route may hold
+  // consecutive points at the same position.
   const rearmOnNewDestination = () => {
     const next = (
       srcPaths['navigation.course.nextPoint'] as
@@ -788,12 +790,8 @@ module.exports = (server: CourseComputerApp): Plugin => {
         | null
         | undefined
     )?.position
-    // A route may hold consecutive points at the same position. The stored
-    // route, not the announced one, tells them apart: until its waypoints
-    // are fetched it is not known whether the new point is advanced from.
-    const route = srcPaths['activeRoute'] as ActiveRoute | null | undefined
     const destination = next
-      ? `${routePointKey(route) ?? ''}|${next.longitude},${next.latitude}`
+      ? `${routePointKey(courseRoute) ?? ''}|${next.longitude},${next.latitude}`
       : undefined
     if (destination !== watchedDestination) {
       watchedDestination = destination
@@ -804,39 +802,17 @@ module.exports = (server: CourseComputerApp): Plugin => {
 
   // ********* Route advance *****************
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const routePointKey = (route: any): string | undefined =>
+  const routePointKey = (
+    route: ActiveRoute | null | undefined
+  ): string | undefined =>
     route ? `${route.href}|${route.reverse}|${route.pointIndex}` : undefined
 
-  // The route is taken only while its point at pointIndex is the next point
-  // the arrival was computed for: during a switch to another route, the new
-  // route's next point arrives before its waypoints are fetched.
-  const followedRoute = (): ActiveRoute | undefined => {
-    const route = srcPaths['activeRoute'] as ActiveRoute | null | undefined
-    const next = (
-      srcPaths['navigation.course.nextPoint'] as
-        | { position?: { latitude: number; longitude: number } }
-        | null
-        | undefined
-    )?.position
-    if (
-      !route?.href ||
-      routePointKey(route) !== announcedRoute ||
-      typeof route.pointIndex !== 'number' ||
-      typeof route.pointTotal !== 'number' ||
-      !Array.isArray(route.waypoints) ||
-      !next
-    ) {
-      return undefined
-    }
-    const index = route.reverse
-      ? route.waypoints.length - 1 - route.pointIndex
-      : route.pointIndex
-    const point = route.waypoints[index]
-    return point?.[0] === next.longitude && point?.[1] === next.latitude
-      ? route
+  const followedRoute = (): ActiveRoute | undefined =>
+    typeof courseRoute?.href === 'string' &&
+    typeof courseRoute.pointIndex === 'number' &&
+    typeof courseRoute.pointTotal === 'number'
+      ? courseRoute
       : undefined
-  }
 
   const advancesFromNextPoint = (): boolean => {
     const route = followedRoute()
