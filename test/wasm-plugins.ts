@@ -15,6 +15,7 @@ import { expect } from 'chai'
 import fs from 'fs'
 import path from 'path'
 import { execSync } from 'child_process'
+import type { EventEmitter } from 'events'
 import { freeport } from './ts-servertestutilities'
 import {
   startServerP,
@@ -24,7 +25,13 @@ import {
   getAdminToken
 } from './servertestutilities'
 import type { PluginRoutePermission, SecurityStrategy } from '../src/security'
-import { reloadWasmPlugin } from '../dist/wasm/loader'
+import {
+  getWasmPlugin,
+  handleWasmPluginCrash,
+  reloadWasmPlugin,
+  unloadWasmPlugin
+} from '../dist/wasm/loader'
+import { socketManager } from '../dist/wasm/bindings/socket-manager'
 
 interface PluginInfo {
   id: string
@@ -46,6 +53,7 @@ interface ServerInstance {
         port: number
       }
     }
+    signalk: EventEmitter
   }
 }
 
@@ -310,6 +318,8 @@ export function plugin_start(configPtr: usize, configLen: usize): i32 {
   return 0
 }
 
+export function delta_handler(delta: string): void {}
+
 export function plugin_stop(): i32 {
   return 0
 }
@@ -480,6 +490,8 @@ export function http_endpoints(): string {
 export function handle_${build}(requestPtr: usize, requestLen: usize): string {
   return '{"statusCode":200,"body":"${build}"}'
 }
+
+export function delta_handler(delta: string): void {}
 
 export function plugin_stop(): i32 {
   return 0
@@ -653,6 +665,85 @@ export function plugin_stop(): i32 {
 
       await expectBuildTwoRunning()
       expect((await getBuildEndpoint('four')).status).to.equal(404)
+    })
+
+    it('reports a reload whose binary declares malformed endpoints', async function () {
+      expect(await reload('two')).to.equal(200)
+      expect(await waitForStatus('build two')).to.equal('build two')
+
+      buildProbe('six', undefined, '[{not json')
+      let failure: unknown
+      await reloadWasmPlugin(server!.app, packageName).catch((error) => {
+        failure = error
+      })
+
+      expect(String(failure)).to.contain('HTTP endpoints')
+      expect((await getBuildEndpoint('two')).status).to.equal(404)
+      expect((await getBuildEndpoint('six')).status).to.equal(404)
+
+      buildProbe('seven')
+      await reloadWasmPlugin(server!.app, packageName)
+      expect(getWasmPlugin(packageName)?.status).to.equal('running')
+      expect((await getBuildEndpoint('seven')).status).to.equal(200)
+    })
+
+    it('keeps one delta listener when a crashed plugin is restarted', async function () {
+      expect(await reload('two')).to.equal(200)
+      expect(await waitForStatus('build two')).to.equal('build two')
+      const listeners = server!.app.signalk.listenerCount('delta')
+
+      getWasmPlugin(packageName)!.status = 'crashed'
+      await reloadWasmPlugin(server!.app, packageName)
+
+      expect(getWasmPlugin(packageName)?.status).to.equal('running')
+      expect(server!.app.signalk.listenerCount('delta')).to.equal(listeners)
+    })
+
+    it('closes the sockets of a crashed plugin before restarting it', async function () {
+      expect(await reload('two')).to.equal(200)
+      expect(await waitForStatus('build two')).to.equal('build two')
+      const closedFor: string[] = []
+      const closeAllForPlugin = socketManager.closeAllForPlugin
+      socketManager.closeAllForPlugin = (pluginId: string) => {
+        closedFor.push(pluginId)
+        closeAllForPlugin.call(socketManager, pluginId)
+      }
+      try {
+        getWasmPlugin(packageName)!.status = 'crashed'
+        await reloadWasmPlugin(server!.app, packageName)
+      } finally {
+        socketManager.closeAllForPlugin = closeAllForPlugin
+      }
+
+      expect(closedFor).to.deep.equal([packageName])
+    })
+
+    it('drops the PUT handlers of a crashed plugin when it is restarted', async function () {
+      expect(await reload('two')).to.equal(200)
+      expect(await waitForStatus('build two')).to.equal('build two')
+      expect(await putStatus('two')).to.equal(200)
+
+      buildProbe('eight')
+      getWasmPlugin(packageName)!.status = 'crashed'
+      await reloadWasmPlugin(server!.app, packageName)
+
+      expect((await getBuildEndpoint('eight')).status).to.equal(200)
+      expect(await putStatus('two')).to.equal(405)
+    })
+
+    // Last in this block: the probe stays unloaded
+    it('does not restart a crashed plugin after it was unloaded', async function () {
+      expect(await reload('two')).to.equal(200)
+      expect(await waitForStatus('build two')).to.equal('build two')
+      const plugin = getWasmPlugin(packageName)!
+
+      await handleWasmPluginCrash(server!.app, packageName, new Error('probe'))
+      const backoff = plugin.restartBackoff
+      await unloadWasmPlugin(server!.app, packageName)
+      await new Promise((resolve) => setTimeout(resolve, backoff + 500))
+
+      expect(plugin.status).to.equal('stopped')
+      expect(plugin.statusMessage).to.equal('Unloaded')
     })
   })
 

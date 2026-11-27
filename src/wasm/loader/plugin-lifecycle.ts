@@ -235,6 +235,39 @@ async function startWasmPluginInternal(
   }
 }
 
+function stopPollAndDeltas(pluginId: string): void {
+  const pollTimer = pollTimers.get(pluginId)
+  if (pollTimer) {
+    clearInterval(pollTimer)
+    pollTimers.delete(pluginId)
+    debug(`Stopped poll timer for ${pluginId}`)
+  }
+
+  const deltaUnsubscriber = deltaUnsubscribers.get(pluginId)
+  if (deltaUnsubscriber) {
+    deltaUnsubscriber()
+    deltaUnsubscribers.delete(pluginId)
+    debug(`Stopped delta subscription for ${pluginId}`)
+  }
+}
+
+function cancelRestart(pluginId: string): void {
+  const timer = restartTimers.get(pluginId)
+  if (timer) {
+    clearTimeout(timer)
+    restartTimers.delete(pluginId)
+  }
+}
+
+// A plugin that is not running never went through stopWasmPlugin, so a
+// crashed one still holds its poll timer, delta listener, sockets and PUT
+// handlers.
+function releaseStoppedPlugin(plugin: WasmPlugin): void {
+  stopPollAndDeltas(plugin.id)
+  socketManager.closeAllForPlugin(plugin.id)
+  cleanupWasmPutHandlers(plugin.packageName)
+}
+
 /**
  * Stop a WASM plugin
  */
@@ -247,28 +280,8 @@ export async function stopWasmPlugin(pluginId: string): Promise<void> {
   debug(`Stopping WASM plugin: ${pluginId}`)
 
   try {
-    // Cancel any pending restart timers
-    const timer = restartTimers.get(pluginId)
-    if (timer) {
-      clearTimeout(timer)
-      restartTimers.delete(pluginId)
-    }
-
-    // Cancel any poll timers
-    const pollTimer = pollTimers.get(pluginId)
-    if (pollTimer) {
-      clearInterval(pollTimer)
-      pollTimers.delete(pluginId)
-      debug(`Stopped poll timer for ${pluginId}`)
-    }
-
-    // Unsubscribe from delta events
-    const deltaUnsubscriber = deltaUnsubscribers.get(pluginId)
-    if (deltaUnsubscriber) {
-      deltaUnsubscriber()
-      deltaUnsubscribers.delete(pluginId)
-      debug(`Stopped delta subscription for ${pluginId}`)
-    }
+    cancelRestart(pluginId)
+    stopPollAndDeltas(pluginId)
 
     if (plugin.instance) {
       // Call plugin stop()
@@ -312,9 +325,13 @@ export async function unloadWasmPlugin(
   debug(`Unloading WASM plugin: ${pluginId}`)
 
   try {
+    // A pending crash restart would start the unloaded plugin again
+    cancelRestart(pluginId)
     // Stop the plugin first if running
     if (plugin.status === 'running') {
       await stopWasmPlugin(pluginId)
+    } else {
+      releaseStoppedPlugin(plugin)
     }
     cleanupWasmPutHandlers(plugin.packageName)
 
@@ -389,11 +406,11 @@ export async function reloadWasmPlugin(
   debug(`Reloading WASM plugin: ${pluginId}`)
 
   try {
-    const wasRunning = plugin.status === 'running'
-
-    // Stop the plugin
-    if (wasRunning) {
+    if (plugin.status === 'running') {
       await stopWasmPlugin(pluginId)
+    } else {
+      // the start below would otherwise add a second set beside them
+      releaseStoppedPlugin(plugin)
     }
 
     // Save current configuration
@@ -411,14 +428,17 @@ export async function reloadWasmPlugin(
 
     plugin.instance = newInstance
     // The endpoints and their access levels come from the binary just loaded
-    setupPluginSpecificRoutes(app, plugin)
+    if (!setupPluginSpecificRoutes(app, plugin)) {
+      throw new Error('cannot read the HTTP endpoints it declares')
+    }
 
     // Update schema from new instance
     const schemaJson = newInstance.exports.schema()
     plugin.schema = schemaJson ? JSON.parse(schemaJson) : {}
 
-    // Restart if it was running
-    if (wasRunning) {
+    // An enabled plugin that a failed reload left in error starts again
+    // once a reload succeeds
+    if (plugin.enabled) {
       await startWasmPlugin(app, pluginId)
     }
 
