@@ -43,6 +43,7 @@ import https from 'https'
 import _ from 'lodash'
 import path from 'path'
 import { startApis } from './api'
+import type { CourseApi } from './api/course'
 import type { HistoryApiHttpRegistry } from './api/history'
 import { ServerApp, SignalKMessageHub, WithConfig } from './app'
 import { ConfigApp, load, sendBaseDeltas } from './config/config'
@@ -885,6 +886,7 @@ class Server {
       })
 
       this.app.stalenessEnforcer?.stop()
+      ;(this.app as { courseApi?: CourseApi }).courseApi?.stop()
 
       // Cancel a pending history-provider grace timer; reload() creates
       // a fresh registry, so a timer left running here would emit a

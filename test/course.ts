@@ -540,6 +540,38 @@ describe('Course Api', () => {
     stop()
   })
 
+  it('leaves no timer or subscription behind when the server stops', async function () {
+    const { server, sendDelta, stop } = await startServer()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const courseApi = server.app.courseApi as any
+    try {
+      await sendDelta('navigation.position', {
+        latitude: 43.02,
+        longitude: 7.84
+      })
+      await courseApi.parseStreamValue(
+        {
+          type: 'NMEA0183',
+          $source: 'nmea.external',
+          msg: 'RMB',
+          path: 'navigation.courseRhumbline.nextPoint.position'
+        },
+        { latitude: 43.03, longitude: 7.94 }
+      )
+      expect(courseApi.externalNavTimer).to.not.equal(null)
+      const deadline = Date.now() + 5000
+      while (courseApi.unsubscribes.length === 0) {
+        if (Date.now() > deadline)
+          throw new Error('course API did not subscribe')
+        await new Promise((resolve) => setTimeout(resolve, 50))
+      }
+    } finally {
+      await stop()
+    }
+    expect(courseApi.externalNavTimer).to.equal(null)
+    expect(courseApi.unsubscribes).to.have.length(0)
+  })
+
   it('rebases external NMEA0183 previousPoint using Signal K XTE sign', async function () {
     const { server, selfGetJson, sendDelta, stop } = await startServer()
     const vesselPosition = { latitude: 43.02, longitude: 7.84 }
