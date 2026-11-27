@@ -104,6 +104,17 @@ export class Watcher {
     return this._sampleSize
   }
 
+  // Leaves the range, if inside it, and forgets the last value, so the next
+  // value is tested as a first one.
+  reset() {
+    if (this._inRange) {
+      this._inRange = false
+      this._callback({ type: 'exit', value: this._val })
+    }
+    this._val = -1
+    this._sampleCount = 0
+  }
+
   isInRange(value: number = this._val): boolean {
     return typeof value === 'number' &&
       value <= this.rangeMax &&

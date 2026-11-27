@@ -791,6 +791,21 @@ describe('route advance', () => {
     stop()
   })
 
+  it('notifies the arrival at the last point when its circle overlaps the previous one', async () => {
+    const { server, position, select, stop } = await follow(1, {
+      passedPerpendicular: false
+    })
+    await position()
+    await select('r1', 2)
+    await position()
+
+    expect(server.activateRoute.calls).to.deep.equal([
+      [{ href: HREF, pointIndex: 2, reverse: false }]
+    ])
+    expect(raisedNotifications(server)).to.deep.equal([ARRIVAL])
+    stop()
+  })
+
   it('advances again from a point reached a second time', async () => {
     const { server, position, select, stop } = await follow(0)
     await position()

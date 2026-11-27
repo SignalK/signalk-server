@@ -200,6 +200,9 @@ module.exports = (server: CourseComputerApp): Plugin => {
   // while the route's waypoints are fetched, and must not be advanced then.
   let announcedRoute: string | undefined
 
+  // The next point the arrival watchers last measured against.
+  let watchedDestination: string | undefined
+
   // ******** REQUIRED PLUGIN DEFINITION *******
   const plugin: Plugin = {
     id: 'course-provider',
@@ -258,6 +261,7 @@ module.exports = (server: CourseComputerApp): Plugin => {
       metaSent = false
       advancedFrom = undefined
       announcedRoute = undefined
+      watchedDestination = undefined
       resetCaches()
 
       initSubscriptions(SRC_PATHS)
@@ -551,6 +555,7 @@ module.exports = (server: CourseComputerApp): Plugin => {
         ? -1
         : arrivalCircleRange
 
+    rearmOnNewDestination()
     watchArrival.value = result.gc?.distance ?? -1
     watchPassedDest.value = result.passedPerpendicular ? 1 : 0
     advanceOnArrival(result)
@@ -770,6 +775,23 @@ module.exports = (server: CourseComputerApp): Plugin => {
       emitNotification(
         new NotificationMgr('navigation.course.perpendicularPassed', null)
       )
+    }
+  }
+
+  // A new destination starts outside its arrival zones, so a vessel already
+  // inside the next point's circle when it becomes the destination is told.
+  const rearmOnNewDestination = () => {
+    const next = (
+      srcPaths['navigation.course.nextPoint'] as
+        | { position?: { latitude: number; longitude: number } }
+        | null
+        | undefined
+    )?.position
+    const destination = next ? `${next.longitude},${next.latitude}` : undefined
+    if (destination !== watchedDestination) {
+      watchedDestination = destination
+      watchArrival.reset()
+      watchPassedDest.reset()
     }
   }
 
