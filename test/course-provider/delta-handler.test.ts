@@ -45,6 +45,8 @@ interface StartOptions {
   startArgs?: Record<string, unknown>
   /** The server's Course API activateRoute(). */
   activateRoute?: (dest: unknown) => Promise<void>
+  /** The server's resourcesApi.getResource(). */
+  getResource?: (type: string, id: string) => Promise<unknown>
 }
 
 // Stub `calcs`/`parseSKPaths` so the dispatcher can run inline without
@@ -118,7 +120,7 @@ function startPluginCapturingDelta(opts: StartOptions = {}): {
       )
     },
     resourcesApi: {
-      getResource: spy(() => Promise.resolve(null))
+      getResource: spy(opts.getResource ?? (() => Promise.resolve(null)))
     }
   }
 
@@ -568,6 +570,7 @@ describe('route advance', () => {
   const ARRIVAL = 'notifications.navigation.course.arrivalCircleEntered'
   const PERPENDICULAR = 'notifications.navigation.course.perpendicularPassed'
   const HREF = '/resources/routes/r1'
+  const HREF2 = '/resources/routes/r2'
 
   const raisedNotifications = (
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -583,8 +586,61 @@ describe('route advance', () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .map((v: any) => v.path)
 
-  // Follows a three-point route at pointIndex, then reports positions that
-  // are `distance` metres from the next point inside a 50 m arrival circle.
+  const ROUTES: Record<string, number[][]> = {
+    r1: [
+      [3, 60],
+      [3, 60.1],
+      [3, 60.2]
+    ],
+    r2: [
+      [4, 61],
+      [4, 61.1],
+      [4, 61.2]
+    ]
+  }
+
+  // The course as the server publishes it when following a route: the
+  // active route and its point at pointIndex as the next point.
+  const courseDelta = (
+    id: string | null,
+    pointIndex = 0,
+    nextPointOf = id
+  ) => ({
+    updates: [
+      {
+        values: [
+          {
+            path: 'navigation.course.activeRoute',
+            value: id
+              ? {
+                  href: `/resources/routes/${id}`,
+                  pointIndex,
+                  pointTotal: 3,
+                  reverse: false
+                }
+              : null
+          },
+          {
+            path: 'navigation.course.nextPoint',
+            value: nextPointOf
+              ? {
+                  type: 'RoutePoint',
+                  position: {
+                    longitude: ROUTES[nextPointOf]![pointIndex]![0],
+                    latitude: ROUTES[nextPointOf]![pointIndex]![1]
+                  }
+                }
+              : null
+          }
+        ]
+      }
+    ]
+  })
+
+  const settle = () => new Promise((resolve) => setImmediate(resolve))
+
+  // Follows route r1 at pointIndex, then reports positions that are
+  // `distance` metres from the next point inside a 50 m arrival circle.
   const follow = async (
     pointIndex: number,
     opts: {
@@ -597,6 +653,10 @@ describe('route advance', () => {
     const started = startPluginCapturingDelta({
       startArgs: opts.startArgs ?? {},
       activateRoute: opts.activateRoute,
+      getResource: (_type, id) =>
+        Promise.resolve({
+          feature: { geometry: { coordinates: ROUTES[id] } }
+        }),
       calcsReturn: {
         gc: { distance: opts.distance ?? 20 },
         rl: {},
@@ -605,23 +665,23 @@ describe('route advance', () => {
     })
     started.deltaCallback({
       updates: [
-        {
-          values: [
-            { path: 'navigation.course.arrivalCircle', value: 50 },
-            {
-              path: 'navigation.course.activeRoute',
-              value: { href: HREF, pointIndex, pointTotal: 3, reverse: false }
-            }
-          ]
-        }
+        { values: [{ path: 'navigation.course.arrivalCircle', value: 50 }] }
       ]
     })
-    await new Promise((resolve) => setImmediate(resolve))
+    const select = async (
+      id: string | null,
+      index = 0,
+      nextPointOf: string | null = id
+    ) => {
+      started.deltaCallback(courseDelta(id, index, nextPointOf))
+      await settle()
+    }
+    await select('r1', pointIndex)
     const position = () => {
       started.deltaCallback(positionDelta(10, 20))
-      return new Promise((resolve) => setImmediate(resolve))
+      return settle()
     }
-    return { ...started, position }
+    return { ...started, position, select }
   }
 
   it('moves on from an intermediate point once, without notifications', async () => {
@@ -693,6 +753,55 @@ describe('route advance', () => {
     await position()
 
     expect(server.activateRoute.calls.length).to.equal(2)
+    stop()
+  })
+
+  it('does not advance the old route while a new one is being selected', async () => {
+    const { server, position, select, stop } = await follow(0)
+    // r2's next point is known, r1 is still the route its waypoints match.
+    await select('r1', 0, 'r2')
+    await position()
+
+    expect(server.activateRoute.called).to.equal(false)
+    expect(raisedNotifications(server)).to.have.members([
+      ARRIVAL,
+      PERPENDICULAR
+    ])
+    stop()
+  })
+
+  it('advances again from a point reached a second time', async () => {
+    const { server, position, select, stop } = await follow(0)
+    await position()
+    await select('r1', 1)
+    await select(null)
+    await select('r1', 0)
+    await position()
+
+    expect(server.activateRoute.calls.length).to.equal(2)
+    stop()
+  })
+
+  it('keeps a newer advance guarded when an older one fails late', async () => {
+    let failFirst: (error: Error) => void = () => undefined
+    const { server, position, select, stop } = await follow(0, {
+      activateRoute: (dest) =>
+        (dest as { href: string }).href === HREF
+          ? new Promise((_resolve, reject) => {
+              failFirst = reject
+            })
+          : new Promise(() => undefined)
+    })
+    await position()
+    await select('r2', 0)
+    await position()
+    failFirst(new Error('route not found'))
+    await settle()
+    await position()
+
+    expect(
+      server.activateRoute.calls.map((call: [{ href: string }]) => call[0].href)
+    ).to.deep.equal([HREF, HREF2])
     stop()
   })
 

@@ -192,8 +192,9 @@ module.exports = (server: CourseComputerApp): Plugin => {
   let metaSent = false
 
   // The route point last advanced from, so the ticks before the course
-  // catches up with the advance do not advance again.
-  let advancedFrom: string | undefined
+  // catches up with the advance do not advance again. Each attempt has its
+  // own identity, so a late failure clears only the guard it set.
+  let advancedFrom: { from: string; attempt: symbol } | undefined
 
   // ******** REQUIRED PLUGIN DEFINITION *******
   const plugin: Plugin = {
@@ -455,6 +456,12 @@ module.exports = (server: CourseComputerApp): Plugin => {
   const handleActiveRoute = async (value: any) => {
     if (server.debug.enabled) {
       server.debug(`*** handleActiveRoute *** ${JSON.stringify(value)}`)
+    }
+
+    // Once the course has moved on (or was cleared), the point advanced from
+    // may be reached again later, e.g. when the route is restarted.
+    if (advancedFrom && advancedFrom.from !== routePointKey(value)) {
+      advancedFrom = undefined
     }
 
     if (!value || typeof value?.href !== 'string') {
@@ -761,11 +768,35 @@ module.exports = (server: CourseComputerApp): Plugin => {
 
   // ********* Route advance *****************
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const routePointKey = (route: any): string | undefined =>
+    route ? `${route.href}|${route.reverse}|${route.pointIndex}` : undefined
+
+  // The route is taken only while its point at pointIndex is the next point
+  // the arrival was computed for: during a switch to another route, the new
+  // route's next point arrives before its waypoints are fetched.
   const followedRoute = (): ActiveRoute | undefined => {
     const route = srcPaths['activeRoute'] as ActiveRoute | null | undefined
-    return route?.href &&
-      typeof route.pointIndex === 'number' &&
-      typeof route.pointTotal === 'number'
+    const next = (
+      srcPaths['navigation.course.nextPoint'] as
+        | { position?: { latitude: number; longitude: number } }
+        | null
+        | undefined
+    )?.position
+    if (
+      !route?.href ||
+      typeof route.pointIndex !== 'number' ||
+      typeof route.pointTotal !== 'number' ||
+      !Array.isArray(route.waypoints) ||
+      !next
+    ) {
+      return undefined
+    }
+    const index = route.reverse
+      ? route.waypoints.length - 1 - route.pointIndex
+      : route.pointIndex
+    const point = route.waypoints[index]
+    return point?.[0] === next.longitude && point?.[1] === next.latitude
       ? route
       : undefined
   }
@@ -805,11 +836,12 @@ module.exports = (server: CourseComputerApp): Plugin => {
     if (!route || !advancesFromNextPoint() || !hasArrived(result)) {
       return
     }
-    const from = `${route.href}|${route.reverse}|${route.pointIndex}`
-    if (advancedFrom === from) {
+    const from = routePointKey(route) as string
+    if (advancedFrom?.from === from) {
       return
     }
-    advancedFrom = from
+    const attempt = Symbol(from)
+    advancedFrom = { from, attempt }
     server
       .activateRoute({
         href: route.href,
@@ -818,7 +850,9 @@ module.exports = (server: CourseComputerApp): Plugin => {
       })
       .catch((error: Error) => {
         // Cleared so the next position update tries again.
-        advancedFrom = undefined
+        if (advancedFrom?.attempt === attempt) {
+          advancedFrom = undefined
+        }
         server.debug(`Route advance failed: ${error.message}`)
       })
   }
