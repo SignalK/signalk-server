@@ -131,11 +131,16 @@ const orderExternalNavigationValues = (values: PathValue[]) => [
 const isFiniteNumber = (value: unknown): value is number =>
   typeof value === 'number' && Number.isFinite(value)
 
+const COURSE_CHANGED = 'The course changed while this request was pending'
+
 export class CourseApi {
   private courseInfo = NO_COURSE_INFO
 
   private store: Store
   private cmdSource: CommandSource | null = null // source which set the destination
+  // Counts changes of destination, so a request that waited for a resource
+  // can tell that a newer one changed the course meanwhile.
+  private courseRevision = 0
   private unsubscribes: Unsubscribes = []
   private externalNavTimer: ReturnType<typeof setTimeout> | null = null
   private externalNavLastUpdate = 0
@@ -243,10 +248,11 @@ export class CourseApi {
           if (ref === pathValue.path) {
             if (refType === 'routes') {
               if (this.courseInfo.activeRoute) {
+                const revision = this.courseRevision
                 const rte = await this.getRoute(
                   this.courseInfo.activeRoute.href
                 )
-                if (rte) {
+                if (rte && revision === this.courseRevision) {
                   this.courseInfo.activeRoute.name = rte.name as string
                   this.courseInfo.activeRoute.pointTotal =
                     rte.feature.geometry.coordinates.length
@@ -291,11 +297,16 @@ export class CourseApi {
                 }
               }
             } else {
+              const revision = this.courseRevision
               const r: any = await this.resourcesApi.getResource(
                 refType as SignalKResourceType,
                 h[2]
               )
-              if (r && isValidCoordinate(r.feature.geometry.coordinates)) {
+              if (
+                r &&
+                revision === this.courseRevision &&
+                isValidCoordinate(r.feature.geometry.coordinates)
+              ) {
                 ;(this.courseInfo.nextPoint as NextPreviousPoint).position = {
                   latitude: r.feature.geometry.coordinates[1],
                   longitude: r.feature.geometry.coordinates[0]
@@ -594,6 +605,7 @@ export class CourseApi {
     }
     this.courseInfo.activeRoute = null
     this.courseInfo.startTime = new Date().toISOString()
+    this.courseRevision++
     this.emitCourseInfo(true, 'activeRoute', 'nextPoint', 'previousPoint')
   }
 
@@ -614,7 +626,14 @@ export class CourseApi {
       arrivalCircle: this.courseInfo.arrivalCircle
     }
     this.cmdSource = null
+    this.courseRevision++
     this.emitCourseInfo(!persistState)
+  }
+
+  private assertCourseUnchanged(revision: number) {
+    if (revision !== this.courseRevision) {
+      throw new Error(COURSE_CHANGED)
+    }
   }
 
   /** Start the current leg at the vessel position (exposed to plugins) */
@@ -966,9 +985,18 @@ export class CourseApi {
           res.status(400).json(Responses.invalid)
           return
         }
+        const revision = this.courseRevision
         const rte = await this.getRoute(this.courseInfo.activeRoute.href)
         if (!rte) {
           res.status(400).json(Responses.invalid)
+          return
+        }
+        if (revision !== this.courseRevision) {
+          res.status(400).json({
+            state: 'FAILED',
+            statusCode: 400,
+            message: COURSE_CHANGED
+          })
           return
         }
 
@@ -1082,6 +1110,7 @@ export class CourseApi {
             )
           }
         }
+        this.courseRevision++
         this.emitCourseInfo()
         res.status(200).json(Responses.ok)
       }
@@ -1100,6 +1129,7 @@ export class CourseApi {
     route: RouteDestination,
     src: CommandSource = API_CMD_SRC
   ): Promise<boolean> {
+    const revision = this.courseRevision
     const { href, reverse } = route
     let rte: any
 
@@ -1170,10 +1200,12 @@ export class CourseApi {
       }
     }
 
+    this.assertCourseUnchanged(revision)
     if (this.isSourceChange(src)) {
       this.clearDestination(true)
     }
     this.courseInfo = newCourse
+    this.courseRevision++
     this.cmdSource = src
     this.clearExternalNavigationState()
     return true
@@ -1183,6 +1215,7 @@ export class CourseApi {
     dest: PointDestination & { arrivalCircle?: number },
     src: CommandSource = API_CMD_SRC
   ): Promise<boolean> {
+    const revision = this.courseRevision
     const newCourse: CourseInfo = { ...this.courseInfo }
 
     newCourse.startTime = new Date().toISOString()
@@ -1256,10 +1289,12 @@ export class CourseApi {
       throw new Error(`Error: Unable to retrieve vessel position!`)
     }
 
+    this.assertCourseUnchanged(revision)
     if (this.isSourceChange(src)) {
       this.clearDestination(true)
     }
     this.courseInfo = newCourse
+    this.courseRevision++
     this.cmdSource = src
     this.clearExternalNavigationState()
     if (isExternalCmdSource(src)) {
