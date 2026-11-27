@@ -1,11 +1,20 @@
-# fly.toml file generated for demo-signalk-org on 2022-09-23T17:08:59+03:00
-
 app = "demo-signalk-org"
 kill_signal = "SIGINT"
 kill_timeout = 5
 processes = []
 
 [env]
+  # Fly's proxy connects to the server and appends the app's own IP address
+  # to X-Forwarded-For, so the visitor's address is two hops back
+  # (https://fly.io/docs/networking/request-headers/)
+  TRUST_PROXY = "2"
+  # Visitors on a shared network (a boat show, a marina, a club) reach the
+  # demo from one address, and every open demo page holds several WebSockets
+  MAX_WS_CONNECTIONS_PER_IP = "200"
+  # Per address and 10 minutes the server allows 1000 login status checks
+  # and 100 logins. A shared address carries many visitors, each page load
+  # checks the login several times, and the demo has no admin to guess.
+  HTTP_RATE_LIMITS = "loginStatus=10000,login=1000"
 
 [experimental]
   allowed_public_ports = []
@@ -18,8 +27,8 @@ processes = []
   protocol = "tcp"
   script_checks = []
   [services.concurrency]
-    hard_limit = 100
-    soft_limit = 20
+    hard_limit = 500
+    soft_limit = 400
     type = "connections"
 
   [[services.ports]]
@@ -36,3 +45,7 @@ processes = []
     interval = "15s"
     restart_limit = 0
     timeout = "2s"
+
+[[vm]]
+  size = "performance-2x"
+  memory = "4gb"

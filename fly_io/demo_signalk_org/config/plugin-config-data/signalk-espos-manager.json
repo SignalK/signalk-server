@@ -1,0 +1,9 @@
+{
+  "enabled": true,
+  "configuration": {
+    "demo": true,
+    "dayNight": {
+      "publishMode": false
+    }
+  }
+}
