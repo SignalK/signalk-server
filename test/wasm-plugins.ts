@@ -718,6 +718,19 @@ export function plugin_stop(): i32 {
       expect(closedFor).to.deep.equal([packageName])
     })
 
+    it('drops the PUT handlers of a crashed plugin when it is restarted', async function () {
+      expect(await reload('two')).to.equal(200)
+      expect(await waitForStatus('build two')).to.equal('build two')
+      expect(await putStatus('two')).to.equal(200)
+
+      buildProbe('eight')
+      getWasmPlugin(packageName)!.status = 'crashed'
+      await reloadWasmPlugin(server!.app, packageName)
+
+      expect((await getBuildEndpoint('eight')).status).to.equal(200)
+      expect(await putStatus('two')).to.equal(405)
+    })
+
     // Last in this block: the probe stays unloaded
     it('does not restart a crashed plugin after it was unloaded', async function () {
       expect(await reload('two')).to.equal(200)

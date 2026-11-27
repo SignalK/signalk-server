@@ -209,10 +209,12 @@ function cancelRestart(pluginId: string): void {
 }
 
 // A plugin that is not running never went through stopWasmPlugin, so a
-// crashed one still holds its poll timer, delta listener and sockets.
-function releaseStoppedPlugin(pluginId: string): void {
-  stopPollAndDeltas(pluginId)
-  socketManager.closeAllForPlugin(pluginId)
+// crashed one still holds its poll timer, delta listener, sockets and PUT
+// handlers.
+function releaseStoppedPlugin(plugin: WasmPlugin): void {
+  stopPollAndDeltas(plugin.id)
+  socketManager.closeAllForPlugin(plugin.id)
+  cleanupWasmPutHandlers(plugin.packageName)
 }
 
 /**
@@ -276,7 +278,7 @@ export async function unloadWasmPlugin(
     if (plugin.status === 'running') {
       await stopWasmPlugin(pluginId)
     } else {
-      releaseStoppedPlugin(pluginId)
+      releaseStoppedPlugin(plugin)
     }
     cleanupWasmPutHandlers(plugin.packageName)
 
@@ -355,7 +357,7 @@ export async function reloadWasmPlugin(
       await stopWasmPlugin(pluginId)
     } else {
       // the start below would otherwise add a second set beside them
-      releaseStoppedPlugin(pluginId)
+      releaseStoppedPlugin(plugin)
     }
 
     // Save current configuration
