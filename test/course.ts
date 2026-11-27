@@ -848,3 +848,218 @@ async function courseAfterRestart(): Promise<CourseInfo> {
     await server.stop()
   }
 }
+
+describe('Course Api concurrent requests', () => {
+  const routeBody = (coordinates: number[][]) => ({
+    feature: {
+      type: 'Feature',
+      geometry: { type: 'LineString', coordinates }
+    }
+  })
+  const ROUTE_A = [
+    [3.3452, 65.4567],
+    [3.3352, 65.5567],
+    [3.3261, 65.5777]
+  ]
+  const ROUTE_B = [
+    [4.1, 66.1],
+    [4.2, 66.2],
+    [4.3, 66.3]
+  ]
+
+  type Started = Awaited<ReturnType<typeof startServer>>
+
+  const create = async (started: Started, type: string, body: object) => {
+    const response = await started.post(`/resources/${type}`, body)
+    response.status.should.equal(201)
+    const { id } = (await response.json()) as { id: string }
+    return id
+  }
+
+  // Holds the next fetch of resource `id` until released, and tells when
+  // that fetch has started.
+  const holdFetch = (started: Started, id: string) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const resources = started.server.app.resourcesApi as any
+    const getResource = resources.getResource.bind(resources)
+    let release!: () => void
+    const released = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    let reached!: () => void
+    const reachedFetch = new Promise<void>((resolve) => {
+      reached = resolve
+    })
+    let held = false
+    resources.getResource = async (type: string, resId: string) => {
+      if (!held && resId === id) {
+        held = true
+        reached()
+        await released
+      }
+      return getResource(type, resId)
+    }
+    return { reached: reachedFetch, release }
+  }
+
+  const start = async () => {
+    const started = await startServer()
+    started.sendDelta('navigation.position', {
+      latitude: -35.45,
+      longitude: 138.0
+    })
+    return started
+  }
+
+  const course = (started: Started) =>
+    started.selfGetJson('navigation/course') as Promise<CourseInfo>
+
+  it('keeps a route selected while an earlier activation was loading', async function () {
+    const started = await start()
+    const a = await create(started, 'routes', routeBody(ROUTE_A))
+    const b = await create(started, 'routes', routeBody(ROUTE_B))
+    const hold = holdFetch(started, a)
+
+    const first = started.selfPut('navigation/course/activeRoute', {
+      href: `/resources/routes/${a}`
+    })
+    await hold.reached
+    const second = await started.selfPut('navigation/course/activeRoute', {
+      href: `/resources/routes/${b}`
+    })
+    hold.release()
+
+    second.status.should.equal(200)
+    ;(await first).status.should.equal(400)
+    expect((await course(started)).activeRoute?.href).to.equal(
+      `/resources/routes/${b}`
+    )
+    await started.stop()
+  })
+
+  it('keeps a destination set while a waypoint was loading', async function () {
+    const started = await start()
+    const w = await create(started, 'waypoints', {
+      feature: {
+        type: 'Feature',
+        geometry: { type: 'Point', coordinates: [24.9384, 60.1699] }
+      }
+    })
+    const hold = holdFetch(started, w)
+
+    const first = started.selfPut('navigation/course/destination', {
+      href: `/resources/waypoints/${w}`
+    })
+    await hold.reached
+    const second = await started.selfPut('navigation/course/destination', {
+      position: { latitude: -35.5, longitude: 138.7 }
+    })
+    hold.release()
+
+    second.status.should.equal(200)
+    ;(await first).status.should.equal(400)
+    expect((await course(started)).nextPoint?.position).to.deep.equal({
+      latitude: -35.5,
+      longitude: 138.7
+    })
+    await started.stop()
+  })
+
+  it('does not move to the next point of a route replaced while it loaded', async function () {
+    const started = await start()
+    const a = await create(started, 'routes', routeBody(ROUTE_A))
+    const b = await create(started, 'routes', routeBody(ROUTE_B))
+    await started
+      .selfPut('navigation/course/activeRoute', {
+        href: `/resources/routes/${a}`
+      })
+      .then((response) => response.status.should.equal(200))
+    const hold = holdFetch(started, a)
+
+    const next = started.selfPut('navigation/course/activeRoute/nextPoint', {
+      value: 1
+    })
+    await hold.reached
+    await started
+      .selfPut('navigation/course/activeRoute', {
+        href: `/resources/routes/${b}`
+      })
+      .then((response) => response.status.should.equal(200))
+    hold.release()
+
+    ;(await next).status.should.equal(400)
+    const now = await course(started)
+    expect(now.activeRoute?.href).to.equal(`/resources/routes/${b}`)
+    expect(now.activeRoute?.pointIndex).to.equal(0)
+    expect(now.nextPoint?.position).to.deep.equal({
+      latitude: 66.1,
+      longitude: 4.1
+    })
+    await started.stop()
+  })
+
+  it('does not apply an edit of a waypoint replaced while the edit loaded', async function () {
+    const started = await start()
+    const waypoint = (coordinates: number[]) => ({
+      feature: { type: 'Feature', geometry: { type: 'Point', coordinates } }
+    })
+    const w = await create(started, 'waypoints', waypoint([24.9384, 60.1699]))
+    await started
+      .selfPut('navigation/course/destination', {
+        href: `/resources/waypoints/${w}`
+      })
+      .then((response) => response.status.should.equal(200))
+    const hold = holdFetch(started, w)
+
+    await started
+      .put(`/resources/waypoints/${w}`, waypoint([25, 61]))
+      .then((response) => response.status.should.equal(200))
+    await hold.reached
+    await started
+      .selfPut('navigation/course/destination', {
+        position: { latitude: -35.5, longitude: 138.7 }
+      })
+      .then((response) => response.status.should.equal(200))
+    hold.release()
+    await new Promise((resolve) => setTimeout(resolve, 100))
+
+    expect((await course(started)).nextPoint?.position).to.deep.equal({
+      latitude: -35.5,
+      longitude: 138.7
+    })
+    await started.stop()
+  })
+
+  it('does not apply an edit of a route replaced while the edit loaded', async function () {
+    const started = await start()
+    const a = await create(started, 'routes', routeBody(ROUTE_A))
+    const b = await create(started, 'routes', routeBody(ROUTE_B))
+    await started
+      .selfPut('navigation/course/activeRoute', {
+        href: `/resources/routes/${a}`
+      })
+      .then((response) => response.status.should.equal(200))
+    const hold = holdFetch(started, a)
+
+    await started
+      .put(`/resources/routes/${a}`, routeBody(ROUTE_A.slice(0, 2)))
+      .then((response) => response.status.should.equal(200))
+    await hold.reached
+    await started
+      .selfPut('navigation/course/activeRoute', {
+        href: `/resources/routes/${b}`
+      })
+      .then((response) => response.status.should.equal(200))
+    hold.release()
+    await new Promise((resolve) => setTimeout(resolve, 100))
+
+    const now = await course(started)
+    expect(now.activeRoute?.href).to.equal(`/resources/routes/${b}`)
+    expect(now.activeRoute?.pointTotal).to.equal(3)
+    expect(now.nextPoint?.position).to.deep.equal({
+      latitude: 66.1,
+      longitude: 4.1
+    })
+    await started.stop()
+  })
+})
