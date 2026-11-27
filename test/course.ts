@@ -877,7 +877,7 @@ describe('Course Api concurrent requests', () => {
   }
 
   // Holds the next fetch of resource `id` until released, and tells when
-  // that fetch has started.
+  // that fetch has started and when it has been answered.
   const holdFetch = (started: Started, id: string) => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const resources = started.server.app.resourcesApi as any
@@ -890,21 +890,28 @@ describe('Course Api concurrent requests', () => {
     const reachedFetch = new Promise<void>((resolve) => {
       reached = resolve
     })
-    let held = false
-    resources.getResource = async (type: string, resId: string) => {
-      if (!held && resId === id) {
-        held = true
-        reached()
-        await released
+    let fetched: Promise<unknown> | undefined
+    resources.getResource = (type: string, resId: string) => {
+      if (fetched || resId !== id) {
+        return getResource(type, resId)
       }
-      return getResource(type, resId)
+      reached()
+      fetched = released.then(() => getResource(type, resId))
+      return fetched
     }
-    return { reached: reachedFetch, release }
+    return {
+      reached: reachedFetch,
+      release,
+      // Settles once the held fetch is answered and the microtasks its
+      // caller resumes with have run.
+      answered: () =>
+        fetched?.then(() => new Promise((resolve) => setImmediate(resolve)))
+    }
   }
 
   const start = async () => {
     const started = await startServer()
-    started.sendDelta('navigation.position', {
+    await started.sendDelta('navigation.position', {
       latitude: -35.45,
       longitude: 138.0
     })
@@ -1021,7 +1028,7 @@ describe('Course Api concurrent requests', () => {
       })
       .then((response) => response.status.should.equal(200))
     hold.release()
-    await new Promise((resolve) => setTimeout(resolve, 100))
+    await hold.answered()
 
     expect((await course(started)).nextPoint?.position).to.deep.equal({
       latitude: -35.5,
@@ -1051,7 +1058,7 @@ describe('Course Api concurrent requests', () => {
       })
       .then((response) => response.status.should.equal(200))
     hold.release()
-    await new Promise((resolve) => setTimeout(resolve, 100))
+    await hold.answered()
 
     const now = await course(started)
     expect(now.activeRoute?.href).to.equal(`/resources/routes/${b}`)
