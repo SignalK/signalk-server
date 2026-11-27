@@ -730,24 +730,24 @@ function PluginConfigCard({
                   </span>
                 </Col>
               </Row>
-              {optimisticData.enabled && (
-                <Row className="mt-2">
-                  <Col>
-                    <small>
-                      <strong>Status:</strong>{' '}
-                      <span className={statusClass}>
-                        {pluginStatus?.message || 'Started'}
-                      </span>
-                    </small>
-                    {lastError && (
-                      <small className="d-block text-danger">
-                        <strong>Last error:</strong> {lastError}
-                      </small>
-                    )}
-                  </Col>
-                </Row>
-              )}
             </>
+          )}
+          {optimisticData.enabled && (
+            <Row className="mt-2">
+              <Col>
+                <small>
+                  <strong>Status:</strong>{' '}
+                  <span className={statusClass}>
+                    {pluginStatus?.message || 'Started'}
+                  </span>
+                </small>
+                {lastError && (
+                  <small className="d-block text-danger">
+                    <strong>Last error:</strong> {lastError}
+                  </small>
+                )}
+              </Col>
+            </Row>
           )}
         </Card.Header>
         <Card.Body>
