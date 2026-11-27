@@ -579,6 +579,26 @@ describe('Course Api', () => {
     } finally {
       await first.stop()
     }
+    // An external update reaching the stopped server must not revive its
+    // course, which would arm its stale-course timeout again.
+    first.server.app.handleMessage('nmea.GP', {
+      updates: [
+        {
+          source: {
+            label: 'nmea',
+            type: 'NMEA0183',
+            talker: 'GP',
+            sentence: 'RMB'
+          },
+          values: [
+            {
+              path: 'navigation.courseRhumbline.nextPoint.position',
+              value: { latitude: 43.04, longitude: 7.95 }
+            }
+          ]
+        }
+      ]
+    })
 
     const port = await freeport()
     const second = await startServerP(port, false, {
